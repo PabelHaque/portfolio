@@ -101,22 +101,6 @@ window.PORTFOLIO = {
       page: "projects/ak47-dashboard.html",
       repo: "https://github.com/pabel64/AK47-Dashboard",
       visibility: "private"
-    },
-    {
-      slug: "sprite-spirit",
-      title: "sprite-spirit",
-      kicker: "Open source · earlier work",
-      year: "2016",
-      glyph: "code",
-      summary: "An SCSS mixin that generates sprite-sheet positioning from a single declaration. Public, readable in one sitting.",
-      facts: [
-        { k: "Language", v: "SCSS" },
-        { k: "Scope", v: "Single mixin" }
-      ],
-      tags: ["SCSS", "CSS"],
-      page: "",
-      repo: "https://github.com/pabel64/sprite-spirit",
-      visibility: "public"
     }
   ],
 
