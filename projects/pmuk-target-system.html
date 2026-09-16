@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMUK Target &amp; Budget Allocation System — Pabel Haque</title>
+<meta name="description" content="A deterministic weighted largest-remainder cascade that divides branch-level microfinance targets across 2,574 field staff and reproduces the same 17,962 numbers on every re-run.">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0c10'/><circle cx='16' cy='16' r='6' fill='%23f0b46a'/></svg>">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="../index.html#work">Work</a>
+      <a href="../index.html#stack">Stack</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap narrow">
+    <a class="backlink" href="../index.html#work"><span>&larr;</span> All work</a>
+    <p class="eyebrow">Case study · Enterprise system &amp; allocation engine</p>
+    <h1>PMUK Field-Staff Target &amp; Budget Allocation System</h1>
+    <p class="lede">
+      Microfinance branches receive targets. Those targets have to become a fair, defensible
+      number for every individual field officer — across 409 branches and 2,574 staff, every
+      planning cycle. This system does that division with a weighted largest-remainder
+      cascade, and is built so that re-running the same inputs reproduces the same 17,962
+      numbers exactly.
+    </p>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026 · run against live planning data</td></tr>
+        <tr><th>Scale</th><td>2,574 staff · 409 branches · 17,962 staff targets per cycle</td></tr>
+        <tr><th>Stack</th><td>Django, PostgreSQL / PL&#47;pgSQL, TypeScript, React, Docker, role-scoped RBAC, bilingual UI</td></tr>
+        <tr><th>Architecture</th><td>11 domain modules — access control, org hierarchy, roster, indicator and metric catalogues, weight-matrix configuration, target input, run lifecycle, calendar, export integration</td></tr>
+        <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      A branch is told to grow its savings balance by a certain amount this cycle. That figure
+      has to be split across the branch's field officers. Splitting it evenly is unfair and
+      everyone knows it: officers carry very different books. One holds three times the loan
+      outstanding of the next; another covers twice the member count.
+    </p>
+    <p>
+      So the split has to be weighted by each officer's own portfolio. That raises three harder
+      problems at once:
+    </p>
+    <ul>
+      <li><strong>The parts must sum to the whole.</strong> Weighted division produces fractions. Round each share independently and the officer targets no longer add up to the branch target — and a planning system whose numbers do not reconcile is worse than a spreadsheet, because it looks authoritative.</li>
+      <li><strong>Different metrics need different weightings.</strong> Overdue recovery should be distributed on each officer's overdue book. Savings growth should not be. One global weighting cannot express that.</li>
+      <li><strong>The same inputs must produce the same outputs.</strong> When an officer asks why their number changed, "the engine ran again" is not an acceptable answer.</li>
+    </ul>
+
+    <h2>The allocation engine</h2>
+    <p class="plain"><strong>A weighted largest-remainder cascade.</strong></p>
+    <p>
+      Each officer gets a score built from their own portfolio indicators — samity count, member
+      count, loan outstanding — combined through a weight matrix. Scores become proportional
+      shares of the branch target. Those shares are then rounded by the
+      <strong>largest-remainder method</strong>: floor every share, count how many whole units
+      are left unallocated, and hand them out one at a time to the officers with the largest
+      fractional remainders.
+    </p>
+    <p>
+      The result is the property that matters — <strong>the officer targets always foot exactly
+      to the branch target</strong> — reached without distorting anyone's proportional share
+      more than one unit. It is the same family of method used to apportion legislative seats
+      to populations, for the same reason: you cannot give someone 0.6 of a seat, and the total
+      is fixed.
+    </p>
+
+    <figure class="figure">
+      <div class="scroller">
+        <table class="data-table" style="min-width:520px">
+          <thead>
+            <tr><th>Officer</th><th>Weighted score</th><th>Exact share</th><th>Floor</th><th>Remainder</th><th>Final</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>0.412</td><td>412.0</td><td>412</td><td>.0</td><td><strong>412</strong></td></tr>
+            <tr><td><strong>B</strong></td><td>0.331</td><td>331.0</td><td>331</td><td>.0</td><td><strong>331</strong></td></tr>
+            <tr><td><strong>C</strong></td><td>0.149</td><td>148.6</td><td>148</td><td>.6 &larr; largest</td><td><strong>149</strong></td></tr>
+            <tr><td><strong>D</strong></td><td>0.108</td><td>108.4</td><td>108</td><td>.4</td><td><strong>108</strong></td></tr>
+            <tr><td colspan="3" class="mono">Branch target</td><td class="mono">999</td><td class="mono">1 to place</td><td><strong>1,000</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>
+        Flooring alone leaves the branch one unit short. The single remaining unit goes to
+        officer C — the largest fractional remainder — and the column foots exactly. Illustrative
+        figures; the production run does this across 409 branches and ten metrics.
+      </figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>Determinism is enforced, not hoped for.</strong></p>
+    <p>
+      Largest-remainder allocation is order-sensitive at the margin. When two officers have
+      identical remainders and there is one unit left, whoever the engine happens to reach
+      first receives it. If the input ordering can vary between runs — and in a database it
+      can, unless you make it not — then the same inputs legitimately produce different
+      outputs, and the system loses the one property a planning tool cannot be without.
+    </p>
+    <p>
+      The fix is structural. Every indicator carries an <strong>ordinal</strong>: a fixed,
+      unique position in a canonical order. The engine <strong>refuses to run</strong> unless
+      indicators arrive strictly increasing by ordinal. Not a warning — a refusal. That
+      guarantee is what makes a re-run bit-identical.
+    </p>
+    <p>
+      Two consequences I designed for deliberately:
+    </p>
+    <ul>
+      <li><strong>Ordinals are spaced in gaps of ten</strong>, so a new indicator can be inserted into the canonical order later without renumbering anything.</li>
+      <li><strong>Changing an ordinal never changes a number.</strong> Weights are keyed by indicator identity, never by position — so re-ordering the rows of the matrix is a display change, not a data change. Getting this wrong would make a cosmetic edit silently rewrite everyone's targets.</li>
+    </ul>
+
+    <div class="callout">
+      <span class="label">The independence property</span>
+      Each metric column in the weight matrix is its own weight set that must sum to exactly
+      <code>1.000000</code> on its own. That independence is what answers "can we weight overdue
+      differently?" — yes: put overdue outstanding at <code>1.0</code> in that column and zero
+      elsewhere, and overdue distributes purely on each officer's overdue book while every other
+      metric is untouched. A zero weight is <em>provably</em> inert: it never enters the
+      candidate set, never triggers an exclusion, never contributes to a score.
+    </div>
+
+    <h2>Business rules that took judgement</h2>
+
+    <h3>A metric may be cascaded or displayed, never both</h3>
+    <p>
+      Savings-balance increase is the sum of three product lines. You can cascade the three
+      products to staff, or display the roll-up — cascading both would target the same work
+      twice and quietly double a team's obligations. The system refuses that combination
+      outright rather than leaving it as a configuration mistake waiting to happen.
+    </p>
+
+    <h3>Direction is required, with no default</h3>
+    <p>
+      Every metric must declare its direction, and the form deliberately ships with
+      <em>nothing</em> pre-selected. That is what lets the system tell a legitimate large
+      negative figure on an overdue-recovery metric from a nonsensical negative on a growth
+      metric. A pre-filled radio button would make that decision on the user's behalf, silently,
+      for the one field where a wrong default is most expensive.
+    </p>
+
+    <h3>New configuration never moves existing numbers</h3>
+    <p>
+      Adding an indicator seeds a <strong>zero-weight row into every existing weight
+      configuration</strong>, and the form reports how many rows it seeded. Nothing anyone has
+      already agreed to shifts until a weight is deliberately assigned. The related risk —
+      an indicator whose spreadsheet column heading changed upstream and now silently
+      contributes nothing at import — is surfaced by listing unmapped indicators first and
+      counting them in the picker title.
+    </p>
+
+    <h2>Access control that fails closed</h2>
+    <p>
+      Roles are scoped to positions in the org hierarchy, and scope is assigned explicitly. An
+      account with a scoped role and no branches assigned to it <strong>sees nothing</strong>,
+      and the interface says so plainly rather than rendering an empty state that looks like a
+      bug. It does not fall back to showing everything.
+    </p>
+    <p>
+      That is the correct behaviour for a system holding staff-level performance data across an
+      entire field network, and stating it in the UI is what stops an operator from
+      "fixing" it by widening someone's access.
+    </p>
+
+    <h2>What the cycle looks like in practice</h2>
+    <pre>1. Upload staff information  ──►  who is where, and their portfolio
+2. Load branch targets       ──►  what each branch must achieve
+   (1 and 2 are independent; both required before 3)
+3. Compute                   ──►  cascade branch targets across staff
+4. Finalise                  ──►  freeze the run
+5. Export                    ──►  workbooks for downstream use</pre>
+    <p>
+      The weight-matrix editor balances itself while you work: every other cell offers the exact
+      remaining share as a one-click fill, the last empty cell completes itself so the column
+      closes at <code>1.000000</code>, and the sum line reports how far short you are rather
+      than leaving you to work it out. Small thing; it is the screen people live in.
+    </p>
+
+    <h2>Outcome</h2>
+    <p>
+      One planning cycle produced 17,962 individual staff targets across 409 branches from
+      branch-level inputs — reconciling exactly, reproducible on demand, with an audit trail
+      behind each figure and a bilingual interface for the field. The work that used to be a
+      chain of spreadsheets is a run you can point at and explain.
+    </p>
+
+    <div class="case-nav">
+      <a href="editorials-study-assistant.html">
+        <span class="k">Next case study</span>
+        <span class="t">Autonomous Exam-Study Intelligence Platform &rarr;</span>
+      </a>
+      <a href="factory-agent-overlay.html">
+        <span class="k">Previous</span>
+        <span class="t">&larr; Multi-Agent Software Factory</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/site.js"></script>
+</body>
+</html>

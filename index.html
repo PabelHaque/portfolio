@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pabel Haque — Digital Transformation, Systems &amp; Data</title>
+<meta name="description" content="Portfolio of Pabel Haque: multi-agent software orchestration, a deterministic target-allocation engine for 2,574 field staff, an LLM content-scoring pipeline, and a role-aware reporting dashboard.">
+<meta name="author" content="Pabel Haque">
+<meta name="color-scheme" content="dark light">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pabel Haque — Digital Transformation, Systems &amp; Data">
+<meta property="og:description" content="Four production systems: agent orchestration, a deterministic allocation engine, an LLM scoring pipeline, and role-aware analytics.">
+
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0c10'/><circle cx='16' cy='16' r='6' fill='%23f0b46a'/></svg>">
+</head>
+<body>
+
+<a class="skip" href="#work">Skip to projects</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#work">Work</a>
+      <a href="#approach">Approach</a>
+      <a href="#stack">Stack</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============== HERO ============== -->
+  <div class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Digital transformation · Systems &amp; data · Bangladesh</p>
+      <h1>I build the systems that <span class="hl">replace the spreadsheet</span> — and prove they got the number right.</h1>
+      <p class="lede">
+        Four production systems, built end to end: an allocation engine that divides microfinance
+        targets across 2,574 field staff and reproduces the same 17,962 numbers on every re-run,
+        a 60-agent software delivery pipeline with human approval gates that actually block,
+        an LLM content-scoring pipeline that runs on free-tier models, and a role-aware
+        reporting dashboard for a five-tier field hierarchy.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#work">See the work <span class="arrow">&rarr;</span></a>
+        <a class="btn" href="#contact">Get in touch</a>
+      </div>
+      <div class="hero-meta">
+        <span>Python · Django · TypeScript · React</span>
+        <span>PostgreSQL · Docker</span>
+        <span>Multi-agent AI</span>
+      </div>
+
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ============== WORK ============== -->
+  <section id="work">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Selected work</p>
+        <h2>Four systems, each with a real problem behind it</h2>
+        <p class="muted" style="margin-top:.9rem">
+          Every case study follows the same shape: the problem, the decision I actually had to make,
+          one technical detail worth defending, and what it does in production. Depth over grid count.
+        </p>
+      </div>
+      <div class="projects" id="projects"></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ============== APPROACH ============== -->
+  <section id="approach">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Approach</p>
+        <h2>How I work</h2>
+      </div>
+
+      <div class="skill-grid">
+        <div class="skill-block reveal">
+          <h3>Correctness is a mechanism, not a promise</h3>
+          <p class="muted" style="font-size:.9rem;margin:0">
+            The allocation engine refuses to run when its inputs are not in canonical order,
+            because that ordering is what makes a re-run bit-identical. Weight columns must
+            foot to exactly 1.000000. Constraints that matter get enforced in code, not
+            documented in a README.
+          </p>
+        </div>
+        <div class="skill-block reveal">
+          <h3>Access control fails closed</h3>
+          <p class="muted" style="font-size:.9rem;margin:0">
+            A scoped account with no branches assigned sees nothing and is told why — it does
+            not quietly fall back to showing everything. Field staff see their own figures;
+            each management tier sees exactly one level wider.
+          </p>
+        </div>
+        <div class="skill-block reveal">
+          <h3>Humans keep the decisions</h3>
+          <p class="muted" style="font-size:.9rem;margin:0">
+            The agent factory has four approval gates that cannot be skipped, and silence is
+            never treated as approval. Automation that quietly decides on your behalf is the
+            failure mode I design against.
+          </p>
+        </div>
+        <div class="skill-block reveal">
+          <h3>Cost is a design constraint</h3>
+          <p class="muted" style="font-size:.9rem;margin:0">
+            The study platform routes across three model providers, free and local tiers first,
+            and will not make a paid API call unless explicitly switched on. Built for a
+            context where the budget is real.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ============== STACK ============== -->
+  <section id="stack">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Stack</p>
+        <h2>What I actually use</h2>
+        <p class="muted" style="margin-top:.9rem">
+          Everything listed here appears in the shipped systems above — not a logo wall.
+        </p>
+      </div>
+      <div class="skill-grid" id="skills"></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ============== CONTACT ============== -->
+  <section id="contact">
+    <div class="wrap narrow">
+      <div class="section-head">
+        <p class="eyebrow">Contact</p>
+        <h2>Happy to walk through any of this in detail</h2>
+        <p class="muted" style="margin-top:.9rem">
+          Most of the code sits in private repositories because the systems run against real
+          organisational data. I can give a live walkthrough, share architecture documents, or
+          open access for a specific review — just ask.
+        </p>
+      </div>
+      <div class="contact-list" id="contact-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <span class="mono">Built as a static site &middot; no framework, no build step</span>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# nothing is built here - if a build step ever appears, ignore its output
+node_modules/
+dist/

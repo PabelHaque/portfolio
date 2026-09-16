@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AK47 Performance &amp; Reporting Dashboard — Pabel Haque</title>
+<meta name="description" content="A role-aware operations dashboard for a five-tier field hierarchy: Django and Next.js, scoped visibility per management tier, and a reporting suite covering scorecards, transfer analytics and HR exports.">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0c10'/><circle cx='16' cy='16' r='6' fill='%23f0b46a'/></svg>">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="../index.html#work">Work</a>
+      <a href="../index.html#stack">Stack</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap narrow">
+    <a class="backlink" href="../index.html#work"><span>&larr;</span> All work</a>
+    <p class="eyebrow">Case study · Analytics &amp; full-stack</p>
+    <h1>AK47 Performance &amp; Reporting Dashboard</h1>
+    <p class="lede">
+      The reporting half of the field-operations story. Where the target system decides what
+      each officer owes, this dashboard shows what everyone actually did — with visibility
+      scoped strictly by position in a five-tier hierarchy, and a reporting suite that produces
+      the annual scorecards, transfer analytics and HR exports that were previously assembled
+      by hand.
+    </p>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Stack</th><td>Django REST backend, Next.js + TypeScript frontend, PostgreSQL in Docker, containerised local dev with a one-click launcher</td></tr>
+        <tr><th>Audience</th><td>Field staff, branch managers, area managers, regional managers, head office — plus a separate admin console</td></tr>
+        <tr><th>Reporting</th><td>HO/HR export · annual scorecard · transfer tracking &amp; analytics · leaderboard</td></tr>
+        <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      Performance data in a branch network has an awkward property: almost everyone needs it,
+      and almost nobody should see all of it. A field officer looking at a colleague's figures
+      is a personnel problem. A regional manager who can only see their own numbers cannot do
+      their job. Head office needs the whole picture in a format payroll and HR can actually
+      consume.
+    </p>
+    <p>
+      Solve that with one dashboard and a set of filters and you have built a data-exposure
+      incident waiting for someone to bookmark the wrong URL. The scoping has to be a property
+      of the account, enforced server-side, not a view the client chooses.
+    </p>
+
+    <h2>The visibility model</h2>
+    <p class="plain"><strong>Each tier sees exactly one level wider than the one below it.</strong></p>
+
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Tier</th><th>Sees</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Field staff</strong></td><td>Their own figures only</td></tr>
+          <tr><td><strong>Branch manager</strong></td><td>Every officer in their branch</td></tr>
+          <tr><td><strong>Area manager</strong></td><td>Every branch in their area</td></tr>
+          <tr><td><strong>Regional manager</strong></td><td>Every area in their region</td></tr>
+          <tr><td><strong>Head office</strong></td><td>The network, plus the HR and payroll exports</td></tr>
+          <tr><td><strong>Admin</strong></td><td>Scoring configuration and reporting access — a <em>separate console</em>, not a super-powered dashboard</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Separating the admin console from the dashboard was deliberate. The account that can
+      change how scoring works is not the account that browses performance data; keeping them
+      apart means a configuration mistake and a data-access mistake cannot be made in the same
+      session by the same click.
+    </p>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>An auth guard that matched too much, and the endless login loop it caused.</strong></p>
+    <p>
+      During the build, the login page began reloading itself forever in development. The
+      symptom pointed at authentication — a redirect loop between the login route and the
+      dashboard — and that is where an hour could easily have gone.
+    </p>
+    <p>
+      The actual cause was that the auth check was intercepting the Next.js dev server's
+      hot-module-reload <strong>websocket</strong> connection and redirecting it. The browser
+      lost its HMR channel, reconnected, got redirected again, and the page reloaded on every
+      cycle. Nothing was wrong with the credentials, the session, or the redirect logic in the
+      sense the symptom suggested.
+    </p>
+
+    <div class="callout">
+      <span class="label">What I took from it</span>
+      A route guard is a matcher, and a matcher's blast radius is everything it did not mean to
+      match. The bug was not in the authentication logic — it was in the breadth of the pattern
+      the logic was attached to. Since then I treat "what else does this match?" as part of
+      writing the guard, not as something to discover from a symptom three layers away. It is
+      also a case for reading the transport, not just the application: no amount of staring at
+      auth code would have shown a websocket being redirected.
+    </div>
+
+    <h3>The environment lesson alongside it</h3>
+    <p>
+      The same build surfaced a local database whose role password had drifted from the
+      documented value, so the backend could not authenticate. It was a disposable local dev
+      container, and the fix was one command — but the documentation now names the symptom, the
+      cause, and the recovery command explicitly, because the error message
+      ("password authentication failed") tells you nothing about which of the four plausible
+      causes you are looking at. Documenting the failure you actually hit is worth more than
+      documenting the happy path a third time.
+    </p>
+
+    <h2>Reporting that replaced manual assembly</h2>
+    <ul>
+      <li><strong>HO / HR export</strong> — the network view in the shape payroll and HR consume, rather than a screenshot of a dashboard pasted into a workbook.</li>
+      <li><strong>Annual scorecard</strong> — a year of performance per staff member, consistent across tiers because it is computed from one definition rather than re-derived per report.</li>
+      <li><strong>Transfer tracking &amp; analytics</strong> — staff movement between branches and areas over time, which is precisely the history that gets lost when performance is tracked in per-branch spreadsheets.</li>
+      <li><strong>Leaderboard</strong> — comparative standing, visible only within the scope the viewer's tier already grants.</li>
+    </ul>
+    <p>
+      Scoring configuration lives in the admin console, so the formula behind a scorecard is a
+      governed setting rather than a constant buried in a report query — the same registry
+      principle that runs through the target system and the agent factory.
+    </p>
+
+    <h2>Built to be run by someone who is not me</h2>
+    <p>
+      The whole local stack — database container, Django backend, Next.js frontend, browser —
+      comes up from a single launcher script, with the manual two-terminal path documented
+      underneath for when something needs to be taken apart. There is a troubleshooting section
+      written against the failures that actually occurred, including the one above.
+    </p>
+    <p>
+      That matters more than it sounds. A system nobody else can start is a system nobody else
+      can review, and an internal tool that only runs on its author's machine has a very short
+      useful life.
+    </p>
+
+    <h2>Where it sits in the wider system</h2>
+    <p>
+      The dashboard shares its field hierarchy with the PMUK target system and consumes that
+      system's exports, so a target set through the cascade engine and the performance measured
+      against it describe the same staff member, the same branch, and the same cycle. The
+      target system has a dedicated integration module for this boundary rather than the two
+      systems reaching into each other's tables.
+    </p>
+
+    <h2>Outcome</h2>
+    <p>
+      Delivered through the agent factory's full pipeline — code review, a three-round QA cycle,
+      then security, consistency and documentation stages before the final human approval gate.
+      Reporting that took manual assembly per cycle now runs as four scoped views and an export,
+      against data every tier is allowed to see exactly as much of as their role permits.
+    </p>
+
+    <div class="case-nav">
+      <a href="factory-agent-overlay.html">
+        <span class="k">Back to the start</span>
+        <span class="t">Multi-Agent Software Factory &rarr;</span>
+      </a>
+      <a href="editorials-study-assistant.html">
+        <span class="k">Previous</span>
+        <span class="t">&larr; Autonomous Exam-Study Intelligence Platform</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/site.js"></script>
+</body>
+</html>
