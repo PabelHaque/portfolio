@@ -43,7 +43,7 @@ window.PORTFOLIO = {
       summary: "A portable overlay that turns any codebase into a governed, 71-agent software delivery pipeline — four mandatory human approval gates, artifact verification agents cannot fake, and an adversarial critic that blocks work for being merely correct.",
       facts: [
         { k: "Agents", v: "71 specialists" },
-        { k: "Human gates", v: "4, mandatory" },
+        { k: "Stages", v: "38, 4 human-gated" },
         { k: "Playbooks", v: "20 workflows" }
       ],
       tags: ["Python", "Claude Agent SDK", "PowerShell", "Bash", "Pytest", "Governance hooks"],
