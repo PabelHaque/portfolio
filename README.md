@@ -12,7 +12,7 @@ role-aware analytics.
 
 | Project | What it is | Case study |
 |---|---|---|
-| **Multi-Agent Software Factory** | A portable overlay that turns any codebase into a governed 60-agent delivery pipeline — four mandatory human approval gates, artifact verification agents cannot fake, and an adversarial critic that blocks work for being merely correct. | [Read →](projects/factory-agent-overlay.html) |
+| **Multi-Agent Software Factory** | A portable overlay that turns any codebase into a governed 71-agent delivery pipeline — four mandatory human approval gates, artifact verification agents cannot fake, and an adversarial critic that blocks work for being merely correct. | [Read →](projects/factory-agent-overlay.html) |
 | **PMUK Target &amp; Budget Allocation System** | A weighted largest-remainder cascade that divides branch-level microfinance targets across 2,574 field staff in 409 branches — 17,962 targets per cycle, bit-identical on re-run. | [Read →](projects/pmuk-target-system.html) |
 | **Autonomous Exam-Study Intelligence Platform** | A crawler-to-classroom LLM pipeline: scores every article 0–100 for exam relevance through a deterministic taxonomy plus a model gate, and serves the survivors through an 18-page workspace. Runs on free-tier and local models by default. | [Read →](projects/editorials-study-assistant.html) |
 | **AK47 Performance &amp; Reporting Dashboard** | A role-aware operations dashboard for a five-tier field hierarchy — each tier sees exactly one level wider than the one below — plus the reporting suite that replaced manual scorecard assembly. | [Read →](projects/ak47-dashboard.html) |
@@ -59,12 +59,15 @@ without a server.
 
 ### Notes on the build
 
-- **Dark-first, light-aware.** Palette tokens are defined once on `:root` and redefined
-  under `prefers-color-scheme: light`.
+- **Dark, deliberately.** One palette, defined on `:root` in `site.css`. Type is Space
+  Grotesk / Inter / JetBrains Mono from Google Fonts, with system fallbacks.
+- **One signature moment.** The hero is a canvas field of points that lean away from the
+  cursor and light up around it (`initField` in `site.js`). It drifts on its own when there is
+  no pointer, pauses when scrolled off-screen, and renders as a static grid when the visitor
+  has `prefers-reduced-motion` set.
 - **Accessible by default.** Skip link, semantic landmarks, focus-visible outlines, labelled
-  figures, and every animation guarded behind `prefers-reduced-motion` — reveals are applied
-  as an enhancement, so with motion reduced the content is simply present rather than needing
-  a fallback.
+  figures, and every animation guarded behind `prefers-reduced-motion` — reveals, count-ups and
+  glyph pulses are enhancements, so with motion reduced the content is simply present.
 - **Responsive to ~320px.** Tables and wide figures scroll inside their own container; the
   page body never scrolls sideways.
 - **Private repos are never linked as browsable.** A project marked

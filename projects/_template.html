@@ -7,30 +7,36 @@
     2. Delete any section you do not need.
     3. Add a matching entry to assets/js/data.js (see ADDING-A-PROJECT.md).
 
-  The structure below is the one the other four case studies follow, and it is
-  the shape that works on a technical reader:
+  Shape that works on a technical reader:
       problem  ->  what you built  ->  ONE detail worth defending  ->  outcome
-  Keep "the detail I would defend" concrete: an algorithm, a race condition, a
-  schema decision, a bug you found and why it happened. Not adjectives.
+  Keep "the detail" concrete: an algorithm, a race condition, a schema decision,
+  a bug and why it happened. No adjectives, no generic process talk.
+
+  data-glyph options: pipeline | cascade | funnel | hierarchy | code
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>[[Project name]] — Pabel Haque</title>
-<meta name="description" content="[[One sentence, 150 chars or so: what it is and the most impressive true fact about it.]]">
-<meta name="color-scheme" content="dark light">
+<meta name="description" content="[[One sentence: what it is and the most impressive true fact about it.]]">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../assets/css/site.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0c10'/><circle cx='16' cy='16' r='6' fill='%23f0b46a'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307080b'/><circle cx='16' cy='16' r='6' fill='%23f5b76a'/></svg>">
 </head>
 <body>
 
-<header class="site-head">
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
   <div class="wrap">
     <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
     <nav class="nav" aria-label="Sections">
       <a href="../index.html#work">Work</a>
-      <a href="../index.html#stack">Stack</a>
+      <a href="../index.html#stack" class="hide-sm">Stack</a>
       <a href="../index.html#contact">Contact</a>
     </nav>
   </div>
@@ -39,20 +45,25 @@
 <main>
 
 <div class="case-head">
-  <div class="wrap narrow">
+  <div class="wrap">
     <a class="backlink" href="../index.html#work"><span>&larr;</span> All work</a>
-    <p class="eyebrow">Case study · [[Category]]</p>
-    <h1>[[Project name]]</h1>
-    <p class="lede">
-      [[Two or three sentences. Lead with the problem in the world, not the technology.
-      Include one number if you have one.]]
-    </p>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study [[05]] · [[Category]]</p>
+        <h1>[[Project name]]</h1>
+        <p class="lede">
+          [[Two or three sentences. Lead with the problem in the world, not the technology.
+          Include one number if you have one.]]
+        </p>
+      </div>
+      <div data-glyph="[[pipeline]]" aria-hidden="true"></div>
+    </div>
 
     <table class="meta-table">
       <tbody>
-        <tr><th>Role</th><td>[[e.g. Sole designer and builder]]</td></tr>
+        <tr><th>Role</th><td>[[Sole designer and builder]]</td></tr>
         <tr><th>Year</th><td>[[2026]]</td></tr>
-        <tr><th>Scale</th><td>[[users / records / throughput — delete if none]]</td></tr>
+        <tr><th>Scale</th><td>[[users / records / throughput — delete the row if none]]</td></tr>
         <tr><th>Stack</th><td>[[comma-separated]]</td></tr>
         <tr><th>Code</th><td>[[Public repository / Private repository — walkthrough available on request]]</td></tr>
       </tbody>
@@ -64,7 +75,7 @@
   <div class="wrap narrow">
 
     <h2>The problem</h2>
-    <p>[[What was broken or absent. Be specific about who was hurt by it and how.]]</p>
+    <p>[[What was broken or absent. Who was hurt by it and how.]]</p>
     <p>[[Why the obvious solution does not work — this is what makes the rest interesting.]]</p>
 
     <h2>What I built</h2>
@@ -74,25 +85,24 @@
       <li><strong>[[Component]]</strong> — [[what it does]].</li>
     </ul>
 
-    <!-- Optional: a stage/flow figure. Stages animate in on scroll.
-         Add class="gate" to a .stage for the highlighted treatment. -->
+    <!-- Optional flow figure. Stages animate in on scroll; class="gate" highlights one. -->
     <figure class="figure">
       <div class="pipeline" aria-label="[[describe the flow for screen readers]]">
-        <div class="stage"><span class="num">01</span><div><div class="name">[[Stage]]</div><div class="what">[[What happens here.]]</div></div></div>
-        <div class="stage gate"><span class="num">02</span><div><div class="name">[[Stage]] <span class="badge">[[label]]</span></div><div class="what">[[What happens here.]]</div></div></div>
-        <div class="stage"><span class="num">03</span><div><div class="name">[[Stage]]</div><div class="what">[[What happens here.]]</div></div></div>
+        <div class="stage"><span class="num">1</span><div><div class="name">[[Stage]]</div><div class="what">[[What happens here.]]</div></div></div>
+        <div class="stage gate"><span class="num">2</span><div><div class="name">[[Stage]] <span class="badge">[[label]]</span></div><div class="what">[[What happens here.]]</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">[[Stage]]</div><div class="what">[[What happens here.]]</div></div></div>
       </div>
-      <figcaption>[[One line explaining what the reader should take from the figure.]]</figcaption>
+      <figcaption>[[One line: what the reader should take from the figure.]]</figcaption>
     </figure>
 
     <h2>The detail I would defend in an interview</h2>
     <p class="plain"><strong>[[The one-line claim.]]</strong></p>
-    <p>[[Set up why it is hard. What goes wrong if you do it the easy way?]]</p>
+    <p>[[Why it is hard. What goes wrong if you do it the easy way?]]</p>
     <p>[[What you did, precisely enough that a reader could disagree with you.]]</p>
 
     <div class="callout">
       <span class="label">Why this matters</span>
-      [[The general principle, in two sentences. This is the part a recruiter forwards.]]
+      [[The general principle, two sentences. This is the part a recruiter forwards.]]
     </div>
 
     <!-- Optional table.
@@ -104,18 +114,17 @@
     </div>
     -->
 
-    <!-- Optional code / diagram block.
-    <pre>[[plain text, pre-formatted]]</pre>
+    <!-- Optional pre-formatted block.
+    <pre>[[plain text]]</pre>
     -->
 
     <h2>Outcome</h2>
-    <p>[[What is true now that was not true before. Numbers if you have them, plain
-    language if you do not. Do not inflate — an honest small number reads better
-    than an unverifiable big one.]]</p>
+    <p>[[What is true now that was not before. Numbers if you have them. An honest small
+    number reads better than an unverifiable big one.]]</p>
 
     <div class="case-nav">
       <a href="[[next-slug]].html">
-        <span class="k">Next case study</span>
+        <span class="k">Next · [[06]]</span>
         <span class="t">[[Next project name]] &rarr;</span>
       </a>
       <a href="../index.html#work">

@@ -4,19 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multi-Agent Software Factory — Pabel Haque</title>
-<meta name="description" content="A portable overlay that turns any codebase into a governed 60-agent delivery pipeline, with four mandatory human gates and artifact verification agents cannot fake.">
-<meta name="color-scheme" content="dark light">
+<meta name="description" content="A portable overlay that turns any codebase into a governed 71-agent delivery pipeline, with four mandatory human gates and artifact verification agents cannot fake.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../assets/css/site.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0c10'/><circle cx='16' cy='16' r='6' fill='%23f0b46a'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307080b'/><circle cx='16' cy='16' r='6' fill='%23f5b76a'/></svg>">
 </head>
 <body>
 
-<header class="site-head">
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
   <div class="wrap">
     <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
     <nav class="nav" aria-label="Sections">
       <a href="../index.html#work">Work</a>
-      <a href="../index.html#stack">Stack</a>
+      <a href="../index.html#stack" class="hide-sm">Stack</a>
       <a href="../index.html#contact">Contact</a>
     </nav>
   </div>
@@ -25,22 +30,27 @@
 <main>
 
 <div class="case-head">
-  <div class="wrap narrow">
+  <div class="wrap">
     <a class="backlink" href="../index.html#work"><span>&larr;</span> All work</a>
-    <p class="eyebrow">Case study · AI orchestration &amp; platform</p>
-    <h1>Multi-Agent Software Factory</h1>
-    <p class="lede">
-      A drop-in overlay that converts any codebase into a governed software delivery pipeline
-      run by 60 specialist agents — with four human approval gates that cannot be skipped, an
-      adversarial critic that rejects work for being merely correct, and a verification rule
-      that stops an agent from claiming a stage is finished when nothing was written to disk.
-    </p>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 01 · AI orchestration &amp; platform</p>
+        <h1>Multi-Agent Software Factory</h1>
+        <p class="lede">
+          A drop-in overlay that converts any codebase into a governed delivery pipeline run by
+          71 specialist agents — with four human approval gates that cannot be skipped, an
+          adversarial critic that rejects work for being merely correct, and a rule that stops an
+          agent from claiming a stage is finished when nothing was written to disk.
+        </p>
+      </div>
+      <div data-glyph="pipeline" aria-hidden="true"></div>
+    </div>
 
     <table class="meta-table">
       <tbody>
         <tr><th>Role</th><td>Sole designer and builder</td></tr>
         <tr><th>Year</th><td>2026 · actively maintained</td></tr>
-        <tr><th>Scale</th><td>60 specialist agents · 20 workflow playbooks · 4 mandatory gates</td></tr>
+        <tr><th>Scale</th><td>71 specialist agents · 20 workflow playbooks · 4 mandatory gates</td></tr>
         <tr><th>Stack</th><td>Python, Claude Agent SDK, PowerShell, Bash, Pytest, JSON-manifest plugin packaging</td></tr>
         <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
       </tbody>
@@ -53,117 +63,101 @@
 
     <h2>The problem</h2>
     <p>
-      Coding agents are fast and unreliable in a specific way: they will happily report that a
-      stage is complete when nothing was produced, take a shortcut past the part of the work
-      that needed judgement, and treat an unanswered question as permission to continue. Used
-      ad hoc, the output looks plausible and the review burden lands entirely on the human —
-      which is exactly the work you were trying to reduce.
+      Coding agents fail in a specific way: they report a stage complete when nothing was
+      produced, shortcut the part of the work that needed judgement, and treat an unanswered
+      question as permission to continue. Used ad hoc, the output looks plausible and the whole
+      review burden lands back on the human.
     </p>
-    <p>
-      I wanted the opposite arrangement: <strong>the agents do the volume, the process does the
-      enforcing, and the human keeps the decisions that matter.</strong> Not a prompt library —
-      a pipeline with teeth.
-    </p>
+    <p class="plain"><strong>The agents do the volume, the process does the enforcing, the human keeps the decisions.</strong></p>
 
     <h2>What I built</h2>
     <p>
-      A portable overlay. You point it at an existing project, it installs a governance layer
-      alongside your source — it never modifies the code it is installed into — and from that
+      A portable overlay. Point it at an existing project and it installs a governance layer
+      alongside the source — never modifying the code it is installed into — and from that
       point the project has a structured delivery pipeline instead of an open chat window.
     </p>
     <ul>
-      <li><strong>60 specialist agents</strong> covering requirements, architecture, design, build, QA, security, documentation, deployment and business intelligence — including a six-agent technology-decision sub-pipeline that scores stack options against alternatives rather than defaulting to whatever is fashionable.</li>
-      <li><strong>20 workflow playbooks</strong> for the shapes work actually arrives in: bug fix, hotfix, schema change, data migration, security incident, UI enhancement, documentation-only, consulting engagement, new-system incubation, and a deliberate <code>cosmetic_fast_path</code> so a one-line CSS change does not have to walk the full pipeline.</li>
-      <li><strong>Four mandatory human gates</strong> — CLARIFY, REQ, Mockup and PR.</li>
-      <li><strong>An adversarial critic</strong> that issues a pass/revise verdict and blocks the pipeline on revise.</li>
-      <li><strong>A write-guard hook</strong> at the harness level protecting registries, agent definitions, approved requirements and secrets from being edited by the agents themselves.</li>
+      <li><strong>71 specialist agents</strong> across requirements, architecture, design, build, QA, security, documentation, deployment and business intelligence — including a six-agent technology-decision sub-pipeline that scores stack options against alternatives.</li>
+      <li><strong>20 workflow playbooks</strong> for the shapes work actually arrives in: bug fix, hotfix, schema change, data migration, security incident, consulting engagement, new-system incubation — and a deliberate <code>cosmetic_fast_path</code> so a one-line CSS change does not walk the full pipeline.</li>
+      <li><strong>Four mandatory human gates</strong> — CLARIFY, REQ, Mockup, PR.</li>
+      <li><strong>An adversarial critic</strong> whose revise verdict blocks the pipeline.</li>
+      <li><strong>A harness-level write-guard hook</strong> protecting registries, agent definitions, approved requirements and secrets from the agents themselves.</li>
     </ul>
 
     <h2 id="pipeline">The pipeline, and where it stops</h2>
     <p>
-      The interesting part is not the number of stages — it is the four places the pipeline
-      hands control back to a person and refuses to continue without an answer.
+      The number of stages is not the interesting part. The four places it hands control back
+      to a person and refuses to continue without an answer are.
     </p>
 
     <figure class="figure">
       <div class="pipeline" aria-label="Delivery pipeline stages, with the four human approval gates marked">
-        <div class="stage"><span class="num">01</span><div><div class="name">Triage intake</div><div class="what">Classify the request into one of the 20 workflow shapes before any work starts.</div></div></div>
-        <div class="stage gate"><span class="num">02</span><div><div class="name">Clarify <span class="badge">Human gate</span></div><div class="what">Ambiguity is surfaced as questions and the pipeline waits. Silence is not approval.</div></div></div>
-        <div class="stage"><span class="num">03</span><div><div class="name">Requirement intake</div><div class="what">Produce a cited, decision-ready requirement document — not a restated prompt.</div></div></div>
-        <div class="stage gate"><span class="num">04</span><div><div class="name">Requirement approval <span class="badge">Human gate</span></div><div class="what">You approve the scope before a single design decision is made against it.</div></div></div>
-        <div class="stage"><span class="num">05</span><div><div class="name">Technology decision</div><div class="what">Six agents — analyzer, scout, judge, design-system, planner, risk reviewer — score options and record the choice.</div></div></div>
-        <div class="stage"><span class="num">06</span><div><div class="name">Mockups</div><div class="what">Three structurally different directions, not three colourways of one idea.</div></div></div>
-        <div class="stage gate"><span class="num">07</span><div><div class="name">Mockup approval <span class="badge">Human gate</span></div><div class="what">You pick the direction. Build cannot proceed on an unapproved shape.</div></div></div>
-        <div class="stage"><span class="num">08</span><div><div class="name">Build</div><div class="what">Implementation against the approved requirement and the recorded stack decision.</div></div></div>
-        <div class="stage"><span class="num">09</span><div><div class="name">Critic review</div><div class="what">Adversarial pass. A revise verdict blocks the pipeline until the work is redone.</div></div></div>
+        <div class="stage"><span class="num">1</span><div><div class="name">Triage intake</div><div class="what">Classify the request into one of the 20 workflow shapes before any work starts.</div></div></div>
+        <div class="stage gate"><span class="num">2</span><div><div class="name">Clarify <span class="badge">Human gate</span></div><div class="what">Ambiguity becomes questions and the pipeline waits. Silence is not approval.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Requirement intake</div><div class="what">A cited, decision-ready requirement document — not a restated prompt.</div></div></div>
+        <div class="stage gate"><span class="num">4</span><div><div class="name">Requirement approval <span class="badge">Human gate</span></div><div class="what">Scope is approved before a single design decision is made against it.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Technology decision</div><div class="what">Analyzer, scout, judge, design-system, planner, risk reviewer — six agents score options and record the choice.</div></div></div>
+        <div class="stage"><span class="num">6</span><div><div class="name">Mockups</div><div class="what">Three structurally different directions, not three colourways of one idea.</div></div></div>
+        <div class="stage gate"><span class="num">7</span><div><div class="name">Mockup approval <span class="badge">Human gate</span></div><div class="what">You pick the direction. Build cannot proceed on an unapproved shape.</div></div></div>
+        <div class="stage"><span class="num">8</span><div><div class="name">Build</div><div class="what">Implementation against the approved requirement and the recorded stack decision.</div></div></div>
+        <div class="stage"><span class="num">9</span><div><div class="name">Critic review</div><div class="what">Adversarial pass. A revise verdict blocks the pipeline until the work is redone.</div></div></div>
         <div class="stage"><span class="num">10</span><div><div class="name">QA · security · consistency · docs</div><div class="what">Each stage must leave a physical artifact that passes its own self-check.</div></div></div>
         <div class="stage gate"><span class="num">11</span><div><div class="name">Pull-request approval <span class="badge">Human gate</span></div><div class="what">The last word is yours, on a diff that has already survived everything above.</div></div></div>
       </div>
-      <figcaption>
-        The four gates are the design. Everything between them is parallelisable; the gates are not.
-      </figcaption>
+      <figcaption>The four gates are the design. Everything between them is parallelisable; the gates are not.</figcaption>
     </figure>
 
     <h2>The detail I would defend in an interview</h2>
     <p class="plain"><strong>Artifact verification — agents cannot mark their own homework.</strong></p>
     <p>
-      The failure mode that makes agent pipelines untrustworthy is the confident false
-      completion: a stage reports success, the next stage builds on nothing, and the error only
-      surfaces four stages later when the context that would explain it is gone.
+      The confident false completion is what makes agent pipelines untrustworthy: a stage
+      reports success, the next stage builds on nothing, and the error surfaces four stages
+      later when the context that would explain it is gone.
     </p>
     <p>
-      So stage completion is not a claim an agent is allowed to make. A stage is complete when
-      a physical file exists at the expected path <em>and</em> passes a self-check for that
-      artifact type. No file, no completion — regardless of what the agent reports. This moves
-      the integrity check from the model's judgement, where it is unreliable, to the filesystem,
-      where it is not.
+      So stage completion is not a claim an agent is allowed to make. A stage is complete when a
+      physical file exists at the expected path <em>and</em> passes a self-check for that
+      artifact type. No file, no completion — regardless of what the agent reports. The
+      integrity check moves from the model's judgement, where it is unreliable, to the
+      filesystem, where it is not.
     </p>
 
     <div class="callout">
-      <span class="label">Why this matters</span>
-      It is the difference between a pipeline that <em>describes</em> a quality process and one
-      that <em>is</em> one. The same reasoning drives the write-guard hook: if an agent could
-      edit the registry that defines the rules it is judged against, the rules would be
-      advisory. It cannot, so they are not.
+      <span class="label">Same principle, applied to the rules</span>
+      If an agent could edit the registry that defines the rules it is judged against, the rules
+      would be advisory. The write-guard hook means it cannot, so they are not.
     </div>
 
-    <h3>Two more decisions worth naming</h3>
+    <h3>Two more decisions</h3>
     <ul>
-      <li><strong>Business rules and KPIs live in a registry, never in code.</strong> A formula duplicated across a backend, a report and a dashboard drifts. One definition, referenced everywhere, and changing it is a governed action.</li>
+      <li><strong>Business rules and KPIs live in a registry, never in code.</strong> A formula duplicated across a backend, a report and a dashboard drifts. One definition, referenced everywhere; changing it is a governed action.</li>
       <li><strong>Agent updates are themselves a governed workflow.</strong> Changing an agent needs a proposal, human approval, regression tests and a rollback path — the <code>update_agents</code> and <code>sharpen_agents</code> playbooks. The system that enforces process on your code is held to the same process.</li>
     </ul>
 
-    <h2>Engineering the portability</h2>
+    <h2>Portability</h2>
     <p>
-      An overlay is only useful if installing it is boring. It ships with parallel
-      PowerShell and Bash installers plus matching verifiers, has no npm or pip install
-      step of its own, and creates only directories and stub files. Alongside that there is a
-      packaging script that assembles a Claude Code plugin distribution from the live agent,
-      skill and hook directories — read-only sources, never mutated — with a dry-run mode that
-      reports what it <em>would</em> write before it writes anything.
-    </p>
-    <p>
-      It runs on Windows and Unix, and there is a one-command setup path for moving the whole
-      working environment to a new machine. That was not gold-plating: portability is what
-      makes the thing an overlay rather than a bespoke configuration of one laptop.
+      Parallel PowerShell and Bash installers with matching verifiers; no npm or pip install
+      step of its own; creates only directories and stub files. A packaging script assembles a
+      Claude Code plugin distribution from the live agent, skill and hook directories —
+      read-only sources — with a dry-run mode that reports what it <em>would</em> write before
+      writing anything. One-command setup for a new machine, Windows or Unix.
     </p>
 
     <h2>Outcome</h2>
     <p>
-      The overlay is installed in and drives the three other systems in this portfolio. The
-      PMUK allocation engine, the reporting dashboard and the study platform were all built
-      through it — which is the honest measure of whether it works: it is not a demo of a
-      process, it is the process the rest of this work was produced by.
+      The overlay drives the three other systems in this portfolio. The PMUK allocation engine,
+      the reporting dashboard and the study platform were all built through it — it is not a
+      demo of a process, it is the process the rest of this work was produced by.
     </p>
 
     <div class="case-nav">
       <a href="pmuk-target-system.html">
-        <span class="k">Next case study</span>
-        <span class="t">PMUK Field-Staff Target &amp; Budget Allocation System &rarr;</span>
+        <span class="k">Next · 02</span>
+        <span class="t">PMUK Target &amp; Budget Allocation System &rarr;</span>
       </a>
       <a href="../index.html#work">
         <span class="k">Index</span>
-        <span class="t">All four systems</span>
+        <span class="t">All work</span>
       </a>
     </div>
 

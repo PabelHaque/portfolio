@@ -16,6 +16,7 @@ Open [`assets/js/data.js`](assets/js/data.js) and add an entry to the `projects`
   title: "My New Thing",
   kicker: "Category · discipline",
   year: "2026",
+  glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | code
   summary: "Two sentences. Lead with the problem, not the tech. One number if you have one.",
   facts: [
     { k: "Scale",  v: "12k records/day" },
@@ -37,6 +38,7 @@ What each field does:
 | `visibility: "private"` | Card shows *"Private repo — walkthrough on request"* and does **not** link to a URL a recruiter would hit a 404 on. |
 | `facts` | The mono line under the summary. Keep to 2–3; they should be checkable. |
 | `tags` | The pill row. Real technologies only. |
+| `glyph` | The SVG mark on the card's right. `pipeline` (flow with gates), `cascade` (tree into bars), `funnel` (filter), `hierarchy` (tiers), `code` (generic). To add a new one, add an entry to `GLYPHS` in `assets/js/site.js`. |
 
 Only `slug`, `title`, `summary` and `visibility` are strictly required.
 
@@ -77,6 +79,8 @@ All defined in [`assets/css/site.css`](assets/css/site.css) — no classes to in
 - `.figure` + `.pipeline` + `.stage` — a numbered flow that animates in on scroll. Add
   `class="gate"` to a stage for the accent treatment, and a `<span class="badge">` for a
   short label.
+- `<div data-glyph="cascade">` — drops in one of the SVG marks (same keys as the `glyph`
+  field). Used in the case-study header; works anywhere.
 - `.table-scroll` wrapping `.data-table` — a table that scrolls sideways on a phone
   instead of breaking the layout.
 - `<pre>` — plain pre-formatted text (ASCII diagrams, command sequences).
@@ -89,8 +93,9 @@ All defined in [`assets/css/site.css`](assets/css/site.css) — no classes to in
 | Name, location, contact links | `profile` in `assets/js/data.js` |
 | The four headline numbers | `stats` in `assets/js/data.js` |
 | Stack lists | `skills` in `assets/js/data.js` |
-| Hero headline, "How I work", section copy | `index.html` — plain HTML |
+| Hero headline, section headings, contact copy | `index.html` — plain HTML |
 | Colours, spacing, type | the `:root` variables at the top of `assets/css/site.css` |
+| Hero field density / push / glow | `GAP`, `PUSH`, `R` constants in `initField`, `assets/js/site.js` |
 
 ### Testing before you push
 
