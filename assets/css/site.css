@@ -258,6 +258,9 @@ p code, li code, td code {
   .ctrl .hintk { display: none; }
   .map { display: none; }
   .fnode { width: 130px; height: 130px; margin: -65px 0 0 -65px; }
+  /* four labels must share ~375px: wrap them narrow and small */
+  .fnode .tag { white-space: normal; width: 92px; font-size: .54rem; letter-spacing: .1em; padding: 3px 6px; top: calc(50% + 22px); line-height: 1.3; }
+  .fnode .tag b { font-size: .68rem; margin-top: 2px; line-height: 1.15; }
 }
 
 /* ============================================================
