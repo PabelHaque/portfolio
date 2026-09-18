@@ -162,10 +162,15 @@
           ? '<span class="readmore">View on GitHub <span class="arrow">&rarr;</span></span>'
           : "");
 
+    var principle = p.principle
+      ? '<p class="principle"><span class="k">The rule it keeps</span><span class="v">' + esc(p.principle) + "</span></p>"
+      : "";
+
     return '<span class="idx">' + pad(i + 1) + "</span>" +
            "<div>" +
              '<span class="kicker">' + esc(p.kicker || "") + (p.year ? " &middot; " + esc(p.year) : "") + "</span>" +
              "<h3>" + esc(p.title) + "</h3>" +
+             principle +
              '<p class="summary">' + esc(p.summary) + "</p>" +
              (facts ? '<div class="card-facts">' + facts + "</div>" : "") +
              (tags ? '<div class="tags">' + tags + "</div>" : "") +
@@ -190,7 +195,40 @@
       mount.appendChild(node);
     });
     var c = document.getElementById("project-count");
-    if (c) c.textContent = pad((D.projects || []).length) + " projects";
+    if (c) c.textContent = pad((D.projects || []).length) + " systems";
+  }
+
+  /* ---------- rotating headline ---------- */
+
+  function initRotator() {
+    var word = document.getElementById("rot-word");
+    var phrases = (D.hero && D.hero.phrases) || [];
+    if (!word || phrases.length < 2) return;
+    word.textContent = phrases[0];
+    if (REDUCED) return;
+
+    var i = 0, paused = false, HOLD = 2600, SWAP = 380;
+    var hero = word.closest(".hero");
+    if (hero) {
+      hero.addEventListener("pointerenter", function () { paused = true; });
+      hero.addEventListener("pointerleave", function () { paused = false; });
+    }
+
+    // The phrase sits on its own headline line (after a <br>), so a width
+    // change never reflows the line above it — no width reservation needed.
+    function tick() {
+      if (paused || document.hidden) return;
+      word.classList.add("out");
+      setTimeout(function () {
+        i = (i + 1) % phrases.length;
+        word.textContent = phrases[i];
+        word.classList.remove("out");
+        word.classList.add("pre");
+        // force a frame so the "pre" state paints before we animate in
+        requestAnimationFrame(function () { requestAnimationFrame(function () { word.classList.remove("pre"); }); });
+      }, SWAP);
+    }
+    setInterval(tick, HOLD + SWAP);
   }
 
   /* ---------- stack ---------- */
@@ -425,6 +463,7 @@
     var canvas = document.querySelector(".hero canvas");
     if (canvas) initField(canvas);
 
+    initRotator();
     initReveal();
     initSpotlight();
     initScrollChrome();

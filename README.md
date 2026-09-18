@@ -2,9 +2,10 @@
 
 **Live site → https://pabel64.github.io/portfolio/**
 
-Digital transformation, systems and data. Four production systems, each with a full case
-study: agent orchestration, a deterministic allocation engine, an LLM scoring pipeline, and
-role-aware analytics.
+Systems that wait for a human, refuse to guess, won't overspend, and know who's asking.
+Four production systems — a 71-agent AI delivery pipeline, a deterministic allocation engine,
+an LLM study platform, and role-scoped analytics — each with a full case study built around
+the one rule it refuses to break.
 
 ---
 
