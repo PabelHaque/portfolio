@@ -136,13 +136,25 @@
       if (camRect) { var s = size(); camRect.setAttribute("x", -cx / sc); camRect.setAttribute("y", -cy / sc); camRect.setAttribute("width", s.w / sc); camRect.setAttribute("height", s.h / sc); }
     }
     function overview() {
+      // Fit the world into the space the intro text is NOT using — measured, not guessed.
+      // Narrow: the intro sits at the bottom, the world takes the room above it; if the window is
+      // short, the field grows so both fit. Wide: the world takes the room right of the intro.
+      var HEAD = 84, NODES_MIN = 300;
       var s = size();
-      // The intro owns the left 44% on desktop (the world fits the right 56%); on a phone the
-      // intro sits at the bottom and the world takes the top 40%. Nothing overlaps either way.
-      // labels are a fixed ~140px on screen, so a narrow layout reserves that much at each edge
-      var inset = s.narrow ? 76 : 0;
-      var rx = s.narrow ? inset : s.w * .44, rw = s.narrow ? s.w - inset * 2 : s.w * .56;
-      var ry = s.narrow ? s.h * .10 : s.h * .12, rh = s.narrow ? s.h * .36 : s.h * .72;
+      field.style.minHeight = "";
+      var fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
+      var rx, rw, ry, rh;
+      if (s.narrow) {
+        var need = HEAD + NODES_MIN + 24 + ir.height + 150;
+        if (need > s.h) { field.style.minHeight = Math.ceil(need) + "px"; s = size(); fr = world.getBoundingClientRect(); ir = intro.getBoundingClientRect(); }
+        var inset = 72; // labels are a fixed ~140px on screen; keep them inside the edges
+        rx = inset; rw = s.w - inset * 2;
+        ry = HEAD; rh = Math.max(160, (ir.top - fr.top) - 24 - HEAD);
+      } else {
+        var left = (ir.right - fr.left) + 32;
+        rx = left; rw = Math.max(240, s.w - left - 48);
+        ry = HEAD; rh = Math.max(200, s.h - HEAD - 130);
+      }
       // fit the nodes' own bounding box (plus room for labels) into that region, not the whole world
       var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 300, padY = 320;
       var bx = Math.min.apply(null, xs) - padX, by = Math.min.apply(null, ys) - padY;
