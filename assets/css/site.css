@@ -197,8 +197,9 @@ p code, li code, td code {
   transition: opacity .5s, transform .5s;
 }
 .intro.hide { opacity: 0; transform: translateY(12px); pointer-events: none; }
-.intro h1 { text-wrap: balance; margin-bottom: 14px; }
-.intro .lede { max-width: 46ch; }
+/* scale with height as well as width, so a short window never gets a 58px headline */
+.intro h1 { text-wrap: balance; margin-bottom: 14px; font-size: clamp(1.7rem, min(4.6vw, 7.5svh), 3.6rem); }
+.intro .lede { max-width: 46ch; font-size: clamp(.95rem, min(1.8vw, 2.8svh), 1.2rem); }
 
 .panel {
   position: absolute; right: var(--gutter); top: 50%; transform: translate(24px, -50%);
@@ -247,21 +248,28 @@ p code, li code, td code {
 .map circle { fill: var(--faint); } .map circle.on { fill: var(--accent-2); }
 .map rect { fill: none; stroke: var(--accent); stroke-width: 1.2; transition: all 1.1s cubic-bezier(.2,.8,.2,1); }
 
-@media (max-width: 900px) {
-  .intro { left: 16px; right: 16px; bottom: 150px; max-width: none; }
-  .intro h1 { font-size: clamp(1.5rem, 7vw, 2.2rem); }
-  .intro .lede { font-size: .95rem; }
-  .panel { right: 16px; left: 16px; top: auto; bottom: 96px; width: auto; transform: translate(0, 24px); max-height: calc(100% - var(--head-h) - 130px); }
-  .panel.on { transform: translate(0, 0); }
-  .panel p { display: none; }
-  .ctrl { left: 16px; bottom: 30px; }
-  .ctrl .hintk { display: none; }
-  .map { display: none; }
-  .fnode { width: 130px; height: 130px; margin: -65px 0 0 -65px; }
-  /* four labels must share ~375px: wrap them narrow and small */
-  .fnode .tag { white-space: normal; width: 92px; font-size: .54rem; letter-spacing: .1em; padding: 3px 6px; top: calc(50% + 22px); line-height: 1.3; }
-  .fnode .tag b { font-size: .68rem; margin-top: 2px; line-height: 1.15; }
-}
+/* ---- layout modes, set by the script from MEASURED room, not from width alone ----
+   .stacked  — intro at the bottom, nodes above it (phones, and any window where the room
+               beside the intro is too small or too short); the field grows if needed
+   .compact  — nodes are close on screen: labels wrap narrow and small
+   .tiny     — nodes are very close: labels show only "System 0N"                        */
+.field.stacked .intro { left: var(--gutter); right: var(--gutter); bottom: 150px; max-width: none; }
+.field.stacked .intro h1 { font-size: clamp(1.5rem, min(7vw, 6.5svh), 2.2rem); }
+.field.stacked .intro .lede { font-size: .95rem; }
+.field.stacked .panel { right: var(--gutter); left: var(--gutter); top: auto; bottom: 96px; width: auto; transform: translate(0, 24px); max-height: calc(100% - var(--head-h) - 130px); }
+.field.stacked .panel.on { transform: translate(0, 0); }
+.field.stacked .panel p { display: none; }
+.field.stacked .ctrl { bottom: 30px; }
+.field.stacked .ctrl .hintk { display: none; }
+.field.stacked .map { display: none; }
+.field.stacked .fnode { width: 130px; height: 130px; margin: -65px 0 0 -65px; }
+
+.field.compact .fnode .tag { white-space: normal; width: 92px; font-size: .54rem; letter-spacing: .1em; padding: 3px 6px; top: calc(50% + 22px); line-height: 1.3; }
+.field.compact .fnode .tag b { font-size: .68rem; margin-top: 2px; line-height: 1.15; }
+.field.tiny .fnode .tag { width: auto; white-space: nowrap; }
+.field.tiny .fnode .tag b { display: none; }
+
+@media (max-width: 520px) { .field .intro, .field.stacked .intro, .field.stacked .panel { left: 16px; right: 16px; } .field .ctrl { left: 16px; } }
 
 /* ============================================================
    THE GATES — one pinned section per system

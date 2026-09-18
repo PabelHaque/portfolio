@@ -137,36 +137,45 @@
     }
     function overview() {
       // Fit the world into the space the intro text is NOT using — measured, not guessed.
-      // Narrow: the intro sits at the bottom, the world takes the room above it; if the window is
-      // short, the field grows so both fit. Wide: the world takes the room right of the intro.
+      // Side-by-side when there is real room to the right of the intro; otherwise stacked
+      // (intro at the bottom, nodes above), growing the field if the window is short.
       var HEAD = 84, NODES_MIN = 300;
-      var s = size();
+      field.classList.remove("stacked", "compact", "tiny");
       field.style.minHeight = "";
-      var fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
+      var s = size(), fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
+      var left = (ir.right - fr.left) + 32, sideW = s.w - left - 48, sideH = s.h - HEAD - 130;
+      var stacked = s.narrow || sideW < 480 || sideH < 240;
       var rx, rw, ry, rh;
-      if (s.narrow) {
+      if (stacked) {
+        field.classList.add("stacked");
+        s = size(); fr = world.getBoundingClientRect(); ir = intro.getBoundingClientRect();
         var need = HEAD + NODES_MIN + 24 + ir.height + 150;
         if (need > s.h) { field.style.minHeight = Math.ceil(need) + "px"; s = size(); fr = world.getBoundingClientRect(); ir = intro.getBoundingClientRect(); }
-        var inset = 72; // labels are a fixed ~140px on screen; keep them inside the edges
+        var inset = 72; // keep fixed-size labels inside the edges
         rx = inset; rw = s.w - inset * 2;
         ry = HEAD; rh = Math.max(160, (ir.top - fr.top) - 24 - HEAD);
       } else {
-        var left = (ir.right - fr.left) + 32;
-        rx = left; rw = Math.max(240, s.w - left - 48);
-        ry = HEAD; rh = Math.max(200, s.h - HEAD - 130);
+        rx = left; rw = sideW; ry = HEAD; rh = sideH;
       }
       // fit the nodes' own bounding box (plus room for labels) into that region, not the whole world
       var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 300, padY = 320;
       var bx = Math.min.apply(null, xs) - padX, by = Math.min.apply(null, ys) - padY;
       var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + padX * 2, bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + padY * 2;
       sc = Math.min(rw / bw, rh / bh);
-      cx = rx + (rw - bw * sc) / 2 - bx * sc; cy = ry + (rh - bh * sc) / 2 - by * sc; apply();
+      cx = rx + (rw - bw * sc) / 2 - bx * sc; cy = ry + (rh - bh * sc) / 2 - by * sc;
+      // label density: how close do the two nearest nodes land on screen?
+      var minD = Infinity;
+      for (var a = 0; a < pos.length; a++) for (var b = a + 1; b < pos.length; b++) minD = Math.min(minD, Math.hypot((pos[a][0] - pos[b][0]) * sc, (pos[a][1] - pos[b][1]) * sc));
+      if (minD < 215) field.classList.add("compact");
+      if (minD < 118) field.classList.add("tiny");
+      apply();
       cur = -1; panel.classList.remove("on"); intro.classList.remove("hide"); if (posEl) posEl.textContent = "Overview · " + P.length + " systems";
       nodes.forEach(function (n) { n.classList.remove("on"); }); mapDots.forEach(function (d) { d.classList.remove("on"); }); paths.forEach(function (l) { l.classList.remove("lit"); });
     }
     function go(i) {
-      var p = P[i], s = size(); cur = i; sc = s.narrow ? 1.1 : 1.5;
-      var offX = s.narrow ? 0 : -s.w * .17, offY = s.narrow ? -s.h * .2 : 0;
+      var p = P[i], s = size(), st = field.classList.contains("stacked"); cur = i; sc = st ? 1.1 : 1.5;
+      field.classList.remove("compact", "tiny"); // zoomed in, labels have room
+      var offX = st ? 0 : -s.w * .17, offY = st ? -s.h * .2 : 0;
       cx = s.w / 2 - pos[i][0] * sc + offX; cy = s.h / 2 - pos[i][1] * sc + offY; apply();
       intro.classList.add("hide"); if (posEl) posEl.textContent = "System " + pad(i + 1) + " · " + (p.kicker || "").split(" · ")[0];
       panel.querySelector("#p-ref").textContent = "System " + pad(i + 1);
@@ -433,7 +442,10 @@
     var count = document.getElementById("sys-count"); if (count) count.textContent = P.length + " systems";
 
     initField();
-    initGates();
+    // GSAP is loaded after this script so the field never waits on the CDN; the gates
+    // initialise once the page (and therefore GSAP, if it is coming) has loaded.
+    if (window.gsap && window.ScrollTrigger || document.readyState === "complete") initGates();
+    else window.addEventListener("load", initGates, { once: true });
     initReveal();
     initSpotlight();
     initScrollChrome();
