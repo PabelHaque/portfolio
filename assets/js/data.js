@@ -1,6 +1,6 @@
 /* ============================================================
    Portfolio content — this is the ONLY file you edit to add,
-   reorder, or retire a project on the home page.
+   reorder, or retire a project.
    See ADDING-A-PROJECT.md for the 3-step recipe.
    ============================================================ */
 
@@ -10,40 +10,25 @@ window.PORTFOLIO = {
     name: "Pabel Haque",
     role: "Digital Transformation · Systems & Data",
     location: "Bangladesh",
-    // Leave a field as "" to hide that row in the Contact section.
+    // Leave a field as "" to hide that row in the Contact gate.
     github: "https://github.com/pabel64",
     email: "",
     linkedin: "",
     resume: ""
   },
 
-  /* The hero reads "I build systems that / <phrase>." and cycles the
-     phrases. One per system, in the same order as the cards below. */
-  hero: {
-    phrases: [
-      "wait for a human.",
-      "refuse to guess.",
-      "won't overspend.",
-      "know who's asking."
-    ]
-  },
-
-  /* One headline number per system. Animated count-up; keep them to
-     things you can defend in an interview — every one is countable. */
-  stats: [
-    { n: "71",     label: "Agents, four human gates" },
-    { n: "17,962", label: "Targets per cycle, bit-identical" },
-    { n: "0",      label: "Paid API calls by default" },
-    { n: "5",      label: "Role tiers, each scoped" }
-  ],
-
   /* ---------------------------------------------------------
-     PROJECTS — order here is the order on the page.
+     PROJECTS — order here is the order of the gates and the
+     tour. Each project is a node in the field and a gate below.
      principle:  the one rule the system refuses to break (short)
+     stat:       the one number for this system — shown on the
+                 node panel and counted up in its gate
      glyph:      pipeline | cascade | funnel | hierarchy | code
      repo:       full URL, or "" if there is nothing to link
      visibility: "public" | "private"
-     page:       path to the case study, or "" for a card with no page
+     page:       path to the case study, or "" for no page
+     Node positions and connecting lines are computed — nothing
+     to lay out by hand.
      --------------------------------------------------------- */
   projects: [
     {
@@ -53,6 +38,7 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "pipeline",
       principle: "Waits for a human.",
+      stat: { n: "71", label: "specialist agents · 4 human gates" },
       summary: "Drop it into any codebase and the codebase gets a delivery pipeline: 71 specialist agents, 38 stages, and four approval gates where everything stops and waits for you. No agent can declare a stage done without leaving a file on disk that passes its own check, and a critic sends back work that is merely correct.",
       facts: [
         { k: "Agents", v: "71 specialists" },
@@ -71,6 +57,7 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "cascade",
       principle: "Refuses to guess.",
+      stat: { n: "17,962", label: "targets per cycle · bit-identical" },
       summary: "Turns a branch's microfinance targets into a fair share for each of 2,574 field officers, weighted by their own portfolio. The engine will not run on inputs it cannot order canonically and will not accept a metric without a declared direction — so the same cycle re-run gives the same 17,962 numbers, and each one can be explained to the officer who received it.",
       facts: [
         { k: "Scale", v: "2,574 staff · 409 branches" },
@@ -89,6 +76,7 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "funnel",
       principle: "Won't overspend.",
+      stat: { n: "0", label: "paid API calls · by default" },
       summary: "Reads the morning's op-eds and geopolitics coverage so exam candidates don't have to — scoring every article 0–100 against the syllabus, keeping the argument for why a foreign story matters in Bangladesh, and logging the rejects for audit. Routes across three model providers, free and local tiers first; paid calls stay off until someone turns them on.",
       facts: [
         { k: "Model routing", v: "3-provider fallback" },
@@ -107,6 +95,7 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "hierarchy",
       principle: "Knows who's asking.",
+      stat: { n: "5", label: "role tiers · each scoped" },
       summary: "One dashboard for a five-tier field hierarchy: a field officer sees their own figures, each manager sees one level wider, head office gets the whole network in the shape HR and payroll consume. Scoring configuration lives in a separate admin console, so a settings mistake and a data-access mistake can never share a click.",
       facts: [
         { k: "Role tiers", v: "5 + admin" },

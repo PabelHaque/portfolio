@@ -8,7 +8,9 @@ GitHub Pages redeploys in about a minute.
 ## 1. Add the card
 
 Open [`assets/js/data.js`](assets/js/data.js) and add an entry to the `projects` array.
-**Position in the array is position on the page** — put your strongest work first.
+**Position in the array is the order of the gates and the tour** — put your strongest
+work first. The project becomes a node in the field and a gate below it; node positions,
+connecting lines, the rail of locks and the tour all derive from the array.
 
 ```js
 {
@@ -17,6 +19,8 @@ Open [`assets/js/data.js`](assets/js/data.js) and add an entry to the `projects`
   kicker: "Category · discipline",
   year: "2026",
   glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | code
+  principle: "Never loses a record.",   // the one rule it refuses to break — short, ends with a period
+  stat: { n: "12,400", label: "records per day · reconciled" },   // the one number for this system
   summary: "Two sentences. Lead with the problem, not the tech. One number if you have one.",
   facts: [
     { k: "Scale",  v: "12k records/day" },
@@ -33,14 +37,18 @@ What each field does:
 
 | Field | Effect |
 |---|---|
-| `page` | If set, the whole card links to the case study. |
-| `repo` + `visibility: "public"` | If there is no `page`, the card links to GitHub instead. |
-| `visibility: "private"` | Card shows *"Private repo — walkthrough on request"* and does **not** link to a URL a recruiter would hit a 404 on. |
-| `facts` | The mono line under the summary. Keep to 2–3; they should be checkable. |
-| `tags` | The pill row. Real technologies only. |
-| `glyph` | The SVG mark on the card's right. `pipeline` (flow with gates), `cascade` (tree into bars), `funnel` (filter), `hierarchy` (tiers), `code` (generic). To add a new one, add an entry to `GLYPHS` in `assets/js/site.js`. |
+| `principle` | The node label in the field, the big headline of the gate, and the rail label. Same grammatical shape as the others: a short verb phrase, one period. |
+| `stat` | `{ n, label }`. Shown on the node panel and counted up inside the gate. `n` is a string so commas survive (`"17,962"`). |
+| `page` | "Read the case study" on the panel and in the gate. |
+| `repo` + `visibility: "public"` | Adds a "View the code" button in the gate. |
+| `visibility: "private"` | Gate shows *"Private repo — walkthrough on request"* and never links to a URL a recruiter would hit a 404 on. |
+| `tags` | The pill row inside the gate. Real technologies only. |
+| `glyph` | The SVG mark that draws itself in the gate: `pipeline`, `cascade`, `funnel`, `hierarchy`, `code`. To add a new one, add an entry to `GLYPHS` in `assets/js/site.js` — put `pathLength="1"` on any stroked path so it can animate. |
+| `facts` | Kept for the case-study header; not shown on the home page. |
 
-Only `slug`, `title`, `summary` and `visibility` are strictly required.
+Only `slug`, `title`, `principle`, `summary` and `visibility` are strictly required. Up to
+four projects use hand-placed node positions; five or more are distributed around an
+ellipse automatically.
 
 ## 2. Write the case study (optional but recommended)
 
@@ -91,17 +99,20 @@ All defined in [`assets/css/site.css`](assets/css/site.css) — no classes to in
 | What | Where |
 |---|---|
 | Name, location, contact links | `profile` in `assets/js/data.js` |
-| The four headline numbers | `stats` in `assets/js/data.js` |
-| Stack lists | `skills` in `assets/js/data.js` |
-| Hero headline, section headings, contact copy | `index.html` — plain HTML |
+| Stack lists (footer) | `skills` in `assets/js/data.js` |
+| Field intro headline, last-gate copy | `index.html` — plain HTML |
 | Colours, spacing, type | the `:root` variables at the top of `assets/css/site.css` |
-| Hero field density / push / glow | `GAP`, `PUSH`, `R` constants in `initField`, `assets/js/site.js` |
+| Field dot density / push / glow | `GAP`, `PUSH`, `R` constants in `initField`, `assets/js/site.js` |
+| Tour pace | the `4400` ms in `tourStep`, `assets/js/site.js` |
+| Gate scroll length | `end: "+=120%"` in `initGates`, `assets/js/site.js` |
 
 ### Testing before you push
 
 Open `index.html` in a browser directly — it works from the filesystem, because the
-content is a plain `<script>` file rather than a `fetch()`. Check it at phone width too
-(dev tools → device toolbar).
+content is a plain `<script>` file rather than a `fetch()`. GSAP loads from cdnjs; if it
+is blocked or offline, the gates still render with everything visible (the `static` body
+class), they just don't pin and animate. Check it at phone width too (dev tools → device
+toolbar) and with reduced motion on.
 
 ### Things worth keeping true
 
