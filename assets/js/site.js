@@ -125,16 +125,30 @@
 
     // camera
     var cx = 0, cy = 0, sc = 1, cur = -1;
-    function size() { return { w: world.clientWidth || 1, h: world.clientHeight || 1, narrow: (world.clientWidth || 1) < 760 }; }
+    function size() { return { w: world.clientWidth || 1, h: world.clientHeight || 1, narrow: (world.clientWidth || 1) < 900 }; }
     function apply() {
       cam.style.transform = "translate(" + cx + "px," + cy + "px) scale(" + sc + ")";
-      cam.style.setProperty("--inv", Math.min(2.6, 1 / sc).toFixed(3));
+      // nodes counter-scale (capped, so cores stay small); tags cancel the camera exactly, so
+      // a label is always its real CSS size whether zoomed out or in
+      var inv = Math.min(3.2, 1 / sc);
+      cam.style.setProperty("--inv", inv.toFixed(3));
+      cam.style.setProperty("--tag", (1 / sc / inv).toFixed(3));
       if (camRect) { var s = size(); camRect.setAttribute("x", -cx / sc); camRect.setAttribute("y", -cy / sc); camRect.setAttribute("width", s.w / sc); camRect.setAttribute("height", s.h / sc); }
     }
     function overview() {
-      var s = size(); sc = Math.min(s.w / W, s.h / H) * (s.narrow ? .86 : .9);
-      // sit the field a little right and up on desktop so the intro text has clear ground
-      cx = (s.w - W * sc) / 2 + (s.narrow ? 0 : s.w * .1); cy = (s.h - H * sc) / 2 - (s.narrow ? 70 : 30); apply();
+      var s = size();
+      // The intro owns the left 44% on desktop (the world fits the right 56%); on a phone the
+      // intro sits at the bottom and the world takes the top 40%. Nothing overlaps either way.
+      // labels are a fixed ~140px on screen, so a narrow layout reserves that much at each edge
+      var inset = s.narrow ? 76 : 0;
+      var rx = s.narrow ? inset : s.w * .44, rw = s.narrow ? s.w - inset * 2 : s.w * .56;
+      var ry = s.narrow ? s.h * .10 : s.h * .12, rh = s.narrow ? s.h * .36 : s.h * .72;
+      // fit the nodes' own bounding box (plus room for labels) into that region, not the whole world
+      var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 300, padY = 320;
+      var bx = Math.min.apply(null, xs) - padX, by = Math.min.apply(null, ys) - padY;
+      var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + padX * 2, bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + padY * 2;
+      sc = Math.min(rw / bw, rh / bh);
+      cx = rx + (rw - bw * sc) / 2 - bx * sc; cy = ry + (rh - bh * sc) / 2 - by * sc; apply();
       cur = -1; panel.classList.remove("on"); intro.classList.remove("hide"); if (posEl) posEl.textContent = "Overview · " + P.length + " systems";
       nodes.forEach(function (n) { n.classList.remove("on"); }); mapDots.forEach(function (d) { d.classList.remove("on"); }); paths.forEach(function (l) { l.classList.remove("lit"); });
     }
