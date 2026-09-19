@@ -10,6 +10,10 @@ rule it refuses to break.
 
 ---
 
+## Two parts
+
+The site is one journey in two parts. **Part I · Products & systems** holds the five things people use; **Part II · Analytics** holds the reports-and-analytics practice, which gets an in-depth dossier after its gate (the problem, before/after, capabilities, skills, impact). Each project declares its `part` in `assets/js/data.js`; every count on the page is derived from that.
+
 ## The work
 
 | Project | What it is | Case study |

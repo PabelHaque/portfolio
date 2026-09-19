@@ -17,10 +17,20 @@ window.PORTFOLIO = {
     resume: ""
   },
 
+  /* Two parts. Every project carries a `part`; the gates get a divider
+     where the part changes, and the field colours nodes by part. */
+  parts: {
+    systems:   { label: "Products & systems", numeral: "I",  blurb: "Things people use every day: a delivery pipeline, an allocation engine, a study platform, a dashboard, a tracker. Each one enforces a rule so nobody has to remember it." },
+    analytics: { label: "Analytics",          numeral: "II", blurb: "The practice behind them: turning one unwieldy monthly export into answers for regulators, finance, programme heads and donors — in minutes, not days." }
+  },
+
   /* ---------------------------------------------------------
      PROJECTS — order here is the order of the gates and the
      tour. Each project is a node in the field and a gate below.
+     part:       "systems" | "analytics" (groups the gates)
      principle:  the one rule the system refuses to break (short)
+     detail:     optional — an in-depth block rendered after the
+                 gate (pain, before/after, capabilities, impact)
      stat:       the one number for this system — shown on the
                  node panel and counted up in its gate
      glyph:      pipeline | cascade | funnel | hierarchy | code
@@ -33,6 +43,7 @@ window.PORTFOLIO = {
   projects: [
     {
       slug: "factory-agent-overlay",
+      part: "systems",
       title: "Multi-Agent Software Factory",
       kicker: "AI orchestration · platform",
       year: "2026",
@@ -52,6 +63,7 @@ window.PORTFOLIO = {
     },
     {
       slug: "pmuk-target-system",
+      part: "systems",
       title: "PMUK Field-Staff Target & Budget Allocation System",
       kicker: "Enterprise system · allocation engine",
       year: "2026",
@@ -71,6 +83,7 @@ window.PORTFOLIO = {
     },
     {
       slug: "editorials-study-assistant",
+      part: "systems",
       title: "Autonomous Exam-Study Intelligence Platform",
       kicker: "LLM pipeline · data engineering",
       year: "2026",
@@ -90,6 +103,7 @@ window.PORTFOLIO = {
     },
     {
       slug: "ak47-dashboard",
+      part: "systems",
       title: "AK47 Performance & Reporting Dashboard",
       kicker: "Analytics · full-stack",
       year: "2026",
@@ -109,6 +123,7 @@ window.PORTFOLIO = {
     },
     {
       slug: "padakhep-rebate-automation",
+      part: "systems",
       title: "Special-Permission Tracking & Microzen Validation",
       kicker: "Automation · data extraction",
       year: "2026",
@@ -128,18 +143,68 @@ window.PORTFOLIO = {
     },
     {
       slug: "reports-and-analytics",
+      part: "analytics",
       title: "Reports & Analytics",
       kicker: "Data analysis · pandas",
       year: "2023–2026",
       glyph: "report",
       principle: "Shows its working.",
       stat: { n: "73", label: "analyses · 27 months · one dataset" },
-      summary: "Twenty-seven months of answering regulators, finance, programme heads and donors from one monthly MIS export — 73 pandas notebooks in seven programmes, from regulatory classification schedules to portfolio-at-risk, month-to-month cohorts and cross-system validation. The reconciliation checks stay visible in the code, and a small shared library now defines each number once.",
+      summary: "Every month the MIS exports one file: around 800,000 rows by 90 columns, every member and every loan. Excel could barely hold it, and a single question meant a day of filtering, lookups and copying. For twenty-seven months I answered regulators, finance, programme heads and donors from that file with pandas instead — 73 notebooks in seven programmes, each one run in minutes and footed to the source before it left. The reconciliation checks stay in the code.",
       facts: [
+        { k: "Monthly export", v: "≈800,000 rows × 90 columns" },
         { k: "Notebooks", v: "73 kept of 104" },
-        { k: "Programmes", v: "7" },
-        { k: "Engine", v: "cmlib · 10 tests" }
+        { k: "Programmes", v: "7" }
       ],
+      /* The in-depth block rendered after this gate. Only Part II has one. */
+      detail: {
+        eyebrow: "Part II, in depth",
+        heading: "From a file Excel could not hold to answers in minutes.",
+        problem: [
+          "The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, around 800,000 rows by 90 columns, most of them headed in Bangla. It is the only complete picture of the loan book, and there was no reporting layer above it. So every question landed on a spreadsheet — the regulator's classification schedule, the bank's disbursement statement, which branches carry the overdue, which activities the loans fund.",
+          "Excel is the wrong tool at that size. The file sits near the row ceiling, opens slowly if at all, and a pivot or lookup across it can freeze the machine. It strips the leading zeros from member IDs the moment it opens them, reads the same date column four different ways depending on what touched the export last, and counts a member with three loans three times. Each answer took a day or more of filtering, lookups and copying between workbooks, and a wrong cell was invisible.",
+          "A notebook reads the same export in pandas, cleans it once — identifiers as text, four date formats parsed, headers stripped, money coerced — and answers the question in minutes, footed to the source file. Next month the same notebook runs on next month's export."
+        ],
+        file: { n: "≈800,000", l: "rows a month", n2: "90", l2: "columns", n3: "1", l3: "source of truth" },
+        beforeAfter: {
+          cols: ["The question", "In Excel", "In pandas"],
+          rows: [
+            ["Regulator's classification schedule — loans and savers by size, term, aging and sex, per branch", "Manual banding and one pivot per branch over several days; totals checked by hand.", "Bands, branch and sex in one grouped pass; every subtotal footed to the raw file automatically."],
+            ["Bank disbursement statement for finance", "Member rows copied into the bank's layout, branch by branch, every month.", "One run writes the statement in finance's layout — one workbook per zone, subtotals included."],
+            ["Portfolio at risk by zone, branch, product, activity, age band", "A separate pivot for every cut, and members with several loans counted more than once.", "One PAR function, unique members counted, any dimension on request."],
+            ["Month-to-month cohorts — disbursed in one month, overdue the next; overdue members given a new loan", "Practically impossible: two 800,000-row files side by side.", "Two months merged on member and loan ID with month prefixes; the cohort is a filter."],
+            ["Overdue-tracking packs for every zone", "A workbook per zone assembled by hand each month.", "Split into workbooks with subtotals in one step; every zone's pack in one run."]
+          ]
+        },
+        columns: [
+          { title: "Capabilities used", items: [
+            "<b>Cleaning at scale</b> — identifiers kept as text so leading zeros survive, four date formats parsed, headers stripped, money coerced",
+            "<b>Derived measures</b> — July–June fiscal year from the disbursement date, total savings across three accounts, days since last instalment",
+            "<b>Aggregation</b> — groupby, pivot and banded cuts over zone, branch, credit manager, product, activity and age, counting unique members not rows",
+            "<b>Reshaping</b> — members with several loans unstacked to one row; month-prefixed merges for cohorts and flows",
+            "<b>Taxonomy</b> — loan component to product family, activity to sector and agricultural sub-sector",
+            "<b>Reconciliation</b> — totals footed to the raw export; cross-system checks by joining the MIS database",
+            "<b>Delivery</b> — workbooks with subtotals split per zone or branch, charts for programme heads, an interactive ID filter for field visits"
+          ] },
+          { title: "Skills", items: [
+            "Python · pandas · NumPy",
+            "Data cleaning and validation on large exports",
+            "groupby · merge · pivot · pd.cut",
+            "Excel automation — xlsxwriter, openpyxl",
+            "SQL and cross-system joins — SQLAlchemy",
+            "Visualisation — matplotlib, plotly",
+            "Reproducibility — pytest, pre-commit, synthetic sample data",
+            "Domain: microfinance — portfolio at risk, regulatory schedules, fiscal-year reporting"
+          ] },
+          { title: "Impact", items: [
+            "<b>Minutes, not days.</b> A question that took a day of spreadsheet work is a notebook run.",
+            "<b>Answers that foot.</b> Every schedule reconciles to the raw export before it leaves.",
+            "<b>One definition per number.</b> PAR, fiscal year and total savings are defined once, in a tested library.",
+            "<b>Twenty-seven months</b> of regulator, finance, programme and donor questions answered from one dataset; 73 analyses kept.",
+            "<b>The groundwork for Part I.</b> The target-allocation engine and the reporting dashboard were built on this understanding of the data."
+          ] }
+        ]
+      },
       tags: ["Python", "pandas", "Jupyter", "xlsxwriter", "SQLAlchemy", "ipywidgets", "pytest"],
       page: "projects/reports-and-analytics.html",
       repo: "https://github.com/pabel64/reports-and-analytics",

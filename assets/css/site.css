@@ -367,6 +367,97 @@ a.contact-row:hover { border-color: var(--accent-2); background: var(--surface-2
 }
 @media (max-width: 520px) { .visual { grid-template-columns: 1fr; } }
 
+/* ============================================================
+   PARTS — Part I (products & systems, orange) and Part II
+   (analytics, violet). Nodes, locks, gates and dividers carry
+   data-part; the dossier is the in-depth block after a gate.
+   ============================================================ */
+
+/* field: analytics nodes are violet at rest, white when selected */
+.fnode[data-part="analytics"] .core { background: var(--accent-2); box-shadow: 0 0 30px var(--glow-v), 0 0 70px var(--glow-v); }
+.fnode[data-part="analytics"] .core::before { border-color: rgba(139,124,255,.5); }
+.fnode[data-part="analytics"] .core::after { border-color: rgba(255,122,26,.3); }
+.fnode[data-part="analytics"].on .core { background: var(--text); box-shadow: 0 0 34px var(--glow-v), 0 0 90px var(--glow-v); }
+.map circle[data-part="analytics"] { fill: rgba(139,124,255,.55); }
+.map circle[data-part="analytics"].on { fill: var(--text); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.legend span { display: inline-flex; align-items: center; gap: 9px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--glow-o); flex: 0 0 auto; }
+.legend .ana i { background: var(--accent-2); box-shadow: 0 0 10px var(--glow-v); }
+.legend b { color: var(--text); font-weight: 500; }
+.field.stacked .legend { margin-top: 12px; }
+@media (max-height: 540px) { .legend { display: none; } }
+
+/* rail: locks take their part's colour while opening */
+.lock[data-part="analytics"].opening { border-color: var(--accent-2); box-shadow: 0 0 0 4px rgba(139,124,255,.16); }
+.lock[data-part="analytics"].opening svg { stroke: var(--accent-2); }
+
+/* gates in Part II use the violet accent */
+.gate-section[data-part="analytics"] .ref { color: var(--accent-2); }
+.gate-section[data-part="analytics"] .ref::before { background: var(--accent-2); }
+.gate-section[data-part="analytics"] .glyph .a { stroke: var(--accent-2); }
+.gate-section[data-part="analytics"] .glyph .fa { fill: var(--accent-2); }
+
+/* part divider */
+.part-divider { position: relative; border-top: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+.part-divider > .wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(20px, 4vw, 48px); align-items: center; padding-block: clamp(64px, 12svh, 120px); }
+.part-divider .numeral { font-family: var(--display); font-weight: 700; font-size: clamp(4.5rem, 14vw, 11rem); line-height: .85; letter-spacing: -.04em; color: transparent; -webkit-text-stroke: 1px rgba(255,122,26,.45); user-select: none; }
+.part-divider[data-part="analytics"] .numeral { -webkit-text-stroke-color: rgba(139,124,255,.5); }
+.part-divider .ref { margin-bottom: .8rem; }
+.part-divider[data-part="analytics"] .ref { color: var(--accent-2); }
+.part-divider[data-part="analytics"] .ref::before { background: var(--accent-2); }
+.part-title { font-family: var(--display); font-weight: 700; font-size: clamp(1.6rem, 3.6vw, 2.8rem); line-height: 1.05; margin: 0 0 .8rem; letter-spacing: -.01em; }
+.part-blurb { color: var(--dim); max-width: 60ch; margin: 0; font-size: clamp(.95rem, 1.4vw, 1.08rem); line-height: 1.6; }
+.part-divider::after { content: ""; position: absolute; right: -10%; top: -40%; width: 50vw; height: 50vw; max-width: 600px; max-height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(255,122,26,.10), transparent 60%); pointer-events: none; }
+.part-divider[data-part="analytics"]::after { background: radial-gradient(circle, rgba(139,124,255,.14), transparent 60%); }
+
+/* dossier */
+.dossier { position: relative; border-top: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg) 45%); }
+.dossier > .wrap { padding-block: clamp(64px, 10vw, 120px) clamp(56px, 8vw, 96px); display: grid; gap: clamp(36px, 5vw, 64px); }
+.dossier .ref { color: var(--accent-2); }
+.dossier .ref::before { background: var(--accent-2); }
+.dtitle { font-family: var(--display); font-weight: 700; font-size: clamp(1.6rem, 3.8vw, 3rem); line-height: 1.05; letter-spacing: -.01em; margin: 0; max-width: 24ch; text-wrap: balance; }
+.dproblem { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(260px, .7fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
+.dtext p { color: var(--dim); margin: 0 0 1.1rem; font-size: clamp(.98rem, 1.3vw, 1.08rem); line-height: 1.65; }
+.dtext p:first-child { color: var(--text); }
+.dtext p:last-child { margin-bottom: 0; }
+.dtext em { color: var(--text); font-style: normal; font-weight: 600; }
+.file-card { position: relative; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-3); padding: 22px 24px; display: grid; gap: 14px; overflow: hidden; }
+.file-card .row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; position: relative; z-index: 1; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.file-card .row:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.file-card b { font-family: var(--display); font-weight: 500; font-size: clamp(1.5rem, 2.6vw, 2.2rem); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.file-card span { font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); text-align: right; }
+.file-card .grid-lines { position: absolute; inset: 0; background-image: linear-gradient(rgba(139,124,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139,124,255,.08) 1px, transparent 1px); background-size: 100% 22px, 64px 100%; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); pointer-events: none; }
+.ba .table-scroll { margin: 0; }
+.ba-table { min-width: 680px; }
+.ba-table th.c1 { color: var(--faint); }
+.ba-table th.c2 { color: var(--accent-2); }
+.ba-table td { padding: 15px 20px 15px 0; line-height: 1.5; }
+.ba-table td:first-child { width: 30%; }
+.ba-table td.before { color: var(--faint); }
+.ba-table td.after { color: var(--text); }
+.dcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 32px); }
+.dcol { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 22px 24px; }
+.dcol h3 { font-family: var(--mono); font-weight: 500; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2); margin: 0 0 14px; }
+.dcol ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.dcol li { color: var(--dim); font-size: .9rem; line-height: 1.5; padding-left: 16px; position: relative; }
+.dcol li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); opacity: .7; }
+.dcol li b { color: var(--text); font-weight: 700; }
+.dacts { display: flex; }
+@media (max-width: 900px) { .dproblem { grid-template-columns: 1fr; } .dcols { grid-template-columns: 1fr; } .file-card { max-width: 440px; } }
+/* narrow: the before/after table becomes one card per question */
+@media (max-width: 640px) {
+  .ba-table { min-width: 0; }
+  .ba-table thead { display: none; }
+  .ba-table tr { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .ba-table td { display: block; padding: 0; border: 0; width: auto !important; }
+  .ba-table td.before::before, .ba-table td.after::before { display: block; font-family: var(--mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 3px; }
+  .ba-table td.before::before { content: "In Excel"; color: var(--faint); }
+  .ba-table td.after::before { content: "In pandas"; color: var(--accent-2); }
+}
+@media (max-width: 820px) { .part-divider > .wrap { grid-template-columns: 1fr; gap: 10px; } .part-divider .numeral { font-size: clamp(3.5rem, 18vw, 6rem); } }
+
 /* ---------- footer + stack ---------- */
 
 .site-foot { border-top: 1px solid var(--line); padding-block: 34px 44px; font-size: .84rem; color: var(--faint); background: var(--bg); position: relative; z-index: 2; }

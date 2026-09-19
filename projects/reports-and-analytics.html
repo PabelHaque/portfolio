@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reports &amp; Analytics — Pabel Haque</title>
-<meta name="description" content="Twenty-seven months of answering regulators, finance, programme heads and donors from one monthly microfinance export: 73 pandas notebooks in seven programmes, with the reconciliation checks left visible and a shared library that defines each number once.">
+<meta name="description" content="An 800,000-row, 90-column monthly microfinance export that Excel could barely hold, answered in minutes with pandas for twenty-seven months: 73 notebooks in seven programmes, the reconciliation checks left visible, and a shared library that defines each number once.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07070c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="../assets/css/site.css?v=20260919e">
+<link rel="stylesheet" href="../assets/css/site.css?v=20260919f">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
 </head>
 <body>
@@ -20,7 +20,8 @@
   <div class="wrap">
     <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
     <nav class="nav" aria-label="Sections">
-      <a href="../index.html#gates">Systems</a>
+      <a href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
       <a href="../index.html#contact">Contact</a>
     </nav>
   </div>
@@ -33,15 +34,17 @@
     <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
     <div class="grid">
       <div>
-        <p class="eyebrow">Case study 06 · Data analysis &amp; reporting</p>
+        <p class="eyebrow">Case study 06 · Part II · Analytics</p>
         <h1>Reports &amp; Analytics</h1>
         <p class="lede">
-          For twenty-seven months I was the person who could answer any question about a
-          microfinance loan book within a day, from one monthly export. Regulators wanted
-          classification schedules; finance wanted a bank-ready disbursement statement; programme
-          heads wanted to know which products and activities carried the overdue; donors wanted
-          sector splits. The answers are 73 pandas notebooks — kept as they were written, checks
-          included — and, later, a small library that defines each of the recurring numbers once.
+          Every month the MIS exports one file: around 800,000 rows by 90 columns, every member
+          and every loan. Excel could barely hold it, and a single question meant a day of
+          filtering, lookups and copying. For twenty-seven months I answered those questions with
+          pandas instead. Regulators wanted classification schedules; finance wanted a bank-ready
+          disbursement statement; programme heads wanted to know which products and activities
+          carried the overdue; donors wanted sector splits. The answers are 73 notebooks — each one
+          run in minutes and footed to the source, kept as they were written, checks included —
+          and, later, a small library that defines each of the recurring numbers once.
         </p>
       </div>
       <div data-glyph="report" aria-hidden="true"></div>
@@ -51,6 +54,7 @@
       <tbody>
         <tr><th>Role</th><td>Sole analyst — question in, numbers out, every month</td></tr>
         <tr><th>Period</th><td>October 2023 – January 2026</td></tr>
+        <tr><th>Input</th><td>One monthly export · ≈800,000 rows × 90 columns · Bangla headers · four date formats</td></tr>
         <tr><th>Scale</th><td>104 notebooks written · 73 kept · 9,489 lines of pandas · 7 programmes · one dataset</td></tr>
         <tr><th>Stack</th><td>Python, pandas, NumPy, JupyterLab, xlsxwriter / openpyxl, matplotlib / plotly, SQLAlchemy, ipywidgets; pytest and pre-commit for the library</td></tr>
         <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
@@ -64,19 +68,44 @@
 
     <h2>The problem</h2>
     <p>
-      The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, about
-      sixty Bangla-headed columns, several hundred thousand rows. It is the only complete picture
-      of the loan book, and there was no BI layer on top of it. Every question — from the
+      The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, around
+      800,000 rows by 90 columns, most of them headed in Bangla. It is the only complete picture
+      of the loan book, and there was no reporting layer on top of it. Every question — from the
       regulator's half-yearly return to "which branches disburse most in the last three days of
       the month?" — meant someone working the file by hand.
     </p>
     <p>
-      The file fights back. Dates arrive in four formats depending on which tool touched the
-      export last. Member IDs and phone numbers lose their leading zeros the moment Excel opens
-      them. Headers carry stray whitespace. A member with three loans appears on three rows, so a
-      naive count triples them. And the fiscal year runs July to June, so "2023-2024" has to be
-      derived, never read.
+      Excel is the wrong tool at that size. The file sits near the row ceiling, opens slowly if
+      at all, and a pivot or lookup across it can freeze the machine. Each answer took a day or
+      more of filtering, lookups and copying between workbooks, and a wrong cell was invisible
+      until someone downstream noticed.
     </p>
+    <p>
+      The file fights back in smaller ways too. Dates arrive in four formats depending on which
+      tool touched the export last. Member IDs and phone numbers lose their leading zeros the
+      moment Excel opens them. Headers carry stray whitespace. A member with three loans appears
+      on three rows, so a naive count triples them. And the fiscal year runs July to June, so
+      "2023-2024" has to be derived, never read.
+    </p>
+
+    <h2>Before and after</h2>
+    <p>
+      The same questions, asked of the same file, before and after the notebooks. Each "after"
+      runs in minutes on the month's export and foots its totals to the raw file before anything
+      leaves.
+    </p>
+    <div class="table-scroll">
+      <table class="data-table ba-table">
+        <thead><tr><th>The question</th><th class="c1">In Excel</th><th class="c2">In pandas</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Regulator's classification schedule</strong> — loans and savers by size, term, aging and sex, per branch</td><td class="before">Manual banding and one pivot per branch over several days; totals checked by hand.</td><td class="after">Bands, branch and sex in one grouped pass; every subtotal footed to the raw file automatically.</td></tr>
+          <tr><td><strong>Bank disbursement statement</strong> for finance</td><td class="before">Member rows copied into the bank's layout, branch by branch, every month.</td><td class="after">One run writes the statement in finance's layout — one workbook per zone, subtotals included.</td></tr>
+          <tr><td><strong>Portfolio at risk</strong> by zone, branch, product, activity, age band</td><td class="before">A separate pivot for every cut, and members with several loans counted more than once.</td><td class="after">One PAR function, unique members counted, any dimension on request.</td></tr>
+          <tr><td><strong>Month-to-month cohorts</strong> — disbursed in one month, overdue the next; overdue members given a new loan</td><td class="before">Practically impossible: two 800,000-row files side by side.</td><td class="after">Two months merged on member and loan ID with month prefixes; the cohort is a filter.</td></tr>
+          <tr><td><strong>Overdue-tracking packs</strong> for every zone</td><td class="before">A workbook per zone assembled by hand each month.</td><td class="after">Split into workbooks with subtotals in one step; every zone's pack in one run.</td></tr>
+        </tbody>
+      </table>
+    </div>
 
     <h2>What I built</h2>
     <p>
@@ -142,14 +171,26 @@
       <li><strong>Sanitised by pipeline, not by hand.</strong> 104 notebooks carried rendered outputs with member data, absolute paths from two laptops, a database connection string and identifiers in notes. A scrubber clears outputs, rewrites paths to two environment-driven folders, replaces the connection string with an environment variable and redacts identifiers — and runs as a pre-commit check so nothing regresses. The same scrubber turned a 32 MB folder of private output into a repository that can be shown.</li>
     </ul>
 
-    <h2>Outcome</h2>
-    <p>
-      Twenty-seven months of questions answered from one file, now organised so the next person
-      can find and rerun them; a shared library that makes the recurring numbers consistent by
-      construction; and the data understanding that the later systems in this portfolio — the
-      target-allocation engine, the reporting dashboard, the special-permission tracker — were
-      built on.
-    </p>
+    <h2>Capabilities and skills</h2>
+    <ul>
+      <li><strong>Cleaning at scale.</strong> Identifiers kept as text so leading zeros survive; four date formats parsed into one; headers stripped; money coerced. Done once, reused by every programme.</li>
+      <li><strong>Derived measures.</strong> The July–June fiscal year from the disbursement date, total savings across three accounts, days since the last instalment, product family and activity sector from lookup tables.</li>
+      <li><strong>Aggregation and banding.</strong> <code>groupby</code>, pivot tables and <code>pd.cut</code> bands over zone, branch, credit manager, product, activity and age — counting unique members, not rows.</li>
+      <li><strong>Reshaping.</strong> Members with several loans unstacked to one row; two months merged on member and loan ID with month prefixes so cohorts and flows become filters.</li>
+      <li><strong>Reconciliation.</strong> Totals footed to the raw export inside the notebook; cross-system checks by joining the MIS database through SQLAlchemy.</li>
+      <li><strong>Delivery.</strong> Workbooks with subtotals split per zone or branch through xlsxwriter, charts in matplotlib and plotly for programme heads, an ipywidgets ID filter for field visits.</li>
+      <li><strong>Reproducibility.</strong> A tested library, a synthetic sample export, and a pre-commit scrubber so the repository can be shown without showing the data.</li>
+      <li><strong>Domain.</strong> Microfinance portfolio at risk, regulatory classification schedules, savings products and fiscal-year reporting — the vocabulary the questions arrive in.</li>
+    </ul>
+
+    <h2>Impact</h2>
+    <ul>
+      <li><strong>Minutes, not days.</strong> A question that took a day of spreadsheet work is a notebook run, and next month's question is the same run on next month's file.</li>
+      <li><strong>Answers that foot.</strong> Every schedule reconciles to the raw export before it leaves; the check is in the code, not in someone's memory.</li>
+      <li><strong>One definition per number.</strong> PAR, fiscal year and total savings are defined once, in a library with tests, so two reports can no longer disagree.</li>
+      <li><strong>Twenty-seven months</strong> of regulator, finance, programme and donor questions answered from one dataset, now organised so the next person can find and rerun them.</li>
+      <li><strong>The groundwork for Part I.</strong> The target-allocation engine, the reporting dashboard and the special-permission tracker in this portfolio were built on the understanding of the data that these notebooks produced.</li>
+    </ul>
 
     <div class="case-nav">
       <a href="factory-agent-overlay.html">
@@ -174,7 +215,7 @@
   </div>
 </footer>
 
-<script src="../assets/js/data.js?v=20260919e"></script>
-<script src="../assets/js/site.js?v=20260919e"></script>
+<script src="../assets/js/data.js?v=20260919f"></script>
+<script src="../assets/js/site.js?v=20260919f"></script>
 </body>
 </html>

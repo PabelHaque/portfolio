@@ -22,6 +22,11 @@
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function num(s) { var v = parseFloat(String(s).replace(/[^0-9.]/g, "")); return isNaN(v) ? 0 : v; }
   function fmt(v) { return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  // Parts: every project belongs to one ("systems" unless it says otherwise). Labels come from data.js.
+  var PARTS = D.parts || { systems: { label: "Products & systems", numeral: "I" }, analytics: { label: "Analytics", numeral: "II" } };
+  function partOf(p) { return (p && p.part && PARTS[p.part]) ? p.part : "systems"; }
+  function refWord(p) { return partOf(p) === "analytics" ? "Analytics" : "System"; }
+  function countPart(key) { return P.filter(function (p) { return partOf(p) === key; }).length; }
   // letters are individual spans for the stagger; words are wrapped so a line never breaks mid-word
   function chars(s) {
     return s.split(" ").map(function (w) {
@@ -133,13 +138,13 @@
     // nodes, lines, minimap
     P.forEach(function (p, i) {
       var n = el("button", "fnode"); n.type = "button"; n.style.left = pos[i][0] + "px"; n.style.top = pos[i][1] + "px";
-      n.setAttribute("aria-label", p.title);
-      n.innerHTML = '<span class="core"></span><span class="tag">System ' + pad(i + 1) + "<b>" + esc(p.principle || p.title) + "</b></span>";
+      n.setAttribute("aria-label", p.title); n.setAttribute("data-part", partOf(p));
+      n.innerHTML = '<span class="core"></span><span class="tag">' + refWord(p) + " " + pad(i + 1) + "<b>" + esc(p.principle || p.title) + "</b></span>";
       n.addEventListener("click", function (e) { e.stopPropagation(); stopTour(); go(i); });
       nodesEl.appendChild(n);
       var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("pathLength", "1"); path.setAttribute("d", curve(pos[i], pos[(i + 1) % P.length])); lines.appendChild(path);
-      if (map) { var c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", pos[i][0]); c.setAttribute("cy", pos[i][1]); c.setAttribute("r", 38); map.insertBefore(c, map.firstChild); }
+      if (map) { var c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", pos[i][0]); c.setAttribute("cy", pos[i][1]); c.setAttribute("r", 38); c.setAttribute("data-part", partOf(p)); map.insertBefore(c, map.firstChild); }
     });
     if (P.length < 3) lines.innerHTML = "";
     var nodes = nodesEl.querySelectorAll(".fnode"), paths = lines.querySelectorAll("path"), mapDots = map ? map.querySelectorAll("circle") : [], camRect = document.getElementById("cam-rect");
@@ -181,6 +186,7 @@
         rx = left; rw = sideW; ry = HEAD; rh = sideH;
       }
       // fit the nodes' own bounding box (plus room for labels) into that region, not the whole world
+      if (rw < 40 || rh < 40) return; // no room yet (pane still opening); the resize handler will call again
       var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 300, padY = 320;
       var bx = Math.min.apply(null, xs) - padX, by = Math.min.apply(null, ys) - padY;
       var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + padX * 2, bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + padY * 2;
@@ -192,7 +198,7 @@
       if (minD < 215) field.classList.add("compact");
       if (minD < 118) field.classList.add("tiny");
       apply();
-      cur = -1; panel.classList.remove("on"); intro.classList.remove("hide"); if (posEl) posEl.textContent = "Overview · " + P.length + " systems";
+      cur = -1; panel.classList.remove("on"); intro.classList.remove("hide"); if (posEl) posEl.textContent = "Overview · " + P.length + " projects";
       nodes.forEach(function (n) { n.classList.remove("on"); }); mapDots.forEach(function (d) { d.classList.remove("on"); }); paths.forEach(function (l) { l.classList.remove("lit"); });
     }
     function go(i) {
@@ -200,8 +206,9 @@
       field.classList.remove("compact", "tiny"); // zoomed in, labels have room
       var offX = st ? 0 : -s.w * .17, offY = st ? -s.h * .2 : 0;
       cx = s.w / 2 - pos[i][0] * sc + offX; cy = s.h / 2 - pos[i][1] * sc + offY; apply();
-      intro.classList.add("hide"); if (posEl) posEl.textContent = "System " + pad(i + 1) + " · " + (p.kicker || "").split(" · ")[0];
-      panel.querySelector("#p-ref").textContent = "System " + pad(i + 1);
+      intro.classList.add("hide"); if (posEl) posEl.textContent = refWord(p) + " " + pad(i + 1) + " · " + (p.kicker || "").split(" · ")[0];
+      panel.setAttribute("data-part", partOf(p));
+      panel.querySelector("#p-ref").textContent = refWord(p) + " " + pad(i + 1);
       panel.querySelector("#p-cat").textContent = p.kicker || "";
       panel.querySelector("#p-rule").textContent = p.principle || "";
       panel.querySelector("#p-title").textContent = p.title;
@@ -292,10 +299,56 @@
      THE GATES
      ============================================================ */
 
+  function renderDivider(key) {
+    var part = PARTS[key] || {}, n = countPart(key);
+    var d = el("div", "part-divider"); d.id = "part-" + key; d.setAttribute("data-part", key);
+    d.innerHTML =
+      '<div class="wrap">' +
+        '<div class="numeral" aria-hidden="true">' + esc(part.numeral || "") + "</div>" +
+        "<div>" +
+          '<p class="ref">Part ' + esc(part.numeral || "") + " &middot; " + n + (n === 1 ? " gate" : " gates") + "</p>" +
+          '<h2 class="part-title">' + esc(part.label || key) + "</h2>" +
+          (part.blurb ? '<p class="part-blurb">' + esc(part.blurb) + "</p>" : "") +
+        "</div>" +
+      "</div>";
+    return d;
+  }
+
+  function renderDossier(p, i) {
+    var d = p.detail, f = d.file || {};
+    var sec = el("section", "dossier"); sec.id = "dossier-" + (i + 1); sec.setAttribute("data-part", partOf(p));
+    var problem = (d.problem || []).map(function (t, k) { return '<p class="reveal" data-step="' + k + '">' + t + "</p>"; }).join("");
+    var file = f.n ? '<div class="file-card reveal" data-step="1">' +
+        '<div class="row"><b>' + esc(f.n) + "</b><span>" + esc(f.l || "") + "</span></div>" +
+        (f.n2 ? '<div class="row"><b>' + esc(f.n2) + "</b><span>" + esc(f.l2 || "") + "</span></div>" : "") +
+        (f.n3 ? '<div class="row"><b>' + esc(f.n3) + "</b><span>" + esc(f.l3 || "") + "</span></div>" : "") +
+        '<div class="grid-lines" aria-hidden="true"></div></div>' : "";
+    var ba = d.beforeAfter ? '<div class="ba reveal"><div class="table-scroll"><table class="data-table ba-table"><thead><tr>' +
+        (d.beforeAfter.cols || []).map(function (c, k) { return '<th class="c' + k + '">' + esc(c) + "</th>"; }).join("") + "</tr></thead><tbody>" +
+        (d.beforeAfter.rows || []).map(function (r) { return "<tr><td><strong>" + esc(r[0]) + '</strong></td><td class="before">' + esc(r[1]) + '</td><td class="after">' + esc(r[2]) + "</td></tr>"; }).join("") +
+        "</tbody></table></div></div>" : "";
+    var cols = (d.columns || []).map(function (c, k) {
+      return '<div class="dcol reveal" data-step="' + k + '"><h3>' + esc(c.title) + "</h3><ul>" + (c.items || []).map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>";
+    }).join("");
+    sec.innerHTML =
+      '<div class="wrap">' +
+        '<div class="dhead reveal">' +
+          '<p class="ref">' + esc(d.eyebrow || "In depth") + " &middot; " + esc(p.title) + "</p>" +
+          '<h2 class="dtitle">' + esc(d.heading || "") + "</h2>" +
+        "</div>" +
+        '<div class="dproblem">' + '<div class="dtext">' + problem + "</div>" + file + "</div>" +
+        ba +
+        (cols ? '<div class="dcols">' + cols + "</div>" : "") +
+        (p.page ? '<div class="dacts reveal"><a class="pill hot" href="' + esc(p.page) + '">Read the full case study &rarr;</a></div>' : "") +
+      "</div>";
+    return sec;
+  }
+
   function renderGates(mount) {
     P.forEach(function (p, i) {
       var isPublic = p.visibility === "public";
-      var sec = el("section", "gate-section"); sec.id = "gate-" + (i + 1);
+      if (i === 0 || partOf(p) !== partOf(P[i - 1])) mount.appendChild(renderDivider(partOf(p)));
+      var sec = el("section", "gate-section"); sec.id = "gate-" + (i + 1); sec.setAttribute("data-part", partOf(p));
       var acts = (p.page ? '<a class="pill hot" href="' + esc(p.page) + '">Read the case study &rarr;</a>' : "") +
                  (isPublic && p.repo ? '<a class="pill" href="' + esc(p.repo) + '" target="_blank" rel="noopener">View the code</a>' : "");
       var state = isPublic
@@ -320,13 +373,14 @@
           "</div>" +
         "</div>";
       mount.appendChild(sec);
+      if (p.detail) mount.appendChild(renderDossier(p, i));
     });
   }
 
   function renderRail(rail) {
     var track = rail.querySelector(".track"); var n = P.length + 1;
     P.concat([{ principle: "you" }]).forEach(function (p, i) {
-      var l = el("div", "lock"); l.style.top = ((i + .5) / n * 100) + "%";
+      var l = el("div", "lock"); l.style.top = ((i + .5) / n * 100) + "%"; if (i < P.length) l.setAttribute("data-part", partOf(p));
       l.innerHTML = '<svg viewBox="0 0 18 18" aria-hidden="true"><path class="shackle" d="M6 8 V6 a3 3 0 0 1 6 0 V8"/><rect x="4" y="8" width="10" height="7" rx="1.5"/></svg><span class="lbl">' + pad(i + 1) + " " + esc(String(p.principle || "").replace(/\.$/, "").toLowerCase()) + "</span>";
       track.appendChild(l);
     });
@@ -462,10 +516,14 @@
       Array.prototype.forEach.call(pipe.querySelectorAll(".stage"), function (s, i) { s.setAttribute("data-step", String(i % 6)); });
     });
     var y = document.getElementById("year"); if (y) y.textContent = String(new Date().getFullYear());
-    var count = document.getElementById("sys-count"); if (count) count.textContent = P.length + " systems";
+    var nSys = countPart("systems"), nAna = countPart("analytics");
+    var count = document.getElementById("sys-count");
+    if (count) count.textContent = nSys + (nSys === 1 ? " system" : " systems") + (nAna ? " · " + (nAna === 1 ? "one analytics practice" : nAna + " analytics entries") : "");
     var lastGate = document.getElementById("last-gate-n"); if (lastGate) lastGate.textContent = pad(P.length + 1);
     var words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
-    var sysWord = document.getElementById("sys-word"); if (sysWord) sysWord.textContent = words[P.length] || String(P.length);
+    var sysWord = document.getElementById("sys-word"); if (sysWord) sysWord.textContent = words[nSys] || String(nSys);
+    var nS = document.getElementById("n-sys"); if (nS) nS.textContent = String(nSys);
+    var nA = document.getElementById("n-ana"); if (nA) nA.textContent = String(nAna);
 
     initField();
     // GSAP is loaded after this script so the field never waits on the CDN; the gates
