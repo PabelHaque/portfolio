@@ -327,11 +327,15 @@
         (d.beforeAfter.cols || []).map(function (c, k) { return '<th class="c' + k + '">' + esc(c) + "</th>"; }).join("") + "</tr></thead><tbody>" +
         (d.beforeAfter.rows || []).map(function (r) { return "<tr><td><strong>" + esc(r[0]) + '</strong></td><td class="before">' + esc(r[1]) + '</td><td class="after">' + esc(r[2]) + "</td></tr>"; }).join("") +
         "</tbody></table></div></div>" : "";
-    var caps = (d.capabilities || []).map(function (c, k) {
-      return '<div class="dcap reveal" data-step="' + (k % 4) + '"><span class="n">' + pad(k + 1) + "</span><h4>" + esc(c.t) + "</h4><p>" + c.d + "</p></div>";
+    var total = 0;
+    var progs = (d.programmes || []).map(function (g, k) {
+      total += Number(g.n) || 0;
+      return '<div class="dprog reveal" data-step="' + (k % 4) + '"><span class="n">' + pad(k + 1) + "</span><div><h4>" + esc(g.name) + "</h4><p>" + esc(g.q) + "</p>" +
+        (g.who ? '<span class="who">For ' + esc(g.who) + "</span>" : "") + '</div><span class="cnt"><b>' + esc(String(g.n)) + "</b>notebooks</span></div>";
     }).join("");
-    var skills = (d.skills || []).map(function (g) {
-      return '<div class="dskill"><h4>' + esc(g.group) + "</h4><ul>" + (g.items || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+    if (progs) progs += '<div class="dprog total reveal"><span class="n">&Sigma;</span><div><h4>' + total + " notebooks</h4>" + (d.programmesNote ? "<p>" + esc(d.programmesNote) + "</p>" : "") + '</div><span class="cnt"><b>' + total + "</b>kept</span></div>";
+    var rules = (d.rules || []).map(function (r, k) {
+      return '<div class="drule reveal" data-step="' + (k % 3) + '"><span class="n">' + pad(k + 1) + "</span><h4>" + esc(r.t) + "</h4><p>" + esc(r.d) + "</p></div>";
     }).join("");
     var impact = (d.impact || []).map(function (x) { return "<li>" + x + "</li>"; }).join("");
     sec.innerHTML =
@@ -342,9 +346,9 @@
         "</div>" +
         '<div class="dproblem">' + '<div class="dtext">' + problem + "</div>" + file + "</div>" +
         ba +
-        (caps ? '<div class="dblock"><p class="dsub reveal">Capabilities used</p><div class="dcaps">' + caps + "</div></div>" : "") +
-        (skills || impact ? '<div class="dpair">' +
-          (skills ? '<div class="dblock reveal"><p class="dsub">Skills</p><div class="dskills">' + skills + "</div></div>" : "") +
+        (progs ? '<div class="dblock"><p class="dsub reveal">The questions, by programme</p><div class="dprogs">' + progs + "</div></div>" : "") +
+        (rules || impact ? '<div class="dpair">' +
+          (rules ? '<div class="dblock"><p class="dsub reveal">The rules the notebooks keep</p><div class="drules">' + rules + "</div></div>" : "") +
           (impact ? '<div class="dblock reveal" data-step="1"><p class="dsub">Impact</p><div class="dimpact"><ul>' + impact + "</ul></div></div>" : "") +
         "</div>" : "") +
         (p.page ? '<div class="dacts reveal"><a class="pill hot" href="' + esc(p.page) + '">Read the full case study &rarr;</a></div>' : "") +

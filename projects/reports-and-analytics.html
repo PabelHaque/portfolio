@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#07070c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="../assets/css/site.css?v=20260919h">
+<link rel="stylesheet" href="../assets/css/site.css?v=20260919i">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
 </head>
 <body>
@@ -171,39 +171,19 @@
       <li><strong>Sanitised by pipeline, not by hand.</strong> 104 notebooks carried rendered outputs with member data, absolute paths from two laptops, a database connection string and identifiers in notes. A scrubber clears outputs, rewrites paths to two environment-driven folders, replaces the connection string with an environment variable and redacts identifiers — and runs as a pre-commit check so nothing regresses. The same scrubber turned a 32 MB folder of private output into a repository that can be shown.</li>
     </ul>
 
-    <h2>Capabilities</h2>
-    <ol class="cap-list">
-      <li><strong>Read the product name as data.</strong> One regular expression over the loan component string — <code>JAGORON MONTHLY 1Y (13.5%) [Kisti/1K: 95]</code> — yields four columns: instalment type, term, service-charge rate and instalment per thousand. Every product-wise cut starts there.</li>
-      <li><strong>Dates that are never re-read.</strong> Five date formats tried in order, each filling only what the earlier ones missed, Excel serials as the last resort. The July–June fiscal year is derived from the disbursement date, never read from a column.</li>
-      <li><strong>Members, not rows.</strong> A member with three loans is three rows. Savings are summed per member and broadcast back, borrowers are counted unique, and PAR is overdue borrowers' principal over total principal — one definition, tested.</li>
-      <li><strong>Regulatory schedules as data.</strong> Nine classification schemes — MRA loan and savings size, MAPLE term and aging, dormancy, disbursement range, lakh bands, borrower age — held as band edges, so a half-yearly return is one grouped pass per branch, footed to totals.</li>
-      <li><strong>Two months side by side.</strong> Columns prefixed by month and joined on zone, branch and member ID. Disbursed in December and overdue in January; overdue members given a new loan; NID verification in June against October — each is a filter on the join.</li>
-      <li><strong>Measures the export never carried.</strong> Instalments overdue from overdue ÷ instalment amount, days since the last instalment, borrower age from date of birth, expected repayment by instalment type and term, the share of a month's disbursement made in its last three days, transactions posted after 6 pm.</li>
-      <li><strong>Free text into sectors.</strong> Over a hundred income-generating-activity strings, some with Bangla in brackets, mapped to Agriculture, Processing &amp; Manufacturing and Trading, and within agriculture to Livestock, Fisheries and Crops. Fifteen product prefixes map to programme families, most specific first. Anything unknown lands in Other rather than being guessed.</li>
-      <li><strong>Checked against the system of record.</strong> A parameterised SQLAlchemy query into the MIS database confirms each overdue account has a payment history behind it. Verified and unverified phone and NID populations were compared on outstanding and overdue before overdue tracing moved to a new system.</li>
-      <li><strong>Delivered in the shape people use.</strong> Subtotal rows per group, one workbook per zone or branch, frozen headers, autofilter and data validation through xlsxwriter. Pies for programme heads in matplotlib and plotly, a Power BI Python visual, and an ipywidgets front end so the MIS team can paste a path, press run and get the check.</li>
-      <li><strong>Reproducible without the data.</strong> A shared library with ten tests run against a seeded synthetic export. A scrubber clears outputs, rewrites paths, swaps credentials for environment variables and redacts member IDs; pre-commit runs it with nbstripout and gitleaks, so the repository can be shown without showing a member.</li>
-    </ol>
-
-    <h2>Skills</h2>
-    <div class="table-scroll">
-      <table class="data-table skills-table">
-        <tbody>
-          <tr><th>pandas</th><td>groupby · named agg · MultiIndex · unstack · merge (inner, outer, suffixes) · transform · pd.cut bands · nunique · str.extract regex · mixed-format datetimes · nullable Int64 / string dtypes · NumPy</td></tr>
-          <tr><th>Excel delivery</th><td>xlsxwriter · openpyxl · multi-sheet writers · subtotal rows · freeze panes · autofilter · data validation · one workbook per zone</td></tr>
-          <tr><th>Data access</th><td>SQL · SQLAlchemy · parameterised queries · CSV / XLSX at 800k rows · MIS database joins</td></tr>
-          <tr><th>Visuals &amp; interfaces</th><td>matplotlib · plotly · Power BI (Python visual) · ipywidgets · JupyterLab</td></tr>
-          <tr><th>Engineering hygiene</th><td>pytest · pre-commit · nbstripout · gitleaks · synthetic sample data · env-var configuration · Git</td></tr>
-          <tr><th>Domain</th><td>microfinance · PAR · MRA half-yearly return · MAPLE aging schedules · RSP / VSP savings · principal vs service charge · July–June fiscal year · Bangla-headed exports</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <h2>The rules the notebooks keep</h2>
+    <ul>
+      <li><strong>Identifiers are text.</strong> A member ID that loses its leading zero is a different member. Every ID column is read as a string before anything else happens.</li>
+      <li><strong>A date is parsed once.</strong> Five formats tried in order; a value that has parsed is never re-interpreted. The fiscal year is derived from the date, never read from a column.</li>
+      <li><strong>Members, not rows.</strong> A member with three loans is three rows. Borrowers are counted unique and savings summed per member, or every count is wrong by the number of repeat loans.</li>
+      <li><strong>Every total foots.</strong> A schedule reconciles to the raw export inside the notebook before anything is written out. The check is code, not memory.</li>
+      <li><strong>Unknown stays unknown.</strong> An activity that matches no sector goes to Other. Nothing is guessed to make a chart look complete.</li>
+      <li><strong>A number is defined once.</strong> PAR, fiscal year, total savings and the classification bands live in one library with tests, so two reports cannot disagree.</li>
+    </ul>
 
     <h2>Impact</h2>
     <ul>
       <li><strong>Minutes, not days.</strong> A question that took a day in a spreadsheet is a notebook run, and next month it is the same run on the next export.</li>
-      <li><strong>Answers that foot.</strong> Every schedule reconciles to the raw export before it leaves. The check is in the code, not in someone's memory.</li>
-      <li><strong>One definition per number.</strong> PAR, fiscal year, total savings and the nine classification bands are defined once, in a library with tests, so two reports can no longer disagree.</li>
       <li><strong>Recurring deliverables, owned.</strong> The regulator's half-yearly return, finance's monthly bank statement, the zone overdue packs and the member-count cross-checks all run from the same engine.</li>
       <li><strong>Twenty-seven months</strong> of regulator, finance, programme and donor questions answered from one dataset. 73 analyses kept in seven programmes, runnable by the next person.</li>
       <li><strong>The groundwork for Part I.</strong> The target-allocation engine, the reporting dashboard and the special-permission tracker were built on the understanding of the data these notebooks produced.</li>
@@ -232,7 +212,7 @@
   </div>
 </footer>
 
-<script src="../assets/js/data.js?v=20260919h"></script>
-<script src="../assets/js/site.js?v=20260919h"></script>
+<script src="../assets/js/data.js?v=20260919i"></script>
+<script src="../assets/js/site.js?v=20260919i"></script>
 </body>
 </html>
