@@ -45,7 +45,7 @@ What each field does:
 | `visibility: "private"` | Gate shows *"Private repo — walkthrough on request"* and never links to a URL a recruiter would hit a 404 on. |
 | `tags` | The pill row inside the gate. Real technologies only. |
 | `part` | Which half of the site the project belongs to: `systems` (Part I · Products & systems) or `analytics` (Part II · Analytics). The field colours the node by part, the gates get a divider where the part changes, and every count on the page ("Five systems, one practice", the legend, the footer) is derived from these values. |
-| `detail` | Optional. An in-depth dossier rendered after the gate — `eyebrow`, `heading`, `problem` (paragraphs, HTML allowed), `file` (three big numbers), `beforeAfter` (`cols` + `rows` of three strings), `columns` (title + items). Only the analytics entry has one today; see it in `data.js` for the shape. |
+| `detail` | Optional. An in-depth dossier rendered after the gate — `eyebrow`, `heading`, `problem` (paragraphs, HTML allowed), `file` (three big numbers), `beforeAfter` (`cols` + `rows` of three strings), `capabilities` (`t` title + `d` HTML), `skills` (`group` + `items`), `impact` (HTML strings). Only the analytics entry has one today; see it in `data.js` for the shape. |
 | `glyph` | The SVG mark that draws itself in the gate: `pipeline` (flow with gates), `cascade` (tree into bars), `funnel` (filter), `hierarchy` (tiers), `audit` (message becoming ledger rows), `code` (generic). To add a new one, add an entry to `GLYPHS` in `assets/js/site.js` — put `pathLength="1"` on any stroked path so it can animate. |
 | `facts` | Kept for the case-study header; not shown on the home page. |
 
