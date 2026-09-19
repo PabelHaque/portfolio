@@ -237,7 +237,7 @@
       if (posEl) posEl.textContent = refWord(p) + " " + pad(i + 1) + " · " + p.title;
       var shown = panel.classList.contains("on");
       if (stacked()) {
-        if (open) { panel.classList.add("on"); intro.classList.add("hide"); setTimeout(function () { var r = panel.getBoundingClientRect(), over = r.bottom - window.innerHeight + 16; if (over > 0) window.scrollBy({ top: over, behavior: REDUCED ? "auto" : "smooth" }); }, 80); }
+        if (open) { panel.classList.add("on"); intro.classList.add("hide"); setTimeout(function () { var r = panel.getBoundingClientRect(), over = r.bottom - window.innerHeight + 16; if (over > 0) { try { window.scrollBy({ top: over, behavior: "instant" }); } catch (err) { window.scrollBy(0, over); } } }, 80); }
         else if (!shown) { fillPanel(i); return; }
       }
       else panel.classList.add("on");
