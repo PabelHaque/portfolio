@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reports &amp; Analytics — Pabel Haque</title>
-<meta name="description" content="An 800,000-row, 90-column monthly microfinance export that Excel could barely hold, answered in minutes with pandas for twenty-seven months: 73 notebooks in seven programmes, the reconciliation checks left visible, and a shared library that defines each number once.">
+<meta name="description" content="A 700,000-row monthly microfinance export that Excel could barely hold, answered in minutes with pandas for twenty-seven months: 73 notebooks in seven programmes, the reconciliation checks left visible, and a shared library that defines each number once.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07070c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="../assets/css/site.css?v=20260919i">
+<link rel="stylesheet" href="../assets/css/site.css?v=20260919j">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
 </head>
 <body>
@@ -37,7 +37,7 @@
         <p class="eyebrow">Case study 06 · Part II · Analytics</p>
         <h1>Reports &amp; Analytics</h1>
         <p class="lede">
-          Every month the MIS exports one file: around 800,000 rows by 90 columns, every member
+          Every month the MIS exports one file of 590,000 to 736,000 rows and 56 to 82 columns, every member
           and every loan. Excel could barely hold it, and a single question meant a day of
           filtering, lookups and copying. For twenty-seven months I answered those questions with
           pandas instead. Regulators wanted classification schedules; finance wanted a bank-ready
@@ -54,7 +54,7 @@
       <tbody>
         <tr><th>Role</th><td>Sole analyst — question in, numbers out, every month</td></tr>
         <tr><th>Period</th><td>October 2023 – January 2026</td></tr>
-        <tr><th>Input</th><td>One monthly export · ≈800,000 rows × 90 columns · Bangla headers · four date formats</td></tr>
+        <tr><th>Input</th><td>One monthly export · 590,000–736,000 rows × 56–82 columns (Dec 2023 – Oct 2025) · Bangla headers · mixed date formats</td></tr>
         <tr><th>Scale</th><td>104 notebooks written · 73 kept · 9,489 lines of pandas · 7 programmes · one dataset</td></tr>
         <tr><th>Stack</th><td>Python, pandas, NumPy, JupyterLab, xlsxwriter / openpyxl, matplotlib / plotly, SQLAlchemy, ipywidgets; pytest and pre-commit for the library</td></tr>
         <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
@@ -68,8 +68,7 @@
 
     <h2>The problem</h2>
     <p>
-      The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, around
-      800,000 rows by 90 columns, most of them headed in Bangla. It is the only complete picture
+      The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, 590,000 to 736,000 rows by 56 to 82 columns depending on the month, most of them headed in Bangla. It is the only complete picture
       of the loan book, and there was no reporting layer on top of it. Every question — from the
       regulator's half-yearly return to "which branches disburse most in the last three days of
       the month?" — meant someone working the file by hand.
@@ -101,7 +100,7 @@
           <tr><td><strong>Regulator's classification schedule</strong> — loans and savers by size, term, aging and sex, per branch</td><td class="before">Manual banding and one pivot per branch over several days; totals checked by hand.</td><td class="after">Bands, branch and sex in one grouped pass; every subtotal footed to the raw file automatically.</td></tr>
           <tr><td><strong>Bank disbursement statement</strong> for finance</td><td class="before">Member rows copied into the bank's layout, branch by branch, every month.</td><td class="after">One run writes the statement in finance's layout — one workbook per zone, subtotals included.</td></tr>
           <tr><td><strong>Portfolio at risk</strong> by zone, branch, product, activity, age band</td><td class="before">A separate pivot for every cut, and members with several loans counted more than once.</td><td class="after">One PAR function, unique members counted, any dimension on request.</td></tr>
-          <tr><td><strong>Month-to-month cohorts</strong> — disbursed in one month, overdue the next; overdue members given a new loan</td><td class="before">Practically impossible: two 800,000-row files side by side.</td><td class="after">Two months merged on member and loan ID with month prefixes; the cohort is a filter.</td></tr>
+          <tr><td><strong>Month-to-month cohorts</strong> — disbursed in one month, overdue the next; overdue members given a new loan</td><td class="before">Practically impossible: two 700,000-row files side by side.</td><td class="after">Two months merged on member and loan ID with month prefixes; the cohort is a filter.</td></tr>
           <tr><td><strong>Overdue-tracking packs</strong> for every zone</td><td class="before">A workbook per zone assembled by hand each month.</td><td class="after">Split into workbooks with subtotals in one step; every zone's pack in one run.</td></tr>
         </tbody>
       </table>
@@ -212,7 +211,7 @@
   </div>
 </footer>
 
-<script src="../assets/js/data.js?v=20260919i"></script>
-<script src="../assets/js/site.js?v=20260919i"></script>
+<script src="../assets/js/data.js?v=20260919j"></script>
+<script src="../assets/js/site.js?v=20260919j"></script>
 </body>
 </html>

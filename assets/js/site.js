@@ -4,7 +4,7 @@
    add a project: the field lays nodes out, the gates render, the
    rail grows.
 
-   Home page:  the Field (opener) → the Gates (one per project,
+   Home page:  the Field (opener: a constellation, hover/tap to preview) → the Gates (one per project,
                pinned with GSAP ScrollTrigger) → the last gate (you)
    Case pages: header chrome, glyph slots, reveal, spotlight
    ============================================================ */
@@ -113,11 +113,18 @@
      THE FIELD
      ============================================================ */
 
-  function layoutNodes(n) {
+  // Up to four projects sit at preset spots. Beyond that they form a serpentine grid read in
+  // order, 01 to 0N: two columns when the room is upright, more when it is wide.
+  function layoutNodes(n, cols, upright) {
     var preset = [[520, 420], [1500, 380], [1700, 1000], [760, 1050]];
     if (n <= 4) return preset.slice(0, n);
-    var out = [];
-    for (var i = 0; i < n; i++) { var a = -Math.PI / 2 + i * (2 * Math.PI / n); out.push([Math.round(1200 + Math.cos(a) * 760), Math.round(750 + Math.sin(a) * 440)]); }
+    cols = Math.max(2, Math.min(n, cols || 2)); var rows = Math.ceil(n / cols);
+    // upright rooms (phones) are width-bound: pull the columns closer so the rows can breathe
+    var x0 = upright ? 650 : 500, x1 = upright ? 1750 : 1900, y0 = upright ? 180 : 250, y1 = upright ? 1320 : 1250, out = [];
+    for (var i = 0; i < n; i++) {
+      var r = Math.floor(i / cols), c = i % cols; if (r % 2 === 1) c = cols - 1 - c;
+      out.push([Math.round(x0 + c * (x1 - x0) / (cols - 1)), Math.round(rows === 1 ? 750 : y0 + r * (y1 - y0) / (rows - 1))]);
+    }
     return out;
   }
 
@@ -131,130 +138,137 @@
 
   function initField() {
     var field = document.getElementById("field"); if (!field || !P.length) return;
-    var world = field.querySelector(".world"), cam = field.querySelector(".cam"), nodesEl = field.querySelector("#nodes"), lines = field.querySelector("#lines"), map = field.querySelector("#map");
-    var panel = field.querySelector("#panel"), intro = field.querySelector("#intro"), posEl = document.getElementById("pos");
-    var pos = layoutNodes(P.length);
+    var world = field.querySelector(".world"), cam = field.querySelector(".cam"), nodesEl = field.querySelector("#nodes"), lines = field.querySelector("#lines");
+    var panel = field.querySelector("#panel"), intro = field.querySelector("#intro"), posEl = document.getElementById("pos"), hint = field.querySelector("#hint");
+    var pos = layoutNodes(P.length), cols = 0;
+    var HOVER = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    if (hint) hint.textContent = (HOVER ? "Hover" : "Tap") + " a point to preview it · scroll to walk the gates";
 
-    // nodes, lines, minimap
+    // points, and the faint links between neighbours
     P.forEach(function (p, i) {
       var n = el("button", "fnode"); n.type = "button"; n.style.left = pos[i][0] + "px"; n.style.top = pos[i][1] + "px";
-      n.setAttribute("aria-label", p.title); n.setAttribute("data-part", partOf(p));
+      n.setAttribute("aria-label", refWord(p) + " " + pad(i + 1) + ": " + p.title); n.setAttribute("data-part", partOf(p));
       n.innerHTML = '<span class="core"></span><span class="tag">' + refWord(p) + " " + pad(i + 1) + "<b>" + esc(p.principle || p.title) + "</b></span>";
-      n.addEventListener("click", function (e) { e.stopPropagation(); stopTour(); go(i); });
+      n.addEventListener("click", function (e) { e.stopPropagation(); go(i, true); });
+      if (HOVER) n.addEventListener("pointerenter", function () { if (!stacked()) go(i, false); });
+      n.addEventListener("focus", function () { if (!stacked()) go(i, false); });
       nodesEl.appendChild(n);
-      var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("pathLength", "1"); path.setAttribute("d", curve(pos[i], pos[(i + 1) % P.length])); lines.appendChild(path);
-      if (map) { var c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", pos[i][0]); c.setAttribute("cy", pos[i][1]); c.setAttribute("r", 38); c.setAttribute("data-part", partOf(p)); map.insertBefore(c, map.firstChild); }
+      if (i < P.length - 1) { var path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("pathLength", "1"); lines.appendChild(path); }
     });
-    if (P.length < 3) lines.innerHTML = "";
-    var nodes = nodesEl.querySelectorAll(".fnode"), paths = lines.querySelectorAll("path"), mapDots = map ? map.querySelectorAll("circle") : [], camRect = document.getElementById("cam-rect");
+    var nodes = nodesEl.querySelectorAll(".fnode"), paths = lines.querySelectorAll("path");
+    var upright = null;
+    function place(c, up) {
+      if (c === cols && up === upright) return; cols = c; upright = up; pos = layoutNodes(P.length, c, up);
+      nodes.forEach(function (n, i) { n.style.left = pos[i][0] + "px"; n.style.top = pos[i][1] + "px"; });
+      paths.forEach(function (l, i) { l.setAttribute("d", curve(pos[i], pos[i + 1])); });
+    }
 
-    // camera
+    // One fixed camera. The constellation is fitted once into the room the intro and the
+    // preview card leave free. Nothing pans or zooms, so the page reads the same for everyone.
     var cx = 0, cy = 0, sc = 1, cur = -1;
+    function stacked() { return field.classList.contains("stacked"); }
     function size() { return { w: world.clientWidth || 1, h: world.clientHeight || 1, narrow: (world.clientWidth || 1) < 900 }; }
     function apply() {
       cam.style.transform = "translate(" + cx + "px," + cy + "px) scale(" + sc + ")";
-      // nodes counter-scale (capped, so cores stay small); tags cancel the camera exactly, so
-      // a label is always its real CSS size whether zoomed out or in
+      // points counter-scale (capped, so cores stay small); labels cancel the camera exactly
       var inv = Math.min(3.2, 1 / sc);
       cam.style.setProperty("--inv", inv.toFixed(3));
       cam.style.setProperty("--tag", (1 / sc / inv).toFixed(3));
-      if (camRect) { var s = size(); camRect.setAttribute("x", -cx / sc); camRect.setAttribute("y", -cy / sc); camRect.setAttribute("width", Math.max(0, s.w / sc)); camRect.setAttribute("height", Math.max(0, s.h / sc)); }
     }
-    function overview() {
-      // Fit the world into the space the intro text is NOT using — measured, not guessed.
-      // Side-by-side when there is real room to the right of the intro; otherwise stacked
-      // (intro at the bottom, nodes above), growing the field if the window is short.
+    function fit() {
       var HEAD = 84, NODES_MIN = 300;
       var s = size();
-      if (s.w < 120 || s.h < 120) return; // mid-resize or not laid out yet; the resize handler will call again
+      if (s.w < 120 || s.h < 120) return; // not laid out yet; the resize handler will call again
       field.classList.remove("stacked", "compact", "tiny");
-      field.style.minHeight = "";
+      field.style.minHeight = ""; panel.style.width = "";
       s = size(); var fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
-      var left = (ir.right - fr.left) + 32, sideW = s.w - left - 48, sideH = s.h - HEAD - 130;
-      var stacked = s.narrow || sideW < 480 || sideH < 240;
+      var GUT = Math.max(16, ir.left - fr.left), left = (ir.right - fr.left) + 32, sideW = s.w - left - GUT;
+      if (sideW >= 340) panel.style.width = Math.round(sideW) + "px"; // the card takes the room beside the intro
+      var ph = panel.offsetHeight || 190, sideH = s.h - HEAD - ph - 34 - 28;
+      var isStacked = s.narrow || sideW < 480 || sideH < 240;
       var rx, rw, ry, rh;
-      if (stacked) {
-        field.classList.add("stacked");
+      if (isStacked) {
+        field.classList.add("stacked"); panel.style.width = "";
         s = size(); fr = world.getBoundingClientRect(); ir = intro.getBoundingClientRect();
         var need = HEAD + NODES_MIN + 24 + ir.height + 150;
         if (need > s.h) { field.style.minHeight = Math.ceil(need) + "px"; s = size(); fr = world.getBoundingClientRect(); ir = intro.getBoundingClientRect(); }
         var inset = 72; // keep fixed-size labels inside the edges
-        rx = inset; rw = s.w - inset * 2;
-        ry = HEAD; rh = Math.max(160, (ir.top - fr.top) - 24 - HEAD);
+        rx = inset; rw = s.w - inset * 2; ry = HEAD; rh = Math.max(160, (ir.top - fr.top) - 24 - HEAD);
+        if (cur < 0) { panel.classList.remove("on"); intro.classList.remove("hide"); }
       } else {
         rx = left; rw = sideW; ry = HEAD; rh = sideH;
+        panel.classList.add("on"); intro.classList.remove("hide");
       }
-      // fit the nodes' own bounding box (plus room for labels) into that region, not the whole world
-      if (rw < 40 || rh < 40) return; // no room yet (pane still opening); the resize handler will call again
-      var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 300, padY = 320;
+      if (rw < 40 || rh < 40) return;
+      place(rw / rh > 1.6 ? Math.ceil(P.length / 2) : 2, rw / rh < .8);
+      // fit the points' own bounding box (plus room for labels) into that region
+      var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; }), padX = 260, padY = 280;
       var bx = Math.min.apply(null, xs) - padX, by = Math.min.apply(null, ys) - padY;
       var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + padX * 2, bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + padY * 2;
       sc = Math.min(rw / bw, rh / bh);
       cx = rx + (rw - bw * sc) / 2 - bx * sc; cy = ry + (rh - bh * sc) / 2 - by * sc;
-      // label density: how close do the two nearest nodes land on screen?
-      var minD = Infinity;
-      for (var a = 0; a < pos.length; a++) for (var b = a + 1; b < pos.length; b++) minD = Math.min(minD, Math.hypot((pos[a][0] - pos[b][0]) * sc, (pos[a][1] - pos[b][1]) * sc));
-      if (minD < 215) field.classList.add("compact");
-      if (minD < 118) field.classList.add("tiny");
+      // label density: would two labels of this size overlap on screen?
+      function collides(w, h) { for (var a = 0; a < pos.length; a++) for (var b = a + 1; b < pos.length; b++) if (Math.abs(pos[a][0] - pos[b][0]) * sc < w && Math.abs(pos[a][1] - pos[b][1]) * sc < h) return true; return false; }
+      if (collides(215, 96)) field.classList.add("compact");
+      if (collides(112, 52)) field.classList.add("tiny");
       apply();
-      cur = -1; panel.classList.remove("on"); intro.classList.remove("hide"); if (posEl) posEl.textContent = "Overview · " + P.length + " projects";
-      nodes.forEach(function (n) { n.classList.remove("on"); }); mapDots.forEach(function (d) { d.classList.remove("on"); }); paths.forEach(function (l) { l.classList.remove("lit"); });
     }
-    function go(i) {
-      var p = P[i], s = size(), st = field.classList.contains("stacked"); cur = i; sc = st ? 1.1 : 1.5;
-      field.classList.remove("compact", "tiny"); // zoomed in, labels have room
-      var offX = st ? 0 : -s.w * .17, offY = st ? -s.h * .2 : 0;
-      cx = s.w / 2 - pos[i][0] * sc + offX; cy = s.h / 2 - pos[i][1] * sc + offY; apply();
-      intro.classList.add("hide"); if (posEl) posEl.textContent = refWord(p) + " " + pad(i + 1) + " · " + (p.kicker || "").split(" · ")[0];
+
+    var swapT = null;
+    function fillPanel(i) {
+      var p = P[i];
       panel.setAttribute("data-part", partOf(p));
       panel.querySelector("#p-ref").textContent = refWord(p) + " " + pad(i + 1);
       panel.querySelector("#p-cat").textContent = p.kicker || "";
       panel.querySelector("#p-rule").textContent = p.principle || "";
-      panel.querySelector("#p-title").textContent = p.title;
+      panel.querySelector("#p-title").textContent = p.title + (p.year ? " · " + p.year : "");
       panel.querySelector("#p-body").textContent = p.summary;
       panel.querySelector("#p-l").textContent = (p.stat && p.stat.label) || "";
-      countTo(panel.querySelector("#p-n"), num(p.stat && p.stat.n));
+      var nEl = panel.querySelector("#p-n"), target = num(p.stat && p.stat.n);
+      if (panel.classList.contains("on")) countTo(nEl, target, 600); else nEl.textContent = fmt(target);
       var read = panel.querySelector("#p-read"); if (p.page) { read.href = p.page; read.hidden = false; } else { read.hidden = true; }
       panel.querySelector("#p-gate").setAttribute("data-gate", "gate-" + (i + 1));
-      panel.classList.remove("on"); setTimeout(function () { panel.classList.add("on"); }, REDUCED ? 0 : 260);
-      nodes.forEach(function (n, k) { n.classList.toggle("on", k === i); }); mapDots.forEach(function (d, k) { d.classList.toggle("on", k === i); });
+    }
+    // open: true when the visitor clicked or used the keyboard; on phones only that opens the sheet
+    function go(i, open) {
+      var p = P[i], changed = cur !== i; cur = i;
+      nodes.forEach(function (n, k) { n.classList.toggle("on", k === i); });
       paths.forEach(function (l, k) { l.classList.toggle("lit", k === i); });
+      if (posEl) posEl.textContent = refWord(p) + " " + pad(i + 1) + " · " + p.title;
+      var shown = panel.classList.contains("on");
+      if (stacked()) {
+        if (open) { panel.classList.add("on"); intro.classList.add("hide"); setTimeout(function () { panel.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" }); }, 60); }
+        else if (!shown) { fillPanel(i); return; }
+      }
+      else panel.classList.add("on");
+      if (changed && shown && !REDUCED) {
+        clearTimeout(swapT); panel.classList.add("swap");
+        swapT = setTimeout(function () { fillPanel(i); panel.classList.remove("swap"); }, 140);
+      } else fillPanel(i);
     }
-
-    // drag to pan (touch-action: pan-y leaves vertical page scroll to the browser)
-    var drag = null;
-    world.addEventListener("pointerdown", function (e) { if (e.target.closest(".fnode")) return; drag = { x: e.clientX, y: e.clientY, cx: cx, cy: cy }; world.classList.add("dragging"); try { world.setPointerCapture(e.pointerId); } catch (err) {} });
-    world.addEventListener("pointermove", function (e) { if (!drag) return; cx = drag.cx + (e.clientX - drag.x); cy = drag.cy + (e.clientY - drag.y); apply(); });
-    function endDrag() { drag = null; world.classList.remove("dragging"); }
-    world.addEventListener("pointerup", endDrag); world.addEventListener("pointercancel", endDrag);
-
-    // tour
-    var touring = false, tourT = null, bar = field.querySelector("#tourbar"), tourBtn = field.querySelector("#tour");
-    function stopTour() { touring = false; clearTimeout(tourT); if (bar) { bar.style.transition = "none"; bar.style.transform = "scaleX(0)"; } if (tourBtn) tourBtn.innerHTML = "&#9654; Take the tour"; }
-    function tourStep(i) {
-      go(i);
-      if (bar) { bar.style.transition = "none"; bar.style.transform = "scaleX(0)"; requestAnimationFrame(function () { bar.style.transition = "transform 4.2s linear"; bar.style.transform = "scaleX(1)"; }); }
-      tourT = setTimeout(function () { if (!touring) return; if (i + 1 < P.length) tourStep(i + 1); else { stopTour(); overview(); } }, 4400);
+    function closePanel() {
+      if (!stacked()) return;
+      panel.classList.remove("on"); intro.classList.remove("hide"); cur = -1;
+      nodes.forEach(function (n) { n.classList.remove("on"); }); paths.forEach(function (l) { l.classList.remove("lit"); });
+      if (posEl) posEl.textContent = "Overview · " + P.length + " projects";
     }
-    if (tourBtn) tourBtn.addEventListener("click", function () { if (touring) { stopTour(); return; } touring = true; tourBtn.innerHTML = "&#9632; Stop tour"; tourStep(0); });
-    var ov = field.querySelector("#overview"); if (ov) ov.addEventListener("click", function () { stopTour(); overview(); });
-    panel.querySelector("#p-next").addEventListener("click", function () { stopTour(); go((cur + 1) % P.length); });
+    var closeBtn = panel.querySelector("#p-close"); if (closeBtn) closeBtn.addEventListener("click", closePanel);
     panel.querySelector("#p-gate").addEventListener("click", function () {
       var t = document.getElementById(this.getAttribute("data-gate")); if (t) t.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
     });
+    world.addEventListener("click", function (e) { if (!e.target.closest(".fnode")) closePanel(); });
 
-    // keys work while the field is on screen
+    // arrow keys step through the points while the field is on screen
     var visible = true;
     document.addEventListener("keydown", function (e) {
       if (!visible || e.target.closest("input, textarea")) return;
-      if (e.key === "ArrowRight") { stopTour(); go((cur + 1 + P.length) % P.length); }
-      else if (e.key === "ArrowLeft") { stopTour(); go((cur - 1 + P.length) % P.length); }
-      else if (e.key === "Escape") { stopTour(); overview(); }
+      if (e.key === "ArrowRight") go((cur + 1 + P.length) % P.length, true);
+      else if (e.key === "ArrowLeft") go((cur - 1 + P.length) % P.length, true);
+      else if (e.key === "Escape") closePanel();
     });
-    window.addEventListener("resize", function () { if (cur < 0) overview(); else go(cur); });
+    window.addEventListener("resize", function () { fit(); if (cur >= 0 && !stacked()) go(cur, false); });
 
-    // dots: a point field in world space that leans away from the cursor
+    // dots: a point field in world space that leans gently away from the cursor
     var cv = field.querySelector("canvas"), ctx = cv && cv.getContext("2d"), pts = [], raf = null, frame = null, drawStatic = null;
     var mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999, has: false }, t0 = performance.now();
     if (ctx) {
@@ -292,7 +306,9 @@
       }, { threshold: 0 }).observe(field);
     } else if (ctx && !REDUCED) { raf = requestAnimationFrame(frame); }
 
-    overview();
+    // the first project is shown from the start, so the card is never empty on a desktop
+    fillPanel(0); fit();
+    if (!stacked()) go(0, false); else if (posEl) posEl.textContent = "Overview · " + P.length + " projects";
   }
 
   /* ============================================================

@@ -141,19 +141,17 @@ p code, li code, td code {
    ============================================================ */
 
 .field { position: relative; height: 100svh; min-height: 560px; overflow: hidden; background: var(--bg); }
-.field .world { position: absolute; inset: 0; cursor: grab; touch-action: pan-y; }
-.field .world.dragging { cursor: grabbing; }
+.field .world { position: absolute; inset: 0; touch-action: pan-y; }
 .field .cam {
   position: absolute; left: 0; top: 0; width: 2400px; height: 1500px;
   transform-origin: 0 0;
   transition: transform 1.1s cubic-bezier(.2,.8,.2,1);
   will-change: transform;
 }
-.dragging .cam { transition: none; }
 .field canvas { position: absolute; inset: 0; }
 .field .lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: var(--line-2); stroke-width: 1.2; pointer-events: none; }
-.field .lines path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.2s ease .2s, stroke .4s; }
-.field .lines path.lit { stroke-dashoffset: 0; stroke: var(--accent-2); }
+.field .lines path { stroke-dasharray: 1; stroke-dashoffset: 0; opacity: .38; transition: opacity .4s, stroke .4s; }
+.field .lines path.lit { opacity: 1; stroke: var(--accent-2); }
 
 .fnode {
   position: absolute; width: 170px; height: 170px; margin: -85px 0 0 -85px;
@@ -162,9 +160,8 @@ p code, li code, td code {
   transition: transform 1.1s cubic-bezier(.2,.8,.2,1);
   border-radius: 50%;
 }
-.dragging .fnode { transition: none; }
 .fnode .core {
-  width: 18px; height: 18px; border-radius: 50%; background: var(--accent);
+  width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
   box-shadow: 0 0 30px var(--glow-o), 0 0 70px var(--glow-o);
   position: relative; transition: transform .5s cubic-bezier(.2,1.4,.3,1), background .4s, box-shadow .4s;
 }
@@ -179,12 +176,13 @@ p code, li code, td code {
   transform: translateX(-50%) scale(var(--tag, 1)); transform-origin: 50% 0;
   transition: transform 1.1s cubic-bezier(.2,.8,.2,1);
   white-space: nowrap;
-  font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
-  padding: 4px 8px; border-radius: 8px; background: rgba(7,7,12,.55);
+  font-family: var(--mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
+  padding: 5px 9px; border-radius: 8px; background: rgba(7,7,12,.6);
 }
-.dragging .fnode .tag { transition: none; }
-.fnode .tag b { display: block; font-family: var(--display); font-weight: 500; font-size: .8rem; letter-spacing: .01em; text-transform: none; color: var(--text); margin-top: 4px; }
-.fnode:hover .core, .fnode.on .core { transform: scale(1.5); }
+.fnode .tag b { display: block; font-family: var(--display); font-weight: 500; font-size: .86rem; letter-spacing: .01em; text-transform: none; color: var(--text); margin-top: 4px; }
+.fnode:hover .core, .fnode.on .core, .fnode:focus-visible .core { transform: scale(1.5); }
+.fnode:focus-visible { outline: none; }
+.fnode:focus-visible .tag { box-shadow: 0 0 0 2px var(--accent-2); }
 .fnode.on .core { background: var(--accent-2); box-shadow: 0 0 34px var(--glow-v), 0 0 90px var(--glow-v); }
 .fnode.on .tag { color: var(--accent-2); }
 
@@ -200,31 +198,35 @@ p code, li code, td code {
 /* scale with height as well as width, so a short window never gets a 58px headline */
 .intro h1 { text-wrap: balance; margin-bottom: 14px; font-size: clamp(1.7rem, min(4.6vw, 7.5svh), 3.6rem); }
 .intro .lede { max-width: 46ch; font-size: clamp(.95rem, min(1.8vw, 2.8svh), 1.2rem); }
+.intro .hint { font-family: var(--mono); font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 18px 0 0; display: flex; align-items: center; gap: 10px; }
+.intro .hint::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 10px var(--glow-v); flex: 0 0 auto; }
 
+/* The preview card. One fixed place, bottom right beside the intro; the script sizes it to the
+   room that is left and fits the constellation above it. On phones it is a bottom sheet. */
 .panel {
-  position: absolute; right: var(--gutter); top: 50%; transform: translate(24px, -50%);
-  width: min(400px, calc(100vw - 2 * var(--gutter)));
-  background: rgba(13,13,22,.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--line-2); border-radius: var(--r); padding: 24px 24px 20px; z-index: 6;
-  max-height: calc(100% - var(--head-h) - 120px); overflow: auto;
-  opacity: 0; pointer-events: none;
-  transition: opacity .45s, transform .55s cubic-bezier(.2,.8,.2,1);
+  position: absolute; right: var(--gutter); bottom: 34px; z-index: 6;
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  background: rgba(13,13,22,.84); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line-2); border-radius: var(--r); padding: 18px 20px 16px;
+  opacity: 0; transform: translateY(12px); pointer-events: none;
+  transition: opacity .45s, transform .55s cubic-bezier(.2,.8,.2,1), border-color .4s;
 }
-.panel.on { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
-@media (max-height: 680px) and (min-width: 901px) {
-  /* short desktop windows: hang the panel from the header instead of centring it over the controls */
-  .panel { top: calc(var(--head-h) + 12px); transform: translate(24px, 0); }
-  .panel.on { transform: translate(0, 0); }
-  .panel p { display: none; }
-}
-.panel .k { font-family: var(--mono); font-size: .64rem; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; gap: 12px; }
-.panel h2 { font-size: clamp(1.25rem, 2.2vw, 1.6rem); margin: 10px 0 6px; }
-.panel h3 { font-family: var(--sans); font-weight: 700; font-size: .95rem; margin: 0 0 10px; }
-.panel p { margin: 0 0 14px; color: var(--dim); font-size: .92rem; line-height: 1.55; }
-.panel .stat { display: flex; align-items: baseline; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 14px; }
-.panel .stat b { font-family: var(--display); font-weight: 500; font-size: 1.9rem; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-.panel .stat span { font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
-.panel .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.panel.on { opacity: 1; transform: none; pointer-events: auto; }
+.panel[data-part="analytics"] { border-color: rgba(139,124,255,.45); }
+.panel .pgrid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 4px 22px; align-items: start; transition: opacity .14s; }
+.panel.swap .pgrid { opacity: 0; }
+.panel .k { font-family: var(--mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); display: flex; gap: 12px; white-space: nowrap; overflow: hidden; }
+.panel .k #p-cat { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.panel h2 { font-size: clamp(1.1rem, 1.7vw, 1.4rem); line-height: 1.1; margin: 8px 0 5px; }
+.panel h3 { font-family: var(--sans); font-weight: 700; font-size: .88rem; margin: 0; color: var(--dim); }
+.panel p { margin: 0 0 10px; color: var(--dim); font-size: .86rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.panel .stat { display: flex; align-items: baseline; gap: 10px; margin: 0; }
+.panel .stat b { font-family: var(--display); font-weight: 500; font-size: 1.5rem; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.panel .stat span { font-family: var(--mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); min-width: 0; line-height: 1.5; }
+.panel .row { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.panel .row .pill { padding: 8px 13px; font-size: .8rem; }
+.panel .close { display: none; position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(13,13,22,.7); color: var(--dim); font-size: 1.05rem; line-height: 1; cursor: pointer; place-items: center; }
+@media (max-height: 680px) and (min-width: 901px) { .panel p { display: none; } }
 
 .pill {
   display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
@@ -237,35 +239,29 @@ p code, li code, td code {
 .pill.hot:hover { transform: translateY(-1px); }
 
 .ctrl { position: absolute; left: var(--gutter); bottom: 34px; z-index: 6; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.ctrl .hintk { font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-left: 6px; }
-.tour-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transform: scaleX(0); transform-origin: left; z-index: 7; }
-
-.map {
-  position: absolute; right: var(--gutter); bottom: 34px; width: 132px; height: 84px; z-index: 6;
-  border: 1px solid var(--line-2); border-radius: 10px; background: rgba(13,13,22,.7); backdrop-filter: blur(10px); overflow: hidden;
-}
-.map svg { width: 100%; height: 100%; }
-.map circle { fill: var(--faint); } .map circle.on { fill: var(--accent-2); }
-.map rect { fill: none; stroke: var(--accent); stroke-width: 1.2; transition: all 1.1s cubic-bezier(.2,.8,.2,1); }
 
 /* ---- layout modes, set by the script from MEASURED room, not from width alone ----
-   .stacked  — intro at the bottom, nodes above it (phones, and any window where the room
+   .stacked  — intro at the bottom, points above it (phones, and any window where the room
                beside the intro is too small or too short); the field grows if needed
-   .compact  — nodes are close on screen: labels wrap narrow and small
-   .tiny     — nodes are very close: labels show only "System 0N"                        */
+   .compact  — points are close on screen: labels wrap narrow and small
+   .tiny     — points are very close: labels show only "System 0N"                        */
 .field.stacked .intro { left: var(--gutter); right: var(--gutter); bottom: 150px; max-width: none; }
 .field.stacked .intro h1 { font-size: clamp(1.5rem, min(7vw, 6.5svh), 2.2rem); }
 .field.stacked .intro .lede { font-size: .95rem; }
-.field.stacked .panel { right: var(--gutter); left: var(--gutter); top: auto; bottom: 96px; width: auto; transform: translate(0, 24px); max-height: calc(100% - var(--head-h) - 130px); }
-.field.stacked .panel.on { transform: translate(0, 0); }
+.field.stacked .intro .hint { margin-top: 12px; }
+.field.stacked .panel { right: var(--gutter); left: var(--gutter); bottom: 96px; width: auto; padding-top: 22px; }
+.field.stacked .panel .pgrid { grid-template-columns: 1fr; gap: 8px; }
+.field.stacked .panel .k { display: block; white-space: normal; padding-right: 36px; line-height: 1.6; }
+.field.stacked .panel .k #p-cat:not(:empty)::before { content: " b7"; margin: 0 8px; }
+.field.stacked .panel .k #p-cat { overflow: visible; }
+.field.stacked .panel .stat { flex-wrap: wrap; }
 .field.stacked .panel p { display: none; }
+.field.stacked .panel .close { display: grid; }
 .field.stacked .ctrl { bottom: 30px; }
-.field.stacked .ctrl .hintk { display: none; }
-.field.stacked .map { display: none; }
 .field.stacked .fnode { width: 130px; height: 130px; margin: -65px 0 0 -65px; }
 
-.field.compact .fnode .tag { white-space: normal; width: 92px; font-size: .54rem; letter-spacing: .1em; padding: 3px 6px; top: calc(50% + 22px); line-height: 1.3; }
-.field.compact .fnode .tag b { font-size: .68rem; margin-top: 2px; line-height: 1.15; }
+.field.compact .fnode .tag { white-space: normal; width: 150px; font-size: .56rem; letter-spacing: .1em; padding: 3px 7px; top: calc(50% + 22px); line-height: 1.3; }
+.field.compact .fnode .tag b { font-size: .74rem; margin-top: 2px; line-height: 1.15; }
 .field.tiny .fnode .tag { width: auto; white-space: nowrap; }
 .field.tiny .fnode .tag b { display: none; }
 
@@ -572,7 +568,7 @@ pre { background: var(--bg-2); border: 1px solid var(--line); border-radius: var
   .rule .ch, .gate-section .body { opacity: 1; transform: none; }
   .gate-section .glyph path, .gate-section .glyph circle, .gate-section .glyph rect { stroke-dashoffset: 0; }
   .gate-section .glyph .fa, .gate-section .glyph .fb { opacity: 1; }
-  .field .cam, .fnode, .fnode .core, .panel, .intro, .field .lines path, .map rect, .rail, .lock, .lock svg, .lock .shackle { transition: none; }
+  .field .cam, .fnode, .fnode .core, .panel, .intro, .field .lines path, .rail, .lock, .lock svg, .lock .shackle { transition: none; }
   .fnode .core::before, .fnode .core::after { animation: none; }
   .fnode .tag { transition: none; }
   .pill.hot:hover, .case-nav a:hover { transform: none; }

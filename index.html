@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pabel Haque — Systems that keep their rules</title>
-<meta name="description" content="Pabel Haque builds systems that wait for a human, refuse to guess, won't overspend, know who's asking and won't assume a yes — a 71-agent AI delivery pipeline, a deterministic allocation engine, an LLM study platform, role-scoped analytics, a WhatsApp-to-ledger automation — and an analytics practice that turns an 800,000-row monthly export into answers in minutes.">
+<meta name="description" content="Pabel Haque builds systems that wait for a human, refuse to guess, won't overspend, know who's asking and won't assume a yes — a 71-agent AI delivery pipeline, a deterministic allocation engine, an LLM study platform, role-scoped analytics, a WhatsApp-to-ledger automation — and an analytics practice that turns a 700,000-row monthly export into answers in minutes.">
 <meta name="author" content="Pabel Haque">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07070c">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pabel Haque — Systems that keep their rules">
-<meta property="og:description" content="Five systems and one analytics practice, each built around one rule it refuses to break. Fly between them, then pass the gates.">
+<meta property="og:description" content="Five systems and one analytics practice, each built around one rule it refuses to break. Preview each one, then pass the gates.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="assets/css/site.css?v=20260919i">
+<link rel="stylesheet" href="assets/css/site.css?v=20260919j">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
 </head>
 <body class="static">
@@ -36,7 +36,7 @@
 <main id="top">
 
   <!-- ============== THE FIELD ============== -->
-  <section class="field" id="field" aria-label="The systems, as a field you can explore">
+  <section class="field" id="field" aria-label="The projects, as a constellation you can preview">
     <div class="world" id="world">
       <div class="cam" id="cam">
         <canvas width="2400" height="1500" aria-hidden="true"></canvas>
@@ -51,39 +51,38 @@
       <h1><span id="sys-word">Five</span> systems, one practice.<br>One rule each <span class="grad">refuses to break.</span></h1>
       <p class="lede">
         An AI delivery pipeline, an allocation engine, an LLM study platform, a role-scoped
-        dashboard and a WhatsApp-to-ledger automation — then the analytics behind them: 27 months
-        of answers from one 800,000-row export, in minutes. Click a node, drag the field, or take
-        the tour — then scroll down and pass the gates.
+        dashboard, a WhatsApp-to-ledger automation — and the analytics practice behind them,
+        27 months of answers from one monthly export.
       </p>
       <div class="legend" aria-label="Two parts">
         <span class="sys"><i></i><b id="n-sys">5</b>&nbsp;products &amp; systems</span>
         <span class="ana"><i></i><b id="n-ana">1</b>&nbsp;analytics practice</span>
       </div>
+      <p class="hint" id="hint">Hover a point to preview it · scroll to walk the gates</p>
     </div>
 
     <aside class="panel" id="panel" aria-live="polite">
-      <div class="k"><span id="p-ref">System 01</span><span id="p-cat"></span></div>
-      <h2 class="grad" id="p-rule"></h2>
-      <h3 id="p-title"></h3>
-      <p id="p-body"></p>
-      <div class="stat"><b id="p-n">0</b><span id="p-l"></span></div>
-      <div class="row">
-        <a class="pill hot" id="p-read" href="#">Read the case study &rarr;</a>
-        <button class="pill" id="p-gate" type="button" data-gate="gate-1">Open the gate &darr;</button>
-        <button class="pill" id="p-next" type="button">Next</button>
+      <button class="close" id="p-close" type="button" aria-label="Close preview">&times;</button>
+      <div class="pgrid">
+        <div>
+          <div class="k"><span id="p-ref">System 01</span><span id="p-cat"></span></div>
+          <h2 class="grad" id="p-rule"></h2>
+          <h3 id="p-title"></h3>
+        </div>
+        <div>
+          <p id="p-body"></p>
+          <div class="stat"><b id="p-n">0</b><span id="p-l"></span></div>
+        </div>
+        <div class="row">
+          <a class="pill hot" id="p-read" href="#">Read the case study &rarr;</a>
+          <button class="pill" id="p-gate" type="button" data-gate="gate-1">See its gate &darr;</button>
+        </div>
       </div>
     </aside>
 
     <div class="ctrl">
-      <button class="pill hot" id="tour" type="button">&#9654; Take the tour</button>
-      <button class="pill" id="overview" type="button">Overview</button>
-      <a class="pill" href="#gates">All systems &darr;</a>
-      <span class="hintk">&larr; &rarr; keys &middot; drag to pan</span>
-    </div>
-    <div class="tour-bar" id="tourbar" aria-hidden="true"></div>
-
-    <div class="map" aria-hidden="true">
-      <svg viewBox="0 0 2400 1500" preserveAspectRatio="none" id="map"><rect id="cam-rect" x="0" y="0" width="2400" height="1500"/></svg>
+      <a class="pill hot" href="#part-systems">Walk the gates &darr;</a>
+      <a class="pill" href="#part-analytics">The analytics practice</a>
     </div>
 
     <span class="sr-only" id="pos"></span>
@@ -133,8 +132,8 @@
 
 <!-- The field must never wait on a CDN: our scripts run first, GSAP arrives after and the gates
      initialise on window load (or fall back to the static layout if GSAP never comes). -->
-<script src="assets/js/data.js?v=20260919i"></script>
-<script src="assets/js/site.js?v=20260919i"></script>
+<script src="assets/js/data.js?v=20260919j"></script>
+<script src="assets/js/site.js?v=20260919j"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </body>

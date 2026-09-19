@@ -150,9 +150,9 @@ window.PORTFOLIO = {
       glyph: "report",
       principle: "Shows its working.",
       stat: { n: "73", label: "analyses · 27 months · one dataset" },
-      summary: "Every month the MIS exports one file: around 800,000 rows by 90 columns, every member and every loan. Excel could barely hold it, and a single question meant a day of filtering, lookups and copying. For twenty-seven months I answered regulators, finance, programme heads and donors from that file with pandas instead — 73 notebooks in seven programmes, each one run in minutes and footed to the source before it left. The reconciliation checks stay in the code.",
+      summary: "Every month the MIS exports one file of 590,000 to 736,000 rows and 56 to 82 columns, growing every month: every member and every loan. Excel could barely hold it, and a single question meant a day of filtering, lookups and copying. For twenty-seven months I answered regulators, finance, programme heads and donors from that file with pandas instead — 73 notebooks in seven programmes, each one run in minutes and footed to the source before it left. The reconciliation checks stay in the code.",
       facts: [
-        { k: "Monthly export", v: "≈800,000 rows × 90 columns" },
+        { k: "Monthly export", v: "590,000\u2013736,000 rows \u00d7 56\u201382 columns" },
         { k: "Notebooks", v: "73 kept of 104" },
         { k: "Programmes", v: "7" }
       ],
@@ -161,18 +161,18 @@ window.PORTFOLIO = {
         eyebrow: "Part II, in depth",
         heading: "From a file Excel could not hold to answers in minutes.",
         problem: [
-          "The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, around 800,000 rows by 90 columns, most of them headed in Bangla. It is the only complete picture of the loan book, and there was no reporting layer above it. So every question landed on a spreadsheet — the regulator's classification schedule, the bank's disbursement statement, which branches carry the overdue, which activities the loans fund.",
+          "The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, 590,000 to 736,000 rows by 56 to 82 columns depending on the month, most of them headed in Bangla. It is the only complete picture of the loan book, and there was no reporting layer above it. So every question landed on a spreadsheet — the regulator's classification schedule, the bank's disbursement statement, which branches carry the overdue, which activities the loans fund.",
           "Excel is the wrong tool at that size. The file sits near the row ceiling, opens slowly if at all, and a pivot or lookup across it can freeze the machine. It strips the leading zeros from member IDs the moment it opens them, reads the same date column four different ways depending on what touched the export last, and counts a member with three loans three times. Each answer took a day or more of filtering, lookups and copying between workbooks, and a wrong cell was invisible.",
           "A notebook reads the same export in pandas, cleans it once — identifiers as text, four date formats parsed, headers stripped, money coerced — and answers the question in minutes, footed to the source file. Next month the same notebook runs on next month's export."
         ],
-        file: { n: "≈800,000", l: "rows a month", n2: "90", l2: "columns", n3: "1", l3: "source of truth" },
+        file: { n: "736k", l: "rows in the latest month", n2: "82", l2: "columns, up from 56", n3: "70%", l3: "of Excel\u2019s row ceiling" },
         beforeAfter: {
           cols: ["The question", "In Excel", "In pandas"],
           rows: [
             ["Regulator's classification schedule — loans and savers by size, term, aging and sex, per branch", "Manual banding and one pivot per branch over several days; totals checked by hand.", "Bands, branch and sex in one grouped pass; every subtotal footed to the raw file automatically."],
             ["Bank disbursement statement for finance", "Member rows copied into the bank's layout, branch by branch, every month.", "One run writes the statement in finance's layout — one workbook per zone, subtotals included."],
             ["Portfolio at risk by zone, branch, product, activity, age band", "A separate pivot for every cut, and members with several loans counted more than once.", "One PAR function, unique members counted, any dimension on request."],
-            ["Month-to-month cohorts — disbursed in one month, overdue the next; overdue members given a new loan", "Practically impossible: two 800,000-row files side by side.", "Two months merged on member and loan ID with month prefixes; the cohort is a filter."],
+            ["Month-to-month cohorts — disbursed in one month, overdue the next; overdue members given a new loan", "Practically impossible: two 700,000-row files side by side.", "Two months merged on member and loan ID with month prefixes; the cohort is a filter."],
             ["Overdue-tracking packs for every zone", "A workbook per zone assembled by hand each month.", "Split into workbooks with subtotals in one step; every zone's pack in one run."]
           ]
         },
