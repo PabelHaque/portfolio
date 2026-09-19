@@ -120,7 +120,7 @@ p code, li code, td code {
   border-bottom-color: var(--line);
 }
 .site-head .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.brand { font-family: var(--display); font-weight: 700; font-size: .95rem; letter-spacing: .01em; display: flex; align-items: center; gap: 11px; }
+.brand { font-family: var(--display); font-weight: 700; font-size: .95rem; letter-spacing: .01em; display: flex; align-items: center; gap: 11px; white-space: nowrap; }
 .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--glow-o); flex: 0 0 auto; }
 .nav { display: flex; gap: clamp(14px, 3vw, 30px); font-size: .9rem; font-weight: 600; }
 .nav a { color: var(--dim); position: relative; padding: 4px 0; transition: color .2s ease; }
@@ -415,6 +415,7 @@ a.contact-row:hover { border-color: var(--accent-2); background: var(--surface-2
 /* dossier */
 .dossier { position: relative; border-top: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg) 45%); }
 .dossier > .wrap { padding-block: clamp(64px, 10vw, 120px) clamp(56px, 8vw, 96px); display: grid; gap: clamp(36px, 5vw, 64px); }
+.dossier > .wrap > * { min-width: 0; }
 .dossier .ref { color: var(--accent-2); }
 .dossier .ref::before { background: var(--accent-2); }
 .dtitle { font-family: var(--display); font-weight: 700; font-size: clamp(1.6rem, 3.8vw, 3rem); line-height: 1.05; letter-spacing: -.01em; margin: 0; max-width: 24ch; text-wrap: balance; }
@@ -430,7 +431,7 @@ a.contact-row:hover { border-color: var(--accent-2); background: var(--surface-2
 .file-card span { font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); text-align: right; }
 .file-card .grid-lines { position: absolute; inset: 0; background-image: linear-gradient(rgba(139,124,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139,124,255,.08) 1px, transparent 1px); background-size: 100% 22px, 64px 100%; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); pointer-events: none; }
 .ba .table-scroll { margin: 0; }
-.ba-table { min-width: 680px; }
+.data-table.ba-table { min-width: 680px; }
 .ba-table th.c1 { color: var(--faint); }
 .ba-table th.c2 { color: var(--accent-2); }
 .ba-table td { padding: 15px 20px 15px 0; line-height: 1.5; }
@@ -448,7 +449,7 @@ a.contact-row:hover { border-color: var(--accent-2); background: var(--surface-2
 @media (max-width: 900px) { .dproblem { grid-template-columns: 1fr; } .dcols { grid-template-columns: 1fr; } .file-card { max-width: 440px; } }
 /* narrow: the before/after table becomes one card per question */
 @media (max-width: 640px) {
-  .ba-table { min-width: 0; }
+  .data-table.ba-table { min-width: 0; }
   .ba-table thead { display: none; }
   .ba-table tr { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
   .ba-table td { display: block; padding: 0; border: 0; width: auto !important; }
