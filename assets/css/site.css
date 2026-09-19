@@ -252,7 +252,7 @@ p code, li code, td code {
 .field.stacked .panel { right: var(--gutter); left: var(--gutter); bottom: 96px; width: auto; padding-top: 22px; }
 .field.stacked .panel .pgrid { grid-template-columns: 1fr; gap: 8px; }
 .field.stacked .panel .k { display: block; white-space: normal; padding-right: 36px; line-height: 1.6; }
-.field.stacked .panel .k #p-cat:not(:empty)::before { content: " b7"; margin: 0 8px; }
+.field.stacked .panel .k #p-cat:not(:empty)::before { content: "·"; margin: 0 8px; }
 .field.stacked .panel .k #p-cat { overflow: visible; }
 .field.stacked .panel .stat { flex-wrap: wrap; }
 .field.stacked .panel p { display: none; }
