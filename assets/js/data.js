@@ -125,6 +125,25 @@ window.PORTFOLIO = {
       page: "projects/padakhep-rebate-automation.html",
       repo: "https://github.com/pabel64/padakhep-rebate-automation",
       visibility: "private"
+    },
+    {
+      slug: "reports-and-analytics",
+      title: "Reports & Analytics",
+      kicker: "Data analysis · pandas",
+      year: "2023–2026",
+      glyph: "report",
+      principle: "Shows its working.",
+      stat: { n: "73", label: "analyses · 27 months · one dataset" },
+      summary: "Twenty-seven months of answering regulators, finance, programme heads and donors from one monthly MIS export — 73 pandas notebooks in seven programmes, from regulatory classification schedules to portfolio-at-risk, month-to-month cohorts and cross-system validation. The reconciliation checks stay visible in the code, and a small shared library now defines each number once.",
+      facts: [
+        { k: "Notebooks", v: "73 kept of 104" },
+        { k: "Programmes", v: "7" },
+        { k: "Engine", v: "cmlib · 10 tests" }
+      ],
+      tags: ["Python", "pandas", "Jupyter", "xlsxwriter", "SQLAlchemy", "ipywidgets", "pytest"],
+      page: "projects/reports-and-analytics.html",
+      repo: "https://github.com/pabel64/reports-and-analytics",
+      visibility: "private"
     }
   ],
 

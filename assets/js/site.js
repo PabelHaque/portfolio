@@ -69,6 +69,16 @@
         '<path class="b" pathLength="1" d="M70 50 L38 100 L70 150 M130 50 L162 100 L130 150" stroke-width="2"/>' +
         '<path class="a" pathLength="1" d="M112 44 L88 156" stroke-width="2"/><g class="fa"><circle cx="100" cy="100" r="4"/></g>' +
       "</svg>",
+    /* a report page: rows, a small bar chart, one row checked */
+    report:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M44 28 H132 L156 52 V172 H44 Z"/><path class="b" pathLength="1" d="M132 28 V52 H156"/>' +
+        '<path class="b" pathLength="1" d="M60 72 H140 M60 92 H140"/>' +
+        '<g class="fb"><rect x="60" y="136" width="10" height="22" rx="2"/><rect x="78" y="128" width="10" height="30" rx="2"/><rect x="96" y="144" width="10" height="14" rx="2"/></g>' +
+        '<g class="fa"><rect x="114" y="122" width="10" height="36" rx="2"/></g>' +
+        '<path class="a" pathLength="1" d="M60 112 H140"/>' +
+        '<path class="a" pathLength="1" d="M122 86 L130 94 L146 76"/>' +
+      "</svg>",
     /* a chat message becoming ledger rows, one row checked against the record */
     audit:
       '<svg viewBox="0 0 200 200" aria-hidden="true">' +

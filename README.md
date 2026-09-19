@@ -19,6 +19,7 @@ rule it refuses to break.
 | **Autonomous Exam-Study Intelligence Platform** | A crawler-to-classroom LLM pipeline: scores every article 0–100 for exam relevance through a deterministic taxonomy plus a model gate, and serves the survivors through an 18-page workspace. Runs on free-tier and local models by default. | [Read →](projects/editorials-study-assistant.html) |
 | **AK47 Performance &amp; Reporting Dashboard** | A role-aware operations dashboard for a five-tier field hierarchy — each tier sees exactly one level wider than the one below — plus the reporting suite that replaced manual scorecard assembly. | [Read →](projects/ak47-dashboard.html) |
 | **Special-Permission Tracking &amp; Microzen Validation** | Extracts loan waiver, rebate and settlement applications from a bilingual WhatsApp group, records each exactly once, cross-checks every member against the core banking system for a post-concession loan — and never infers an approval. | [Read →](projects/padakhep-rebate-automation.html) |
+| **Reports &amp; Analytics** | Twenty-seven months of answering regulators, finance, programme heads and donors from one monthly MIS export — 73 pandas notebooks in seven programmes, reconciliation checks left visible, and a shared library that defines each number once. | [Read →](projects/reports-and-analytics.html) |
 
 Most of the source repositories are private because the systems run against real
 organisational data. Live walkthroughs and architecture documents are available on request —

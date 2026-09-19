@@ -18,7 +18,7 @@ connecting lines, the rail of locks and the tour all derive from the array.
   title: "My New Thing",
   kicker: "Category · discipline",
   year: "2026",
-  glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | audit | code
+  glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | audit | report | code
   principle: "Never loses a record.",   // the one rule it refuses to break — short, ends with a period
   stat: { n: "12,400", label: "records per day · reconciled" },   // the one number for this system
   summary: "Two sentences. Lead with the problem, not the tech. One number if you have one.",

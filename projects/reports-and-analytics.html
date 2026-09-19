@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reports &amp; Analytics — Pabel Haque</title>
+<meta name="description" content="Twenty-seven months of answering regulators, finance, programme heads and donors from one monthly microfinance export: 73 pandas notebooks in seven programmes, with the reconciliation checks left visible and a shared library that defines each number once.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=20260919e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="../index.html#gates">Systems</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 06 · Data analysis &amp; reporting</p>
+        <h1>Reports &amp; Analytics</h1>
+        <p class="lede">
+          For twenty-seven months I was the person who could answer any question about a
+          microfinance loan book within a day, from one monthly export. Regulators wanted
+          classification schedules; finance wanted a bank-ready disbursement statement; programme
+          heads wanted to know which products and activities carried the overdue; donors wanted
+          sector splits. The answers are 73 pandas notebooks — kept as they were written, checks
+          included — and, later, a small library that defines each of the recurring numbers once.
+        </p>
+      </div>
+      <div data-glyph="report" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole analyst — question in, numbers out, every month</td></tr>
+        <tr><th>Period</th><td>October 2023 – January 2026</td></tr>
+        <tr><th>Scale</th><td>104 notebooks written · 73 kept · 9,489 lines of pandas · 7 programmes · one dataset</td></tr>
+        <tr><th>Stack</th><td>Python, pandas, NumPy, JupyterLab, xlsxwriter / openpyxl, matplotlib / plotly, SQLAlchemy, ipywidgets; pytest and pre-commit for the library</td></tr>
+        <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      The institution's MIS exports a monthly <em>CM Report</em>: one row per member-loan, about
+      sixty Bangla-headed columns, several hundred thousand rows. It is the only complete picture
+      of the loan book, and there was no BI layer on top of it. Every question — from the
+      regulator's half-yearly return to "which branches disburse most in the last three days of
+      the month?" — meant someone working the file by hand.
+    </p>
+    <p>
+      The file fights back. Dates arrive in four formats depending on which tool touched the
+      export last. Member IDs and phone numbers lose their leading zeros the moment Excel opens
+      them. Headers carry stray whitespace. A member with three loans appears on three rows, so a
+      naive count triples them. And the fiscal year runs July to June, so "2023-2024" has to be
+      derived, never read.
+    </p>
+
+    <h2>What I built</h2>
+    <p>
+      Seven programmes of analysis, each answering a different kind of question, all starting
+      from the same cleaning steps.
+    </p>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Programme</th><th>The question</th><th>≈</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Regulatory schedules</strong></td><td>Loans and savers classified by size, term, aging and sex, per branch, footed to totals — the regulator's return and the MAPLE aging schedules</td><td>7</td></tr>
+          <tr><td><strong>Portfolio quality</strong></td><td>Where the risk sits: PAR by zone, branch, product, activity, age band and education; dormancy since last instalment; members with several loans</td><td>16</td></tr>
+          <tr><td><strong>Cohorts &amp; flows</strong></td><td>Disbursed one month, overdue the next; overdue members who got a new loan; new overdue realised or carried; end-of-month disbursement dumping</td><td>12</td></tr>
+          <tr><td><strong>Fiscal-year structure</strong></td><td>The book by disbursement year, quarter and month at organisation, zone, branch, credit-manager and product level</td><td>10</td></tr>
+          <tr><td><strong>Sector &amp; IGA</strong></td><td>Agriculture and its sub-sectors; branches with cattle, fish or forestry borrowers; loan-size geography for project design</td><td>10</td></tr>
+          <tr><td><strong>Operational services</strong></td><td>The monthly member-level disbursement statement for finance and the bank; overdue-tracking workbooks per zone; monitoring packs; an ID-filter interface for field visits</td><td>14</td></tr>
+          <tr><td><strong>System validation</strong></td><td>Before overdue tracing moved systems: payment history, phone and NID verification against outstanding and overdue</td><td>4</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From monthly export to delivered answer">
+        <div class="stage"><span class="num">1</span><div><div class="name">Export</div><div class="what">The monthly CM Report lands as a wide CSV — every member, every loan, every savings balance.</div></div></div>
+        <div class="stage"><span class="num">2</span><div><div class="name">Clean</div><div class="what">Identifiers kept as text so leading zeros survive; four date formats parsed; headers stripped; money coerced.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Derive</div><div class="what">Fiscal year from disbursement date; total savings across three accounts; days since last instalment; product family and activity sector.</div></div></div>
+        <div class="stage"><span class="num">4</span><div><div class="name">Aggregate</div><div class="what">Zone, branch, credit manager, product, activity, age band — counting unique members, not rows.</div></div></div>
+        <div class="stage gate"><span class="num">5</span><div><div class="name">Reconcile <span class="badge">Check</span></div><div class="what">Do the classified totals foot to the raw file? Does compulsory savings returned equal its two parts? The checks are in the notebooks.</div></div></div>
+        <div class="stage"><span class="num">6</span><div><div class="name">Deliver</div><div class="what">One workbook per zone or branch with subtotals; a statement in finance's layout; a chart for the programme head.</div></div></div>
+      </div>
+      <figcaption>Every programme is a variation on these six steps. Steps 2, 3 and 6 are now functions in the shared library.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>The checks stay in the code.</strong></p>
+    <p>
+      Scattered through the notebooks are lines like
+      <code>file['compulsory_withdrawn'].sum() - (rsp_w_returned.sum() + rsp_m_returned.sum())</code>
+      — an expression whose only correct value is zero — and
+      <code>df[df['member_id'].duplicated(keep=False)]</code>, a look at exactly the rows that would
+      double-count if forgotten. Many are commented out; they were run, satisfied, and left in place.
+    </p>
+    <p>
+      When these notebooks went into version control I was tempted to tidy them away. I didn't.
+      They are the record of how each number was verified before it went to a regulator or a
+      finance team, and they are the difference between "the total is 17,962" and "the total is
+      17,962 and here is why I believe it." A clean notebook with no checks is not more
+      professional; it is less auditable.
+    </p>
+
+    <div class="callout">
+      <span class="label">What did change</span>
+      The definitions that every notebook re-implemented — the four-format date parser, the
+      July–June fiscal year, total savings, PAR, the MRA and MAPLE classification bands, the
+      activity-to-sector taxonomy, the split-into-workbooks-with-subtotals step — now live once, in
+      a small library with tests against a synthetic export. New analysis imports them. Old analysis
+      stands as written.
+    </div>
+
+    <h3>Two more decisions</h3>
+    <ul>
+      <li><strong>Organised by question, not by who asked.</strong> The working folders were named after requesters. The repository is grouped into the seven programmes above, so a reader finds every PAR analysis in one place regardless of which manager commissioned it.</li>
+      <li><strong>Sanitised by pipeline, not by hand.</strong> 104 notebooks carried rendered outputs with member data, absolute paths from two laptops, a database connection string and identifiers in notes. A scrubber clears outputs, rewrites paths to two environment-driven folders, replaces the connection string with an environment variable and redacts identifiers — and runs as a pre-commit check so nothing regresses. The same scrubber turned a 32 MB folder of private output into a repository that can be shown.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      Twenty-seven months of questions answered from one file, now organised so the next person
+      can find and rerun them; a shared library that makes the recurring numbers consistent by
+      construction; and the data understanding that the later systems in this portfolio — the
+      target-allocation engine, the reporting dashboard, the special-permission tracker — were
+      built on.
+    </p>
+
+    <div class="case-nav">
+      <a href="factory-agent-overlay.html">
+        <span class="k">Back to · 01</span>
+        <span class="t">Multi-Agent Software Factory &rarr;</span>
+      </a>
+      <a href="padakhep-rebate-automation.html">
+        <span class="k">Previous · 05</span>
+        <span class="t">&larr; Special-Permission Tracking &amp; Microzen Validation</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=20260919e"></script>
+<script src="../assets/js/site.js?v=20260919e"></script>
+</body>
+</html>
