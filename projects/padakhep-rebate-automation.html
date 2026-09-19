@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Special-Permission Tracking &amp; Microzen Validation — Pabel Haque</title>
+<meta name="description" content="Extracts loan waiver, rebate and settlement applications from a bilingual WhatsApp group, records them idempotently, cross-checks each member against the core banking system, and never infers an approval.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=20260919d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="../index.html#gates">Systems</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 05 · Automation &amp; data extraction</p>
+        <h1>Special-Permission Tracking &amp; Microzen Validation</h1>
+        <p class="lede">
+          Branch staff at a microfinance institution request loan waivers, rebates and
+          settlements the way people actually communicate — in a WhatsApp group, in Bangla and
+          English, mixed in with dozens of unrelated procedural asks. This system reads the
+          export, keeps only the genuine financial concessions, records each one exactly once,
+          and checks every member against the core banking system to catch the thing policy
+          forbids: a new loan issued after a concession. It never infers an approval.
+        </p>
+      </div>
+      <div data-glyph="audit" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Scope</th><td>5 concession types (waiver, rebate, settlement, case withdrawal, write-off) · Bangla + English · 6-sheet audit workbook</td></tr>
+        <tr><th>Stack</th><td>Python, Flask, SQLite, Playwright (Chromium), Chart.js dashboard, Excel and JSON export, CLI for scheduled runs</td></tr>
+        <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      A loan concession is a financial decision with a paper trail — except that here the paper
+      trail was a group chat. Applications arrived as free-text messages, sometimes in Bangla,
+      sometimes in English, often both, alongside requests that look similar but are not
+      concessions at all: early disbursement, tenure extension, ceiling increases, savings-rate
+      changes. Keeping track meant someone reading the whole chat.
+    </p>
+    <p>
+      Worse, the concession itself is only half the rule. The other half is that a member who
+      has been granted one should not quietly receive a new loan afterwards — and that fact
+      lives in a different system entirely, the institution's core banking software.
+    </p>
+
+    <h2>What I built</h2>
+    <p>
+      A locally hosted pipeline from chat export to audited ledger, with the core-banking check
+      built in rather than left to whoever remembers to look.
+    </p>
+    <ul>
+      <li><strong>A bilingual extractor</strong> that recognises the five concession types in either language and deliberately ignores the procedural requests that share their vocabulary.</li>
+      <li><strong>Idempotent ingestion.</strong> Every upload re-reads the whole export, but an application is inserted only if its content hash — timestamp, sender, member ID, amount, loan date — is new. Re-uploading adds nothing; older messages obtained later from the group admin are inserted correctly even though they predate everything already stored.</li>
+      <li><strong>Microzen validation</strong> through Playwright: log in once, open the member's record, collect every loan, visit each loan's detail page — disbursement date, principal, service charge, outstanding, overdue, approval, both guarantors — and flag any loan disbursed <em>after</em> the permission date as a policy violation.</li>
+      <li><strong>A dashboard</strong> of KPIs, monthly trends, zone / branch / relationship-manager breakdowns and waiver exposure, plus a <strong>six-sheet Excel workbook</strong> — database, summary, risk-flagged members, pending review, RM summary, validation results — and JSON export.</li>
+      <li><strong>A command-line path</strong> for scheduled runs, incremental by default; credentials live in a git-ignored config or environment variables, never in the repository.</li>
+    </ul>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From chat export to validated ledger">
+        <div class="stage"><span class="num">1</span><div><div class="name">Export</div><div class="what">The WhatsApp group is exported as text, without media, and dropped into the dashboard or passed to the CLI.</div></div></div>
+        <div class="stage"><span class="num">2</span><div><div class="name">Extract</div><div class="what">Bilingual parsing keeps waiver, rebate, settlement, case-withdrawal and write-off applications; procedural requests are discarded.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">De-duplicate</div><div class="what">A content hash decides whether an application is new. Same export twice adds nothing; a late-arriving older message still lands.</div></div></div>
+        <div class="stage gate"><span class="num">4</span><div><div class="name">Decision <span class="badge">Human</span></div><div class="what">Every application is stored as pending. A person sets the decision per record; nothing is inferred from the chat.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Validate</div><div class="what">Playwright reads each member's loans from the core banking system and matches the concession to the exact loan by date and amount.</div></div></div>
+        <div class="stage gate"><span class="num">6</span><div><div class="name">Flag <span class="badge">Policy</span></div><div class="what">Any loan disbursed after the permission date is a violation; every concession member is marked high-risk with a future-loan restriction recommended.</div></div></div>
+        <div class="stage"><span class="num">7</span><div><div class="name">Report</div><div class="what">Dashboard, six-sheet Excel workbook, JSON.</div></div></div>
+      </div>
+      <figcaption>Two gates: one where a human decides, one where the record decides.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>No approval is guessed — by design, not by omission.</strong></p>
+    <p>
+      In the chat, approvals arrive as bare acknowledgements — a one-word reply from the
+      approver, some time after some application. The tempting shortcut is obvious: attach
+      each "okay" to the nearest preceding application and mark it approved. It would make the
+      dashboard look complete on day one.
+    </p>
+    <p>
+      It would also, sooner or later, mark the wrong member's waiver as approved — a financial
+      record that is wrong in a way nobody would notice until it mattered. So the system does
+      not do it. Every application is stored as <code>pending</code>, and the decision is set by
+      a person, per record, in the member's detail view. The dashboard has a "pending review"
+      sheet precisely because that queue is real work, not a gap to be papered over by a
+      heuristic.
+    </p>
+
+    <div class="callout">
+      <span class="label">The same instinct, on the matching side</span>
+      A member may have taken the same loan amount several times. To pin the concession to the
+      right loan, the validator matches the WhatsApp message's disbursement date <em>and</em>
+      amount — compared against both the principal and the total — rather than trusting either
+      field alone. Where a match is ambiguous, it stays visible as ambiguous.
+    </div>
+
+    <h3>Two more decisions</h3>
+    <ul>
+      <li><strong>Idempotency keyed on content, not position.</strong> Hashing timestamp + sender + member + amount + loan date means the pipeline is safe to re-run on the full export every time, which is exactly what a scheduled job needs — and it still accepts a back-filled history without a special import mode.</li>
+      <li><strong>Read the record, not the summary.</strong> The validator visits every loan detail page rather than the member's overview, because the overview does not carry disbursement dates and guarantors, and the policy check is meaningless without the date.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      A chat that had to be read by hand is now a ledger with a review queue: each concession
+      recorded once, tied to the exact loan in the core banking system, with every
+      post-concession loan flagged automatically and a six-sheet audit workbook that finance
+      can open directly. The approvals column is filled in by people — which is the point.
+    </p>
+
+    <div class="case-nav">
+      <a href="factory-agent-overlay.html">
+        <span class="k">Back to · 01</span>
+        <span class="t">Multi-Agent Software Factory &rarr;</span>
+      </a>
+      <a href="ak47-dashboard.html">
+        <span class="k">Previous · 04</span>
+        <span class="t">&larr; AK47 Performance &amp; Reporting Dashboard</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=20260919d"></script>
+<script src="../assets/js/site.js?v=20260919d"></script>
+</body>
+</html>

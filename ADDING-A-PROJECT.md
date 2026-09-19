@@ -18,7 +18,7 @@ connecting lines, the rail of locks and the tour all derive from the array.
   title: "My New Thing",
   kicker: "Category · discipline",
   year: "2026",
-  glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | code
+  glyph: "pipeline",                    // pipeline | cascade | funnel | hierarchy | audit | code
   principle: "Never loses a record.",   // the one rule it refuses to break — short, ends with a period
   stat: { n: "12,400", label: "records per day · reconciled" },   // the one number for this system
   summary: "Two sentences. Lead with the problem, not the tech. One number if you have one.",
@@ -43,7 +43,7 @@ What each field does:
 | `repo` + `visibility: "public"` | Adds a "View the code" button in the gate. |
 | `visibility: "private"` | Gate shows *"Private repo — walkthrough on request"* and never links to a URL a recruiter would hit a 404 on. |
 | `tags` | The pill row inside the gate. Real technologies only. |
-| `glyph` | The SVG mark that draws itself in the gate: `pipeline`, `cascade`, `funnel`, `hierarchy`, `code`. To add a new one, add an entry to `GLYPHS` in `assets/js/site.js` — put `pathLength="1"` on any stroked path so it can animate. |
+| `glyph` | The SVG mark that draws itself in the gate: `pipeline` (flow with gates), `cascade` (tree into bars), `funnel` (filter), `hierarchy` (tiers), `audit` (message becoming ledger rows), `code` (generic). To add a new one, add an entry to `GLYPHS` in `assets/js/site.js` — put `pathLength="1"` on any stroked path so it can animate. |
 | `facts` | Kept for the case-study header; not shown on the home page. |
 
 Only `slug`, `title`, `principle`, `summary` and `visibility` are strictly required. Up to

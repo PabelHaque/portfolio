@@ -2,10 +2,11 @@
 
 **Live site → https://pabel64.github.io/portfolio/**
 
-Systems that wait for a human, refuse to guess, won't overspend, and know who's asking.
-Four production systems — a 71-agent AI delivery pipeline, a deterministic allocation engine,
-an LLM study platform, and role-scoped analytics — each with a full case study built around
-the one rule it refuses to break.
+Systems that wait for a human, refuse to guess, won't overspend, know who's asking, and won't
+assume a yes. Five production systems — a 71-agent AI delivery pipeline, a deterministic
+allocation engine, an LLM study platform, role-scoped analytics, and a WhatsApp-to-ledger
+automation validated against core banking — each with a full case study built around the one
+rule it refuses to break.
 
 ---
 
@@ -17,6 +18,7 @@ the one rule it refuses to break.
 | **PMUK Target &amp; Budget Allocation System** | A weighted largest-remainder cascade that divides branch-level microfinance targets across 2,574 field staff in 409 branches — 17,962 targets per cycle, bit-identical on re-run. | [Read →](projects/pmuk-target-system.html) |
 | **Autonomous Exam-Study Intelligence Platform** | A crawler-to-classroom LLM pipeline: scores every article 0–100 for exam relevance through a deterministic taxonomy plus a model gate, and serves the survivors through an 18-page workspace. Runs on free-tier and local models by default. | [Read →](projects/editorials-study-assistant.html) |
 | **AK47 Performance &amp; Reporting Dashboard** | A role-aware operations dashboard for a five-tier field hierarchy — each tier sees exactly one level wider than the one below — plus the reporting suite that replaced manual scorecard assembly. | [Read →](projects/ak47-dashboard.html) |
+| **Special-Permission Tracking &amp; Microzen Validation** | Extracts loan waiver, rebate and settlement applications from a bilingual WhatsApp group, records each exactly once, cross-checks every member against the core banking system for a post-concession loan — and never infers an approval. | [Read →](projects/padakhep-rebate-automation.html) |
 
 Most of the source repositories are private because the systems run against real
 organisational data. Live walkthroughs and architecture documents are available on request —

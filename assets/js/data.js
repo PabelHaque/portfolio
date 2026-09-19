@@ -106,6 +106,25 @@ window.PORTFOLIO = {
       page: "projects/ak47-dashboard.html",
       repo: "https://github.com/pabel64/AK47-Dashboard",
       visibility: "private"
+    },
+    {
+      slug: "padakhep-rebate-automation",
+      title: "Special-Permission Tracking & Microzen Validation",
+      kicker: "Automation · data extraction",
+      year: "2026",
+      glyph: "audit",
+      principle: "Won't assume a yes.",
+      stat: { n: "5", label: "concession types · Bangla + English" },
+      summary: "Reads a bilingual WhatsApp group where branch staff post loan waiver, rebate and settlement requests, keeps only the genuine concessions, and cross-checks every member against the core banking system to catch a new loan issued after one. Each application lands as pending — the approver's bare \"Okay\" replies cannot be tied to a record, so no approval is ever inferred.",
+      facts: [
+        { k: "Concession types", v: "5, bilingual" },
+        { k: "Audit workbook", v: "6 sheets" },
+        { k: "Approvals inferred", v: "0" }
+      ],
+      tags: ["Python", "Flask", "SQLite", "Playwright", "Chart.js", "Excel automation", "Bilingual parsing"],
+      page: "projects/padakhep-rebate-automation.html",
+      repo: "https://github.com/pabel64/padakhep-rebate-automation",
+      visibility: "private"
     }
   ],
 

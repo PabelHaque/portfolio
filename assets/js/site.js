@@ -68,6 +68,17 @@
       '<svg viewBox="0 0 200 200" aria-hidden="true">' +
         '<path class="b" pathLength="1" d="M70 50 L38 100 L70 150 M130 50 L162 100 L130 150" stroke-width="2"/>' +
         '<path class="a" pathLength="1" d="M112 44 L88 156" stroke-width="2"/><g class="fa"><circle cx="100" cy="100" r="4"/></g>' +
+      "</svg>",
+    /* a chat message becoming ledger rows, one row checked against the record */
+    audit:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M28 44 H104 a8 8 0 0 1 8 8 V78 a8 8 0 0 1 -8 8 H52 L36 100 V86 H28 a8 8 0 0 1 -8 -8 V52 a8 8 0 0 1 8 -8 Z"/>' +
+        '<path class="b" pathLength="1" d="M40 60 H100 M40 72 H84"/>' +
+        '<path class="b" pathLength="1" d="M124 60 H176 M124 84 H176 M124 108 H176 M124 132 H176 M124 156 H176"/>' +
+        '<g class="fb"><circle cx="116" cy="60" r="2.5"/><circle cx="116" cy="84" r="2.5"/><circle cx="116" cy="132" r="2.5"/><circle cx="116" cy="156" r="2.5"/></g>' +
+        '<path class="a" pathLength="1" d="M124 108 H176"/><g class="fa"><circle cx="116" cy="108" r="4"/></g>' +
+        '<path class="a" pathLength="1" d="M138 118 L146 126 L162 100"/>' +
+        '<path class="b" pathLength="1" d="M40 132 H100 M40 148 H88 M40 164 H96"/>' +
       "</svg>"
   };
   function glyph(name, tl, br) {
@@ -133,16 +144,18 @@
       var inv = Math.min(3.2, 1 / sc);
       cam.style.setProperty("--inv", inv.toFixed(3));
       cam.style.setProperty("--tag", (1 / sc / inv).toFixed(3));
-      if (camRect) { var s = size(); camRect.setAttribute("x", -cx / sc); camRect.setAttribute("y", -cy / sc); camRect.setAttribute("width", s.w / sc); camRect.setAttribute("height", s.h / sc); }
+      if (camRect) { var s = size(); camRect.setAttribute("x", -cx / sc); camRect.setAttribute("y", -cy / sc); camRect.setAttribute("width", Math.max(0, s.w / sc)); camRect.setAttribute("height", Math.max(0, s.h / sc)); }
     }
     function overview() {
       // Fit the world into the space the intro text is NOT using — measured, not guessed.
       // Side-by-side when there is real room to the right of the intro; otherwise stacked
       // (intro at the bottom, nodes above), growing the field if the window is short.
       var HEAD = 84, NODES_MIN = 300;
+      var s = size();
+      if (s.w < 120 || s.h < 120) return; // mid-resize or not laid out yet; the resize handler will call again
       field.classList.remove("stacked", "compact", "tiny");
       field.style.minHeight = "";
-      var s = size(), fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
+      s = size(); var fr = world.getBoundingClientRect(), ir = intro.getBoundingClientRect();
       var left = (ir.right - fr.left) + 32, sideW = s.w - left - 48, sideH = s.h - HEAD - 130;
       var stacked = s.narrow || sideW < 480 || sideH < 240;
       var rx, rw, ry, rh;
@@ -440,6 +453,9 @@
     });
     var y = document.getElementById("year"); if (y) y.textContent = String(new Date().getFullYear());
     var count = document.getElementById("sys-count"); if (count) count.textContent = P.length + " systems";
+    var lastGate = document.getElementById("last-gate-n"); if (lastGate) lastGate.textContent = pad(P.length + 1);
+    var words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+    var sysWord = document.getElementById("sys-word"); if (sysWord) sysWord.textContent = words[P.length] || String(P.length);
 
     initField();
     // GSAP is loaded after this script so the field never waits on the CDN; the gates
