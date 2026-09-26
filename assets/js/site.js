@@ -74,6 +74,46 @@
         '<path class="b" pathLength="1" d="M70 50 L38 100 L70 150 M130 50 L162 100 L130 150" stroke-width="2"/>' +
         '<path class="a" pathLength="1" d="M112 44 L88 156" stroke-width="2"/><g class="fa"><circle cx="100" cy="100" r="4"/></g>' +
       "</svg>",
+    /* an envelope whose rows are verified, and a draft that is never sent */
+    notify:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M26 50 H154 a10 10 0 0 1 10 10 V126 a10 10 0 0 1 -10 10 H26 a10 10 0 0 1 -10 -10 V60 a10 10 0 0 1 10 -10 Z"/>' +
+        '<path class="b" pathLength="1" d="M16 60 L90 104 L164 60"/>' +
+        '<g class="fb"><rect x="38" y="112" width="30" height="5" rx="2"/><rect x="74" y="112" width="20" height="5" rx="2"/><rect x="100" y="112" width="26" height="5" rx="2"/></g>' +
+        '<g class="fa"><circle cx="166" cy="44" r="7"/></g>' +
+        '<path class="a" pathLength="1" d="M118 156 L132 170 L176 122"/>' +
+      "</svg>",
+    /* two portfolios, one member crossing between them, and the ledger that records it */
+    transfer:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M20 36 H84 V100 H20 Z"/><path class="b" pathLength="1" d="M116 36 H180 V100 H116 Z"/>' +
+        '<g class="fb"><rect x="30" y="48" width="44" height="5" rx="2"/><rect x="30" y="60" width="32" height="5" rx="2"/><rect x="126" y="48" width="44" height="5" rx="2"/><rect x="126" y="60" width="28" height="5" rx="2"/></g>' +
+        '<path class="a" pathLength="1" d="M84 84 C 98 84 102 72 116 72"/>' +
+        '<g class="fa"><circle cx="80" cy="86" r="6"/><circle cx="120" cy="70" r="6"/></g>' +
+        '<path class="b" pathLength="1" d="M22 132 H178 M22 150 H178"/>' +
+        '<g class="fa"><circle cx="14" cy="132" r="4"/><circle cx="14" cy="150" r="4"/></g>' +
+        '<path class="a" pathLength="1" d="M140 168 L152 180 L182 146"/>' +
+      "</svg>",
+    /* an identity card: the portrait is the guess, the barcode is the fact */
+    identity:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M22 44 H178 a10 10 0 0 1 10 10 V142 a10 10 0 0 1 -10 10 H22 a10 10 0 0 1 -10 -10 V54 a10 10 0 0 1 10 -10 Z"/>' +
+        '<path class="b" pathLength="1" d="M40 68 H84 V116 H40 Z"/>' +
+        '<g class="fb"><circle cx="62" cy="86" r="9"/><path d="M46 114 a16 16 0 0 1 32 0 Z"/></g>' +
+        '<path class="b" pathLength="1" d="M104 72 H164 M104 88 H144"/>' +
+        '<g class="fa"><rect x="104" y="108" width="4" height="24"/><rect x="112" y="108" width="2" height="24"/><rect x="118" y="108" width="5" height="24"/><rect x="127" y="108" width="2" height="24"/><rect x="133" y="108" width="4" height="24"/><rect x="141" y="108" width="2" height="24"/><rect x="147" y="108" width="5" height="24"/><rect x="156" y="108" width="3" height="24"/><rect x="163" y="108" width="2" height="24"/></g>' +
+        '<path class="a" pathLength="1" d="M144 166 L156 178 L186 146"/>' +
+      "</svg>",
+    /* two sheets meeting on one key column */
+    join:
+      '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        '<path class="b" pathLength="1" d="M20 56 H112 a6 6 0 0 1 6 6 V140 a6 6 0 0 1 -6 6 H20 a6 6 0 0 1 -6 -6 V62 a6 6 0 0 1 6 -6 Z"/>' +
+        '<path class="b" pathLength="1" d="M88 56 H180 a6 6 0 0 1 6 6 V140 a6 6 0 0 1 -6 6 H88 a6 6 0 0 1 -6 -6 V62 a6 6 0 0 1 6 -6 Z"/>' +
+        '<path class="fa" d="M88 56 H112 a6 6 0 0 1 6 6 V140 a6 6 0 0 1 -6 6 H88 a6 6 0 0 1 -6 -6 V62 a6 6 0 0 1 6 -6 Z" opacity=".22"/>' +
+        '<g class="fb"><rect x="28" y="78" width="40" height="5" rx="2"/><rect x="28" y="94" width="30" height="5" rx="2"/><rect x="28" y="110" width="36" height="5" rx="2"/><rect x="134" y="78" width="38" height="5" rx="2"/><rect x="134" y="94" width="28" height="5" rx="2"/><rect x="134" y="110" width="34" height="5" rx="2"/></g>' +
+        '<path class="a" pathLength="1" d="M103 44 V158" stroke-dasharray="4 5"/>' +
+        '<g class="fa"><circle cx="103" cy="82" r="5"/><circle cx="103" cy="120" r="5"/></g>' +
+      "</svg>",
     /* a report page: rows, a small bar chart, one row checked */
     report:
       '<svg viewBox="0 0 200 200" aria-hidden="true">' +

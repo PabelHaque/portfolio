@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfer Eligibility &amp; PAR-Migration Governance &mdash; Pabel Haque</title>
+<meta name="description" content="Checks whether a member may be transferred between field officers, branches and programmes, applies one deterministic rule, and stores every decision with the requester's name so portfolio cosmetics become visible across months and zones.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=v=20260926a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 07 &middot; Governance &amp; compliance</p>
+        <h1>Transfer Eligibility &amp; PAR-Migration Governance</h1>
+        <p class="lede">
+          Branch managers submit spreadsheets asking to move members between programmes,
+          branches, samities, clusters and field officers. Most requests are ordinary. Some are
+          not: moving an overdue member into a colleague's portfolio makes the delinquency
+          disappear from the original officer's numbers. This tool checks every member's real
+          loan position before a transfer is approved, and records who asked, so the pattern
+          becomes visible even when each single request looks reasonable.
+        </p>
+      </div>
+      <div data-glyph="transfer" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Scope</th><td>Zone transfer workbooks &middot; per-member verification &middot; 5 governance reports</td></tr>
+        <tr><th>Stack</th><td>Python, Streamlit, Playwright (Chromium), SQLite, Excel, Outlook COM</td></tr>
+        <tr><th>Status</th><td>Working prototype, exercised on test data only</td></tr>
+        <tr><th>Code</th><td>Private repository &mdash; walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      This tool does two jobs, and the second is the reason it exists.
+    </p>
+    <p>
+      The <strong>operational</strong> job is the obvious one. A zone submits a workbook asking
+      to move several hundred members, and somebody has to open several hundred member profiles
+      by hand to find out which of them are carrying an outstanding loan. It takes days and it
+      is the kind of work that gets skipped when the deadline is close.
+    </p>
+    <p>
+      The <strong>governance</strong> job is the one nobody asks for. Portfolio at risk is
+      measured per officer. If an overdue member is moved out of one officer's portfolio and
+      into a colleague's, the first officer's delinquency figure improves without a single taka
+      being repaid. The industry term is <em>PAR migration</em>, or portfolio cosmetics. Every
+      individual request looks defensible. The pattern only appears when you can see who has
+      been asking, for whom, and how often, across months and zones.
+    </p>
+
+    <div class="callout">
+      <span class="label">The rule</span>
+      A member is <strong>Not Eligible</strong> if they hold an active primary loan with an
+      outstanding balance above zero. Otherwise <strong>Eligible</strong>. If the profile or the
+      loan table could not be read reliably, the answer is <strong>Manual Review</strong> &mdash;
+      never a yes.
+    </div>
+
+    <h2>What I built</h2>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From request workbook to governance record">
+        <div class="stage"><span class="num">1</span><div><div class="name">Upload the request</div><div class="what">A zone's transfer workbook goes in through a browser interface.</div></div></div>
+        <div class="stage"><span class="num">2</span><div><div class="name">Resolve the columns</div><div class="what">Columns are matched by header name and section group, not by column letter, so a manager can add or reorder columns without breaking the reader. The files carry Bangla headers and a before-transfer and after-transfer block.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Check the loan system</div><div class="what">A browser session visits each member's profile, loans and savings tabs, keeping the page text and a screenshot as evidence.</div></div></div>
+        <div class="stage gate"><span class="num">4</span><div><div class="name">Apply the rule <span class="badge">Deterministic</span></div><div class="what">Balances, savings, a confidence value and a manual-review column are written to a results workbook.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Persist and flag</div><div class="what">The run is stored, and integrity flags are raised &mdash; such as a member submitted for transfer while carrying an active primary loan.</div></div></div>
+        <div class="stage"><span class="num">6</span><div><div class="name">Report the pattern</div><div class="what">Requester accountability, a receiving-officer dumping watch, portfolio flow between officers, repeat offenders, and quarter-end spikes.</div></div></div>
+      </div>
+      <figcaption>Steps 1 to 4 answer today's request. Steps 5 and 6 are what make next quarter's pattern visible.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>No language model takes part in an eligibility or fraud decision.</strong></p>
+    <p>
+      I build with language models elsewhere in this portfolio, including a pipeline of 71 of
+      them. Here I deliberately kept them out of the decision path. A compliance tool has to give
+      the same answer twice and be able to say exactly why. A probabilistic component in that
+      path would mean an officer could be flagged by something no one can reproduce, and a
+      flagged officer deserves a rule they can read.
+    </p>
+    <p>
+      Two properties follow from the same reasoning. The tool <strong>fails loud</strong>: a
+      failure to read a page never becomes a quiet "Eligible", it becomes Manual Review. And
+      every decision stores the <strong>version of the rule</strong> that produced it, so a
+      decision made in June can still be explained after the rule changes in September.
+    </p>
+
+    <div class="callout">
+      <span class="label">A pre-check, not an approval</span>
+      The tool never approves a transfer. It tells a human what the loan system actually says
+      and records that it was asked. Business sign-off stays where it was.
+    </div>
+
+    <h3>Two more decisions</h3>
+    <ul>
+      <li><strong>Evidence, not just verdicts.</strong> Each member check keeps the page text and a screenshot. When someone disputes a result months later, the answer is not my parser's opinion but what the system displayed at the time.</li>
+      <li><strong>Member data never leaves the machine.</strong> The governance database, the uploaded requests, the generated results and the per-member snapshots are all excluded from version control. Clone the repository and you get the code and the configuration templates, not anyone's loan balance.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      A manual check that nobody had time to do properly now runs as a batch with evidence
+      attached, and a category of quiet number-moving that was previously invisible has a
+      permanent record. The tool is a working prototype, exercised on test data; the remaining
+      work before a first production run is listed in its handover brief rather than implied.
+    </p>
+
+    <div class="case-nav">
+      <a href="document-extraction-engine.html">
+        <span class="k">Next &middot; 08</span>
+        <span class="t">NID Extraction &amp; KYC Reconciliation &rarr;</span>
+      </a>
+      <a href="special-rebate-automation.html">
+        <span class="k">Previous &middot; 06</span>
+        <span class="t">&larr; Special Rebate Verification &amp; Member Notification</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=v=20260926a"></script>
+<script src="../assets/js/site.js?v=v=20260926a"></script>
+</body>
+</html>

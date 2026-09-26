@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NID Extraction &amp; KYC Reconciliation &mdash; Pabel Haque</title>
+<meta name="description" content="Reconciles member identity data held in a microfinance ERP against the member's national ID card, reading the card's barcode first and treating text recognition as the fallback, because a wrong read matches the wrong member.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=v=20260926a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 08 &middot; Document AI &amp; identity</p>
+        <h1>NID Extraction &amp; KYC Reconciliation</h1>
+        <p class="lede">
+          A microfinance ERP holds identity data that was typed in by hand, years ago, from
+          documents nobody kept. The member's national ID card is the actual source of truth.
+          This reconciles the two, one branch or region at a time. It reads the barcode on the
+          back of the card first, where the fields are exact, and treats text recognition as the
+          fallback rather than the main path &mdash; because a missed field costs a review, and a
+          wrong one silently matches the wrong member.
+        </p>
+      </div>
+      <div data-glyph="identity" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Scope</th><td>Batch per branch, area or region &middot; 4 stages built &middot; write-back deliberately disabled</td></tr>
+        <tr><th>Stack</th><td>Python 3.13, PySide6 desktop app, Surya OCR, PDF417 barcode decoding, SQLite, pytest</td></tr>
+        <tr><th>Code</th><td>Private repository &mdash; walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      Know-your-customer data in the ERP was entered by branch staff over many years. Some of it
+      is wrong. Finding out which parts means comparing it against the document it was copied
+      from, for a book of members large enough that this can only happen in batches.
+    </p>
+    <p>
+      There is a structural difficulty underneath that. Identity documents carry no member ID,
+      so the only way to connect a scanned card back to a member record is the national ID
+      number itself. Which means the join key is also one of the fields being audited. If the
+      ERP holds the wrong number for someone, a search by number will never find them &mdash; and
+      those are precisely the worst records in the book, the ones most worth finding.
+    </p>
+
+    <h2>What I built</h2>
+    <p>
+      Four stages, run per scope, with a desktop interface over them.
+    </p>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From scanned card to review queue">
+        <div class="stage"><span class="num">1</span><div><div class="name">Fetch</div><div class="what">Gather the batch from any mix of local folders, synced cloud folders, network shares or single files. De-duplication is on file content, not path, so the same card arriving twice is registered once.</div></div></div>
+        <div class="stage gate"><span class="num">2</span><div><div class="name">Extract <span class="badge">Barcode first</span></div><div class="what">Decode the PDF417 barcode on the back of the card, which carries the number, the name and the date of birth exactly. Text recognition runs only when that fails.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Resolve to a member</div><div class="what">Find the member by national ID, then by smart-card ID, then by name and date of birth &mdash; recording which of the three worked.</div></div></div>
+        <div class="stage"><span class="num">4</span><div><div class="name">Compare</div><div class="what">Field-by-field comparison against the ERP profile, producing a mismatch review queue and a workbook.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Write back <span class="badge">Not built</span></div><div class="what">Pushing corrections into the ERP is switched off in configuration. The schema and the review decisions are already shaped to support it when that phase starts.</div></div></div>
+      </div>
+      <figcaption>The fifth stage is designed for and deliberately not enabled.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>The fallback chain is a finding, not a fallback.</strong></p>
+    <p>
+      The resolution order is national ID, then smart-card ID, then name and date of birth, and
+      the record stores which one succeeded. That last field is the most valuable output of the
+      whole stage, because <strong>a member who could only be found by name and date of birth is
+      a member whose ID number in the ERP is wrong</strong>. A step that exists to rescue a
+      failed lookup turns out to be the detector for the exact records the project was
+      commissioned to find.
+    </p>
+
+    <h3>Choosing the recognition engine on evidence</h3>
+    <p>
+      I measured two engines on real cards rather than trusting their documentation. Accuracy was
+      close. Confidence was not, and confidence is what decides whether a human has to look.
+    </p>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>&nbsp;</th><th>Engine A</th><th>Engine B</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Bangla names</strong></td><td>3 of 3 exact, one pass</td><td>3 of 3 exact, but only across three passes</td></tr>
+          <tr><td><strong>English name</strong></td><td>Same pass</td><td>Needs a second, Latin-only pass</td></tr>
+          <tr><td><strong>Machine-readable check digits</strong></td><td>All pass</td><td>One fails</td></tr>
+          <tr><td><strong>Mean confidence</strong></td><td><strong>0.88 &ndash; 0.97</strong></td><td>0.44 &ndash; 0.52</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The second engine returns around 0.52 on values that are <em>correct</em>. Against an
+      auto-accept threshold of 0.90, every Bangla name it reads lands in the review queue whether
+      it is right or wrong &mdash; which makes the threshold meaningless and the queue
+      unmanageable. The first engine's scores actually separate good reads from bad, so the
+      threshold does real work. I chose on that, not on the accuracy column.
+    </p>
+
+    <div class="callout">
+      <span class="label">Read the wrong column before the missed column</span>
+      When scoring extraction against a corrected gold set, a <em>missed</em> field sends a
+      record to review, which is merely expensive. A <em>wrong</em> field can match a different
+      member entirely, which is a data-integrity incident. The two failures are not
+      interchangeable and the evaluation reports them separately.
+    </div>
+
+    <h3>One more decision</h3>
+    <ul>
+      <li><strong>Everything runs on the machine in front of you.</strong> No document leaves the computer: the recognition models run locally, cloud folders are read as ordinary synced directories rather than through an API, and there are no tokens to manage. For a file of identity documents that is the only defensible design.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      A batch of scanned cards becomes a reviewed list of concrete mismatches between what the
+      ERP believes and what the member's document says, with the records whose ID number is
+      wrong called out specifically. The correction step is built for and switched off, which is
+      where it should stay until the review workflow has been used in anger.
+    </p>
+
+    <div class="case-nav">
+      <a href="saimarz.html">
+        <span class="k">Next &middot; 09</span>
+        <span class="t">SaiMarz &mdash; Large-Workbook Join Tool &rarr;</span>
+      </a>
+      <a href="transfer-automation.html">
+        <span class="k">Previous &middot; 07</span>
+        <span class="t">&larr; Transfer Eligibility &amp; PAR-Migration Governance</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=v=20260926a"></script>
+<script src="../assets/js/site.js?v=v=20260926a"></script>
+</body>
+</html>

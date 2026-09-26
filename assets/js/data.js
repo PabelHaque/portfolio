@@ -20,7 +20,7 @@ window.PORTFOLIO = {
   /* Two parts. Every project carries a `part`; the gates get a divider
      where the part changes, and the field colours nodes by part. */
   parts: {
-    systems:   { label: "Products & systems", numeral: "I",  blurb: "Things people use every day: a delivery pipeline, an allocation engine, a study platform, a dashboard, a tracker. Each one enforces a rule so nobody has to remember it." },
+    systems:   { label: "Products & systems", numeral: "I",  blurb: "Things people use every day: a delivery pipeline, an allocation engine, a study platform, a dashboard, and five tools that verify, reconcile and record what a microfinance institution runs on. Each one enforces a rule so nobody has to remember it." },
     analytics: { label: "Analytics",          numeral: "II", blurb: "The practice behind them: turning one unwieldy monthly export into answers for regulators, finance, programme heads and donors — in minutes, not days." }
   },
 
@@ -33,7 +33,8 @@ window.PORTFOLIO = {
                  gate (pain, before/after, capabilities, impact)
      stat:       the one number for this system — shown on the
                  node panel and counted up in its gate
-     glyph:      pipeline | cascade | funnel | hierarchy | code
+     glyph:      pipeline | cascade | funnel | hierarchy | audit | report |
+                 notify | transfer | identity | join | code
      repo:       full URL, or "" if there is nothing to link
      visibility: "public" | "private"
      page:       path to the case study, or "" for no page
@@ -139,6 +140,86 @@ window.PORTFOLIO = {
       tags: ["Python", "Flask", "SQLite", "Playwright", "Chart.js", "Excel automation", "Bilingual parsing"],
       page: "projects/padakhep-rebate-automation.html",
       repo: "https://github.com/pabel64/padakhep-rebate-automation",
+      visibility: "private"
+    },
+    {
+      slug: "special-rebate-automation",
+      part: "systems",
+      title: "Special Rebate Verification & Member Notification",
+      kicker: "Automation \u00b7 verification",
+      year: "2026",
+      glyph: "notify",
+      principle: "Drafts, never sends.",
+      stat: { n: "4", label: "audit tables \u00b7 nothing auto-sent" },
+      summary: "Zonal offices email spreadsheets of members who have been granted a special rebate. This reads the mail, appends the new rows to the master file without ever double-counting one, checks each member\u2019s loan position in the core banking system, works out eligibility, writes the member\u2019s SMS, and leaves an Outlook draft. Money and a message on someone\u2019s phone are both irreversible, so the last step stays human.",
+      facts: [
+        { k: "Sources", v: "19 zonal admin inboxes" },
+        { k: "Output", v: "5-sheet report \u00b7 one draft" },
+        { k: "Audit", v: "4 SQLite tables" }
+      ],
+      tags: ["Python", "Outlook COM", "Playwright", "openpyxl", "SQLite", "YAML config"],
+      page: "projects/special-rebate-automation.html",
+      repo: "https://github.com/pabel64/special-rebate-automation",
+      visibility: "private"
+    },
+    {
+      slug: "transfer-automation",
+      part: "systems",
+      title: "Transfer Eligibility & PAR-Migration Governance",
+      kicker: "Governance \u00b7 compliance",
+      year: "2026",
+      glyph: "transfer",
+      principle: "Won't let a number hide.",
+      stat: { n: "5", label: "governance reports \u00b7 every check stored" },
+      summary: "Branch managers ask to move members between officers, branches and programmes. Moving an overdue member into a colleague\u2019s portfolio makes the delinquency disappear from the original officer\u2019s figures \u2014 the industry calls it PAR migration. This checks every member\u2019s real loan position, applies one deterministic rule, and stores each decision with the name of the person who asked, so the pattern shows up across months, officers and zones.",
+      facts: [
+        { k: "The rule", v: "Deterministic \u00b7 versioned" },
+        { k: "Evidence", v: "Page text + screenshot per member" },
+        { k: "Unreadable data", v: "Manual review, never a yes" }
+      ],
+      tags: ["Python", "Streamlit", "Playwright", "SQLite", "Excel", "Outlook COM"],
+      page: "projects/transfer-automation.html",
+      repo: "https://github.com/pabel64/transfer-automation",
+      visibility: "private"
+    },
+    {
+      slug: "document-extraction-engine",
+      part: "systems",
+      title: "NID Extraction & KYC Reconciliation",
+      kicker: "Document AI \u00b7 identity",
+      year: "2026",
+      glyph: "identity",
+      principle: "Won't guess an identity.",
+      stat: { n: "4", label: "stages built \u00b7 the fifth stays off" },
+      summary: "Reconciles the identity data a microfinance ERP holds against the member\u2019s own national ID card. It reads the card\u2019s barcode first, where the fields are exact, and falls back to text recognition only when it must. A missed field goes to a review queue; a wrong one could silently match the wrong member \u2014 so the pipeline is built to prefer the miss. Writing corrections back into the ERP is deliberately switched off.",
+      facts: [
+        { k: "Pipeline", v: "4 stages \u00b7 write-back disabled" },
+        { k: "Resolution", v: "NID \u2192 smart NID \u2192 name and date of birth" },
+        { k: "Tests", v: "31 test files" }
+      ],
+      tags: ["Python", "PySide6", "Surya OCR", "PDF417 barcode", "SQLite", "pytest"],
+      page: "projects/document-extraction-engine.html",
+      repo: "https://github.com/pabel64/document-extraction-engine",
+      visibility: "private"
+    },
+    {
+      slug: "saimarz",
+      part: "systems",
+      title: "SaiMarz \u2014 Large-Workbook Join Tool",
+      kicker: "Desktop tool \u00b7 shipped",
+      year: "2026",
+      glyph: "join",
+      principle: "Keeps a zero a zero.",
+      stat: { n: "731,771", label: "rows joined \u00b7 offline, on a laptop" },
+      summary: "The job people do with VLOOKUP across hundreds of thousands of rows, as a desktop tool colleagues install themselves without an administrator password. Before it writes anything it tells you what your key will cost: how many rows carry it, how many times the lookup repeats it, the best match rate available. Identifier columns stay text, so a member ID never loses its leading zero, and it makes no network call at any point.",
+      facts: [
+        { k: "Measured", v: "731,771 \u00d7 95 joined to 723,121 \u00d7 95" },
+        { k: "Network calls", v: "None, ever" },
+        { k: "Every output", v: "Carries its own provenance sheet" }
+      ],
+      tags: ["Python", "PySide6 / Qt", "pandas", "Parquet", "Inno Setup", "MIT licence"],
+      page: "projects/saimarz.html",
+      repo: "https://github.com/pabel64/saimarz",
       visibility: "private"
     },
     {

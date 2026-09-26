@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaiMarz &mdash; Large-Workbook Join Tool &mdash; Pabel Haque</title>
+<meta name="description" content="A Windows desktop tool that joins two very large Excel workbooks on a shared key, tells you what the key will cost before it writes anything, keeps identifier columns as text, and makes no network calls at all.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=v=20260926a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 09 &middot; Desktop tool &amp; shipped software</p>
+        <h1>SaiMarz &mdash; Large-Workbook Join Tool</h1>
+        <p class="lede">
+          The job people do with VLOOKUP across hundreds of thousands of rows, as a tool
+          colleagues install themselves and run offline. Five steps down the left-hand side, and
+          a check that runs before anything is written. The part I care about is the line under
+          the key picker: it tells you what your chosen key will actually cost, in match rate and
+          in ambiguity, before you commit to it.
+        </p>
+      </div>
+      <div data-glyph="join" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer, builder and packager</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Scope</th><td>Windows desktop application &middot; per-user install, no administrator password</td></tr>
+        <tr><th>Measured</th><td>731,771 &times; 95 joined to 723,121 &times; 95, written as a 430&nbsp;MB workbook</td></tr>
+        <tr><th>Stack</th><td>Python, PySide6 / Qt, pandas, Parquet cache, Inno Setup installer</td></tr>
+        <tr><th>Licence</th><td>MIT &mdash; free to copy and share</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      Two monthly exports, each around 730,000 rows by 95 columns, and a question that needs
+      columns from one attached to rows of the other. In a spreadsheet that is a lookup formula
+      dragged down three-quarters of a million rows: slow enough to freeze the machine, and
+      wrong in ways that leave no trace.
+    </p>
+    <p>
+      The silent failures are the reason this exists. A key that is blank on a quarter of the
+      rows can never match those rows, but the result still looks complete. A key the lookup file
+      repeats means "take the first match" is choosing one of several arbitrarily, and nothing
+      says so. And a member ID written as a number loses its leading zero, so
+      <code>0012345</code> becomes <code>12345</code> &mdash; which is still a plausible-looking
+      identifier, and matches nothing.
+    </p>
+
+    <h2>What I built</h2>
+    <p>
+      Five steps, in order, with the destructive one last.
+    </p>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="Five steps from two files to one">
+        <div class="stage"><span class="num">1</span><div><div class="name">Files</div><div class="what">Drop both workbooks in and pick the sheets. The first ten rows are shown so the header row can be confirmed or detected.</div></div></div>
+        <div class="stage gate"><span class="num">2</span><div><div class="name">Key <span class="badge">Costed</span></div><div class="what">Choose the column the two files share. One line reports how much of it is filled, how many keys the lookup repeats, and the best match rate available.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Columns</div><div class="what">Keep what you need from the target, bring across what you need from the lookup. Identifier columns are detected and held as text.</div></div></div>
+        <div class="stage gate"><span class="num">4</span><div><div class="name">Check <span class="badge">Nothing written</span></div><div class="what">Match rate, new rows, rows only in the lookup, duplicate keys, row-count reconciliation. This step writes nothing at all.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Write</div><div class="what">Excel, CSV or Parquet, optionally split into one file per branch, division or any other column.</div></div></div>
+      </div>
+      <figcaption>Steps 2 and 4 both exist to let someone stop before they have produced a confident, wrong answer.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>The tool tells you what your key will cost before you use it.</strong></p>
+    <p>
+      Under the key picker, one sentence: how much of the column is filled, how many keys the
+      lookup file repeats, and the highest match rate that is therefore possible. A key that is
+      blank on a quarter of the rows is capped at 75% before the join has run, and a repeated key
+      means the tool is picking arbitrarily among candidates.
+    </p>
+    <p>
+      Neither fact is visible in a spreadsheet, and both change what a careful person would do.
+      Putting them on screen at the moment of the decision, rather than in a log afterwards, is
+      most of the value of the tool. There is also a comparison view that scores every candidate
+      column, for when the obvious key turns out to be the wrong one.
+    </p>
+
+    <div class="callout">
+      <span class="label">Keeps a zero a zero</span>
+      When a column holds digits stored as text with leading zeros &mdash; a member ID, a staff
+      ID, a phone number &mdash; it stays text, and the tool says so on screen. Writing
+      <code>0012345</code> as a number produces <code>12345</code>, which still looks like a valid
+      identifier. That is the difference between a join that fails visibly and one that fails
+      silently.
+    </div>
+
+    <h3>Three more decisions</h3>
+    <ul>
+      <li><strong>No network calls at any point.</strong> No telemetry, no update check, nothing. It works with the network cable pulled out. The activity log records file names, sheet names, column names and timings, and never the contents of a row &mdash; so the log is safe to send when someone needs help.</li>
+      <li><strong>Every output carries its own provenance.</strong> Each workbook it writes includes a metadata sheet recording which files were merged, their fingerprints, the key, the join settings, the match rate and the version that produced it. A result found on a shared drive months later can be traced back to its inputs.</li>
+      <li><strong>It has to install without help.</strong> Per-user installation, so no administrator password, and everything bundled, so no runtime to install first. The documentation tells people the unsigned-installer warning is coming and what to click, because a tool nobody can install is not a tool.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      Colleagues join two very large workbooks themselves, offline, and see the cost of their key
+      before they commit to it. On a measured pair of real exports &mdash; 731,771 rows by 95
+      columns joined to 723,121 by 95 &mdash; reading each file takes about two minutes once and
+      is cached thereafter, the pre-flight check about thirty seconds, and the write under a
+      minute.
+    </p>
+
+    <div class="case-nav">
+      <a href="reports-and-analytics.html">
+        <span class="k">Next &middot; 10</span>
+        <span class="t">Reports &amp; Analytics &rarr;</span>
+      </a>
+      <a href="document-extraction-engine.html">
+        <span class="k">Previous &middot; 08</span>
+        <span class="t">&larr; NID Extraction &amp; KYC Reconciliation</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=v=20260926a"></script>
+<script src="../assets/js/site.js?v=v=20260926a"></script>
+</body>
+</html>

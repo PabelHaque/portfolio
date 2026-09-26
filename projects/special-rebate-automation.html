@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Special Rebate Verification &amp; Member Notification &mdash; Pabel Haque</title>
+<meta name="description" content="Reads special-rebate submissions out of Outlook, appends them to the master file without double-counting, verifies each member against the core banking system, computes eligibility, writes the member SMS, and stops at an unsent draft.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=v=20260926a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Pabel Haque</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 06 &middot; Automation &amp; verification</p>
+        <h1>Special Rebate Verification &amp; Member Notification</h1>
+        <p class="lede">
+          Nineteen zonal offices email spreadsheets of members who have been granted a special
+          rebate. Each row has to reach the master file exactly once, be checked against the loan
+          system, be tested against the rebate formula, and become an SMS to the member. This
+          automates all four and then stops: the Outlook message it produces is a draft. Money
+          leaving the institution and a text arriving on a member's phone are both irreversible,
+          so a person presses send.
+        </p>
+      </div>
+      <div data-glyph="notify" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Sole designer and builder</td></tr>
+        <tr><th>Year</th><td>2026</td></tr>
+        <tr><th>Scope</th><td>19 zonal admin inboxes &middot; master workbook &middot; 5-sheet report &middot; per-member SMS</td></tr>
+        <tr><th>Stack</th><td>Python, Outlook COM (win32com), Playwright (Chromium), openpyxl, SQLite, YAML configuration</td></tr>
+        <tr><th>Code</th><td>Private repository &mdash; walkthrough available on request</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      A special rebate is a discretionary reduction granted to a member who has repaid. The
+      request arrives as an email from a zonal admin office with a spreadsheet attached, in the
+      same layout as the master file that finance keeps. Someone then has to open each
+      attachment, copy the new rows into the master workbook, look every member up in the loan
+      system to confirm the loan really is fully repaid and find the last payment, apply the
+      rebate formula, write the Bangla SMS text, and hand the result to the ICT team to send.
+    </p>
+    <p>
+      Every step of that is a place to make an expensive mistake. The same member appended
+      twice is a rebate paid twice. A rebate computed from the wrong base is money out of the
+      door. An SMS to someone who was never eligible is a promise the institution then has to
+      honour or retract. And the master file is the only record, so a bad paste is permanent.
+    </p>
+
+    <h2>What I built</h2>
+    <p>
+      One command runs the whole cycle for a date range, and every stage can be run on its own
+      while something is being checked.
+    </p>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From inbox to unsent draft">
+        <div class="stage"><span class="num">1</span><div><div class="name">Scan the inbox</div><div class="what">Finds messages in the date range from the known sender addresses with a matching subject, and saves their attachments.</div></div></div>
+        <div class="stage gate"><span class="num">2</span><div><div class="name">Refuse duplicates <span class="badge">Check</span></div><div class="what">Every extracted row is compared against the master file and against the audit database before anything is appended.</div></div></div>
+        <div class="stage"><span class="num">3</span><div><div class="name">Back up, then append</div><div class="what">A timestamped copy of the master workbook is written first. Only then are the new rows added and the serial numbers regenerated.</div></div></div>
+        <div class="stage"><span class="num">4</span><div><div class="name">Verify in the loan system</div><div class="what">A browser session opens each member's profile, confirms the loan is fully repaid, and reads the last transaction date and payment amount.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Decide and write the message</div><div class="what">The rebate formula produces eligible, not eligible or error, and the SMS text is generated from the official template.</div></div></div>
+        <div class="stage gate"><span class="num">6</span><div><div class="name">Draft, do not send <span class="badge">Human</span></div><div class="what">A five-sheet report is built and attached to an Outlook draft. The automation never presses send.</div></div></div>
+      </div>
+      <figcaption>Two of the six steps exist to stop the run rather than advance it.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>The unsent draft is the product, not a limitation.</strong></p>
+    <p>
+      It would have been three lines to send the mail. I did not, and the module that builds it
+      is named for what it does rather than what it could do. Two irreversible things happen at
+      the end of this pipeline: an institution pays out money, and a member receives a message
+      saying so. Neither can be recalled if the formula was wrong, and the formula is exactly
+      the part I was least certain about.
+    </p>
+    <div class="callout">
+      <span class="label">Uncertainty belongs in configuration, not in code</span>
+      The rebate rate and the base it applies to live in a settings file, with a note in the
+      documentation saying they must be confirmed with management before a production run.
+      Encoding a number I had not had confirmed as though it were settled would have hidden the
+      one thing a reviewer most needed to see.
+    </div>
+    <h3>Two more decisions</h3>
+    <ul>
+      <li><strong>Back up before you append, not after.</strong> The master workbook is the institution's record of every rebate granted. The backup is written before a single row is added, so the worst outcome of a bad run is a file to restore rather than a history to reconstruct.</li>
+      <li><strong>An audit database beside the workbook.</strong> Four tables record every email processed, every row extracted, every verification result and every append. The workbook is what finance opens; the database is what answers "why is this member in here twice" six months later.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      A cycle of copying between mailboxes and spreadsheets is now one run that ends in a draft
+      waiting for a human to read. The rows are unique by construction, every member has been
+      checked against the loan system rather than taken on trust, and the reasoning behind each
+      decision is queryable long after the workbook has moved on.
+    </p>
+
+    <div class="case-nav">
+      <a href="transfer-automation.html">
+        <span class="k">Next &middot; 07</span>
+        <span class="t">Transfer Eligibility &amp; PAR-Migration Governance &rarr;</span>
+      </a>
+      <a href="padakhep-rebate-automation.html">
+        <span class="k">Previous &middot; 05</span>
+        <span class="t">&larr; Special-Permission Tracking &amp; Microzen Validation</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Pabel Haque</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=v=20260926a"></script>
+<script src="../assets/js/site.js?v=v=20260926a"></script>
+</body>
+</html>
