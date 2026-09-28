@@ -1,4 +1,4 @@
-# Pabel Haque — Portfolio
+# Md. Mominul Haque (Pabel) — Portfolio
 
 **Live site → https://pabel64.github.io/portfolio/**
 

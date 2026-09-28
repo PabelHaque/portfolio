@@ -7,13 +7,13 @@
 window.PORTFOLIO = {
 
   profile: {
-    name: "Pabel Haque",
+    name: "Md. Mominul Haque (Pabel)",
     role: "Digital Transformation · Systems & Data",
     location: "Bangladesh",
     // Leave a field as "" to hide that row in the Contact gate.
     github: "https://github.com/pabel64",
-    email: "",
-    linkedin: "",
+    email: "mdmominul97haque@gmail.com",
+    linkedin: "https://www.linkedin.com/in/md-mominul-haque",
     resume: ""
   },
 
