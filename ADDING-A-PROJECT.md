@@ -29,7 +29,7 @@ connecting lines, the rail of locks and the tour all derive from the array.
   ],
   tags: ["Go", "PostgreSQL", "Docker"],
   page: "projects/my-new-thing.html",   // "" for a card with no case study
-  repo: "https://github.com/pabel64/my-new-thing",
+  repo: "https://github.com/PabelHaque/my-new-thing",
   visibility: "private"                 // "public" | "private"
 }
 ```

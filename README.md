@@ -1,6 +1,6 @@
 # Md. Mominul Haque (Pabel) — Portfolio
 
-**Live site → https://pabel64.github.io/portfolio/**
+**Live site → https://pabelhaque.github.io/portfolio/**
 
 Systems that wait for a human, refuse to guess, won't overspend, know who's asking, and won't
 assume a yes. Five production systems — a 71-agent AI delivery pipeline, a deterministic

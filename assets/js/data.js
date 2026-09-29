@@ -11,7 +11,7 @@ window.PORTFOLIO = {
     role: "Digital Transformation · Systems & Data",
     location: "Bangladesh",
     // Leave a field as "" to hide that row in the Contact gate.
-    github: "https://github.com/pabel64",
+    github: "https://github.com/PabelHaque",
     email: "mdmominul97haque@gmail.com",
     linkedin: "https://www.linkedin.com/in/md-mominul-haque",
     resume: ""
@@ -59,7 +59,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Claude Agent SDK", "PowerShell", "Bash", "Pytest", "Governance hooks"],
       page: "projects/factory-agent-overlay.html",
-      repo: "https://github.com/pabel64/factory-agent-overlay",
+      repo: "https://github.com/PabelHaque/factory-agent-overlay",
       visibility: "private"
     },
     {
@@ -79,7 +79,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Django", "PostgreSQL", "TypeScript", "React", "Docker", "RBAC", "i18n"],
       page: "projects/pmuk-target-system.html",
-      repo: "https://github.com/pabel64/PMUK-Target-System",
+      repo: "https://github.com/PabelHaque/PMUK-Target-System",
       visibility: "private"
     },
     {
@@ -99,7 +99,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Scrapy", "Streamlit", "SQLite", "Groq", "Cerebras", "Ollama", "ReportLab", "OCR"],
       page: "projects/editorials-study-assistant.html",
-      repo: "https://github.com/pabel64/editorials",
+      repo: "https://github.com/PabelHaque/editorials",
       visibility: "private"
     },
     {
@@ -119,7 +119,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Django", "Next.js", "TypeScript", "PostgreSQL", "Docker", "Recharts"],
       page: "projects/ak47-dashboard.html",
-      repo: "https://github.com/pabel64/AK47-Dashboard",
+      repo: "https://github.com/PabelHaque/AK47-Dashboard",
       visibility: "private"
     },
     {
@@ -139,7 +139,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Flask", "SQLite", "Playwright", "Chart.js", "Excel automation", "Bilingual parsing"],
       page: "projects/padakhep-rebate-automation.html",
-      repo: "https://github.com/pabel64/padakhep-rebate-automation",
+      repo: "https://github.com/PabelHaque/padakhep-rebate-automation",
       visibility: "private"
     },
     {
@@ -159,7 +159,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Outlook COM", "Playwright", "openpyxl", "SQLite", "YAML config"],
       page: "projects/special-rebate-automation.html",
-      repo: "https://github.com/pabel64/special-rebate-automation",
+      repo: "https://github.com/PabelHaque/special-rebate-automation",
       visibility: "private"
     },
     {
@@ -179,7 +179,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Streamlit", "Playwright", "SQLite", "Excel", "Outlook COM"],
       page: "projects/transfer-automation.html",
-      repo: "https://github.com/pabel64/transfer-automation",
+      repo: "https://github.com/PabelHaque/transfer-automation",
       visibility: "private"
     },
     {
@@ -199,7 +199,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "PySide6", "Surya OCR", "PDF417 barcode", "SQLite", "pytest"],
       page: "projects/document-extraction-engine.html",
-      repo: "https://github.com/pabel64/document-extraction-engine",
+      repo: "https://github.com/PabelHaque/document-extraction-engine",
       visibility: "private"
     },
     {
@@ -219,7 +219,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "PySide6 / Qt", "pandas", "Parquet", "Inno Setup", "MIT licence"],
       page: "projects/saimarz.html",
-      repo: "https://github.com/pabel64/saimarz",
+      repo: "https://github.com/PabelHaque/saimarz",
       visibility: "private"
     },
     {
@@ -284,7 +284,7 @@ window.PORTFOLIO = {
       },
       tags: ["Python", "pandas", "Jupyter", "xlsxwriter", "SQLAlchemy", "ipywidgets", "pytest"],
       page: "projects/reports-and-analytics.html",
-      repo: "https://github.com/pabel64/reports-and-analytics",
+      repo: "https://github.com/PabelHaque/reports-and-analytics",
       visibility: "private"
     }
   ],
