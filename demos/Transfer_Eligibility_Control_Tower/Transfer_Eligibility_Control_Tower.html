@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfer Eligibility Checker — Simulation</title>
+<!--
+  SIMULATION of a Streamlit application. Single file, no build step, no network.
+  All data is invented and generated from a fixed seed.
+
+  Layout, labels, column headers, badges, validation text, state names and
+  business rules are copied from the real source. Each rule cites its source
+  file inline. Source files referenced:
+    app.py
+    engine/database.py
+    engine/admin_panel.py
+    engine/microzen_batch_runner.py
+    engine/login.py
+    engine/member_profile.py
+    engine/input_resolver.py
+    tasks/microzen_parser.py
+    tasks/transfer_eligibility_logic.py
+
+  No CDN libraries are used. The brief allowed Alpine/Chart.js/SheetJS from a
+  CDN but also required the page to work offline from file:// with no console
+  errors; those two cannot both hold, so charts are hand-rolled inline SVG and
+  the uploader parses CSV natively.
+-->
+<style>
+/* ── Palette and chrome copied from app.py:75-400 ───────────────────── */
+:root{
+  --ink:#0f172a; --ink-2:#1e293b; --ink-3:#334155;
+  --muted:#64748b; --muted-2:#94a3b8; --line:#e2e8f0; --line-2:#f1f5f9;
+  --accent:#2563eb; --accent-dk:#1e40af; --teal:#0d9488;
+  --green-bg:#d1fae5; --green-tx:#065f46; --green-2:#059669;
+  --red-bg:#fee2e2;   --red-tx:#991b1b;   --red-2:#dc2626;
+  --amber-bg:#fef3c7; --amber-tx:#92400e; --amber-2:#d97706;
+  --blue-bg:#dbeafe;  --violet-bg:#ede9fe; --violet-tx:#5b21b6;
+  --page:#f8fafc;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  background:var(--page); color:var(--ink); font-size:15px; line-height:1.5;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit}
+:focus-visible{outline:3px solid #2563eb;outline-offset:2px;border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── Top bar (demo chrome, not part of the real app) ─────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:.9rem;
+  background:#0b1220;border-bottom:1px solid var(--ink-2);padding:.55rem 1rem;color:#e2e8f0;flex-wrap:wrap;
+}
+.topbar-tag{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#bae6fd;padding:.2rem .6rem;border-radius:20px}
+.topbar-title{font-weight:700;font-size:.86rem;color:#f1f5f9}
+.topbar-spacer{flex:1}
+.topbar label{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-2);font-weight:700;margin-right:.35rem}
+.topbar select,.topbar button{
+  background:var(--ink-2);border:1px solid var(--ink-3);color:#f1f5f9;border-radius:8px;padding:.35rem .6rem;font-size:.8rem;cursor:pointer;
+}
+.topbar button:hover,.topbar select:hover{border-color:#475569}
+.role-pill{font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;background:var(--blue-bg);color:var(--accent-dk)}
+
+/* ── App header (app.py:113-166) ─────────────────────────────────────── */
+.app-header{
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0d4f6b 100%);
+  padding:1.8rem 2.2rem;border-radius:20px;color:#fff;margin-bottom:1.5rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  box-shadow:0 20px 60px rgba(15,23,42,.25);
+}
+.app-header-left{flex:1;min-width:260px}
+.app-header-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#bae6fd;
+  font-size:.72rem;font-weight:700;padding:.25rem .75rem;border-radius:20px;display:inline-block;
+  margin-bottom:.6rem;letter-spacing:.06em;text-transform:uppercase}
+.app-header-title{font-size:1.85rem;font-weight:800;margin-bottom:.35rem;letter-spacing:-.02em}
+.app-header-subtitle{font-size:.92rem;color:var(--muted-2);max-width:820px;line-height:1.55}
+.app-header-right{display:flex;gap:.7rem;flex-wrap:wrap}
+.app-header-stat{background:rgba(255,255,255,.08);border-radius:10px;padding:.5rem 1rem;border:1px solid rgba(255,255,255,.12)}
+.app-header-stat-label{font-size:.68rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em}
+.app-header-stat-value{font-size:1.1rem;font-weight:700;color:#f0f9ff}
+.hdr-flag{background:#fee2e2;color:#991b1b;font-size:.72rem;font-weight:700;padding:.2rem .7rem;border-radius:20px;margin-left:.6rem;white-space:nowrap}
+
+/* ── Step indicator (app.py:168-211) ─────────────────────────────────── */
+.steps-bar{display:flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;
+  padding:1rem 1.5rem;margin-bottom:1.4rem;box-shadow:0 4px 16px rgba(15,23,42,.06);overflow-x:auto}
+.step-item{display:flex;align-items:center;flex:1;min-width:150px}
+.step-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.88rem;flex-shrink:0}
+.step-circle.done{background:var(--teal);color:#fff;box-shadow:0 0 0 4px rgba(13,148,136,.15)}
+.step-circle.active{background:var(--accent);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+.step-circle.pending{background:var(--line-2);color:var(--muted-2);border:2px solid var(--line)}
+.step-label{margin-left:.55rem;flex:1}
+.step-label-main{font-size:.82rem;font-weight:700;color:var(--ink)}
+.step-label-main.pending-text{color:var(--muted-2)}
+.step-label-sub{font-size:.72rem;color:var(--muted-2)}
+.step-connector{flex:0 0 32px;height:2px;background:var(--line);margin:0 .5rem}
+.step-connector.done{background:var(--teal)}
+
+/* ── Metric cards (app.py:213-230) ───────────────────────────────────── */
+.metric-row{display:flex;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.metric-card{flex:1;min-width:165px;background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:1.1rem 1.3rem;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+.metric-card-label{font-size:.73rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem}
+.metric-card-value{font-size:1.55rem;font-weight:800;color:var(--ink)}
+.metric-card-sub{font-size:.76rem;color:var(--muted-2);margin-top:.2rem;word-break:break-word}
+.metric-card.green{border-left:4px solid var(--teal)}
+.metric-card.blue{border-left:4px solid var(--accent)}
+.metric-card.amber{border-left:4px solid var(--amber-2)}
+.metric-card.red{border-left:4px solid var(--red-2)}
+.metric-card.slate{border-left:4px solid var(--muted)}
+
+/* ── Section cards (app.py:232-251) ──────────────────────────────────── */
+.section-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1.4rem 1.6rem;
+  margin-bottom:1rem;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+.section-card-title{font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:.25rem}
+.section-card-sub{font-size:.82rem;color:var(--muted);margin-bottom:1rem}
+
+/* ── Badges (app.py:253-265) ─────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;font-size:.72rem;font-weight:700;padding:.22rem .7rem;
+  border-radius:20px;letter-spacing:.03em}
+.badge-green{background:var(--green-bg);color:var(--green-tx)}
+.badge-red{background:var(--red-bg);color:var(--red-tx)}
+.badge-amber{background:var(--amber-bg);color:var(--amber-tx)}
+.badge-blue{background:var(--blue-bg);color:var(--accent-dk)}
+.badge-slate{background:var(--line-2);color:#475569}
+
+/* ── Result summary cards (app.py:267-287) ───────────────────────────── */
+.result-summary-grid{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.result-summary-card{flex:1;min-width:130px;border-radius:14px;padding:1rem 1.2rem;text-align:center}
+.result-summary-card.eligible{background:var(--green-bg);border:1px solid #6ee7b7}
+.result-summary-card.not-eligible{background:var(--red-bg);border:1px solid #fca5a5}
+.result-summary-card.error{background:var(--amber-bg);border:1px solid #fcd34d}
+.result-summary-card.total{background:#eff6ff;border:1px solid #93c5fd}
+.result-summary-number{font-size:2rem;font-weight:800}
+.result-summary-label{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem}
+.result-summary-card.eligible .result-summary-number{color:var(--green-tx)}
+.result-summary-card.eligible .result-summary-label{color:var(--green-2)}
+.result-summary-card.not-eligible .result-summary-number{color:var(--red-tx)}
+.result-summary-card.not-eligible .result-summary-label{color:var(--red-2)}
+.result-summary-card.error .result-summary-number{color:var(--amber-tx)}
+.result-summary-card.error .result-summary-label{color:var(--amber-2)}
+.result-summary-card.total .result-summary-number{color:var(--accent-dk)}
+.result-summary-card.total .result-summary-label{color:var(--accent)}
+
+/* ── Credential panel (app.py:289-307) ───────────────────────────────── */
+.credential-panel{background:var(--ink);border:1px solid var(--ink-2);border-radius:14px;padding:1.3rem 1.5rem;margin-bottom:1rem}
+.credential-panel-title{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:.9rem;display:flex;align-items:center;gap:.4rem}
+.credential-panel input{background:var(--ink-2);border:1px solid var(--ink-3);color:#f1f5f9;border-radius:8px;
+  padding:.5rem .7rem;width:100%}
+.credential-panel input::placeholder{color:#64748b}
+.credential-panel .cap{font-size:.76rem;color:var(--muted);margin-top:.6rem}
+
+/* ── Empty / welcome states (app.py:320-400) ─────────────────────────── */
+.empty-state{text-align:center;padding:3rem 2rem;color:var(--muted-2)}
+.empty-state-icon{font-size:3rem;margin-bottom:.8rem}
+.empty-state-title{font-size:1.05rem;font-weight:700;color:#475569;margin-bottom:.4rem}
+.empty-state-sub{font-size:.88rem}
+.welcome-grid{display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap}
+.welcome-card{flex:1;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:16px;
+  padding:1.5rem;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+.welcome-step-num{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:1rem;margin-bottom:.8rem}
+.welcome-step-num.s1{background:#eff6ff;color:var(--accent)}
+.welcome-step-num.s2{background:#f0fdf4;color:var(--green-2)}
+.welcome-step-num.s3{background:#fefce8;color:var(--amber-2)}
+.welcome-step-num.s4{background:#fdf4ff;color:#9333ea}
+.welcome-card-title{font-size:.95rem;font-weight:700;color:var(--ink);margin-bottom:.3rem}
+.welcome-card-desc{font-size:.82rem;color:var(--muted);line-height:1.5}
+
+/* ── Shell ───────────────────────────────────────────────────────────── */
+.shell{display:flex;align-items:flex-start;min-height:calc(100vh - 44px)}
+.sidebar{width:310px;flex:0 0 310px;background:var(--ink);border-right:1px solid var(--ink-2);
+  padding:1.1rem 1rem 3rem;color:#e2e8f0;align-self:stretch;position:sticky;top:44px;max-height:calc(100vh - 44px);overflow-y:auto}
+.main{flex:1;min-width:0;padding:1.5rem 1.6rem 4rem;max-width:1560px}
+.sb-brand{display:flex;align-items:center;gap:.6rem;padding-bottom:.9rem;border-bottom:1px solid var(--ink-2);margin-bottom:.9rem}
+.sb-brand-mark{font-size:1.5rem}
+.sb-brand-name{font-weight:800;color:#f1f5f9;font-size:.98rem}
+.sb-brand-sub{font-size:.7rem;color:var(--muted-2)}
+.sb-group-label{display:flex;align-items:center;gap:.4rem;font-size:.7rem;font-weight:700;color:var(--muted-2);
+  text-transform:uppercase;letter-spacing:.06em;margin:1.1rem 0 .5rem}
+.sb-line{flex:1;height:1px;background:var(--ink-2)}
+.sb-hint{font-size:.74rem;color:var(--muted-2);line-height:1.45}
+.sb-status{background:#111c33;border:1px solid var(--ink-2);border-radius:10px;padding:.6rem .7rem;margin-bottom:.4rem}
+.sb-status-row{display:flex;align-items:center;gap:.45rem;padding:.16rem 0;font-size:.76rem}
+.sb-status-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.sb-status-dot.on{background:#10b981}
+.sb-status-dot.off{background:#475569}
+.sb-status-label{color:var(--muted-2);flex:0 0 92px}
+.sb-status-value{color:#f1f5f9;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar label.fld{display:block;font-size:.72rem;font-weight:700;color:var(--muted-2);text-transform:uppercase;
+  letter-spacing:.04em;margin:.6rem 0 .25rem}
+.sidebar input[type=text],.sidebar input[type=number],.sidebar select{
+  width:100%;background:var(--ink-2);border:1px solid var(--ink-3);color:#f1f5f9;border-radius:8px;padding:.42rem .6rem;font-size:.84rem}
+.sidebar .radio-row{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.3rem}
+.seg{display:flex;background:var(--ink-2);border:1px solid var(--ink-3);border-radius:9px;padding:2px;gap:2px}
+.seg button{flex:1;background:transparent;border:0;color:var(--muted-2);padding:.36rem .5rem;border-radius:7px;
+  font-size:.78rem;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.opt{display:flex;align-items:center;gap:.45rem;font-size:.82rem;color:#cbd5e1;padding:.2rem 0;cursor:pointer}
+.chiplist{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}
+.chip{font-size:.7rem;background:var(--ink-2);border:1px solid var(--ink-3);color:#cbd5e1;border-radius:20px;
+  padding:.16rem .55rem;cursor:pointer;user-select:none}
+.chip[aria-pressed="true"]{background:#1d4ed8;border-color:#2563eb;color:#fff}
+.dropzone{border:1px dashed var(--ink-3);background:var(--ink-2);border-radius:12px;padding:.85rem;text-align:center;
+  font-size:.78rem;color:var(--muted-2);cursor:pointer}
+.dropzone.drag{border-color:var(--accent);background:#17233c;color:#bfdbfe}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;border-radius:9px;padding:.5rem .9rem;
+  font-size:.85rem;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.btn:hover{border-color:#cbd5e1}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-danger{background:var(--red-2);border-color:var(--red-2);color:#fff}
+.btn-block{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.sidebar .btn{background:var(--ink-2);border-color:var(--ink-3);color:#e2e8f0}
+.sidebar .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem;overflow-x:auto;padding-bottom:1px}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;padding:.6rem .85rem;
+  font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;border-radius:8px 8px 0 0}
+.tabs button:hover{color:var(--ink);background:#f1f5f9}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);background:#eff6ff}
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.8rem}
+thead th{position:sticky;top:0;background:var(--ink-2);color:#fff;text-align:left;font-weight:700;
+  padding:.5rem .6rem;white-space:nowrap;font-size:.74rem;letter-spacing:.02em;z-index:1}
+tbody td{padding:.42rem .6rem;border-top:1px solid var(--line);vertical-align:top}
+tbody tr:nth-child(even){background:#fbfcfe}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.cell-eligible{background:var(--green-bg);color:var(--green-tx);font-weight:700}
+.cell-not-eligible{background:var(--red-bg);color:var(--red-tx);font-weight:700}
+.cell-manual-review{background:var(--amber-bg);color:var(--amber-tx);font-weight:700}
+.cell-error{background:#fde68a;color:var(--amber-tx)}
+.sev-HIGH{background:var(--red-bg);color:var(--red-tx);font-weight:700}
+.sev-MEDIUM{background:var(--amber-bg);color:var(--amber-tx)}
+.sev-LOW{background:var(--line-2);color:#475569}
+.st-open{background:var(--red-bg);color:var(--red-tx);font-weight:700}
+.st-justification_requested{background:var(--amber-bg);color:var(--amber-tx)}
+.st-justified,.st-accepted{background:var(--green-bg);color:var(--green-tx)}
+.st-escalated{background:var(--violet-bg);color:var(--violet-tx);font-weight:700}
+.m-header{background:var(--green-bg);color:var(--green-tx)}
+.m-letter{background:var(--amber-bg);color:var(--amber-tx)}
+.m-none{background:var(--red-bg);color:var(--red-tx);font-weight:700}
+.flagcell{background:var(--red-bg);color:var(--red-tx);font-weight:700}
+
+/* ── Misc ────────────────────────────────────────────────────────────── */
+.alert{border-radius:10px;padding:.7rem .9rem;font-size:.83rem;margin-bottom:.8rem;border:1px solid}
+.alert-info{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.alert-warn{background:var(--amber-bg);border-color:#fcd34d;color:var(--amber-tx)}
+.alert-err{background:var(--red-bg);border-color:#fca5a5;color:var(--red-tx)}
+.alert-ok{background:var(--green-bg);border-color:#6ee7b7;color:var(--green-tx)}
+details.exp{border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:.8rem}
+details.exp>summary{cursor:pointer;padding:.6rem .9rem;font-size:.85rem;font-weight:600;color:var(--ink);list-style:none}
+details.exp>summary::-webkit-details-marker{display:none}
+details.exp>summary::before{content:"▸ ";color:var(--muted)}
+details.exp[open]>summary::before{content:"▾ "}
+details.exp .exp-body{padding:0 .9rem .9rem}
+.grid2{display:flex;gap:1rem;flex-wrap:wrap}
+.grid2>*{flex:1;min-width:280px}
+.fld-lab{display:block;font-size:.76rem;font-weight:700;color:#475569;margin:.55rem 0 .22rem}
+input.txt,select.txt,textarea.txt{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:.45rem .6rem;
+  font-size:.85rem;background:#fff;color:var(--ink)}
+textarea.txt{resize:vertical}
+.cap{font-size:.76rem;color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid var(--line-2);font-size:.82rem}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--muted)}
+.kv .v{font-weight:600;color:var(--ink);text-align:right;word-break:break-word}
+.kv .v.blue{color:var(--accent);font-weight:700}
+.progress{height:10px;background:var(--line-2);border-radius:20px;overflow:hidden;margin:.5rem 0}
+.progress>span{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.feed{font-size:.82rem;line-height:1.75;max-height:220px;overflow:auto;font-variant-numeric:tabular-nums}
+.bars{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:.5rem}
+.bars .b{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;min-width:0}
+.bars .b i{display:block;border-radius:3px 3px 0 0}
+.bars .b b{font-size:.6rem;color:var(--muted-2);text-align:center;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;gap:.9rem;font-size:.74rem;color:var(--muted);margin-top:.4rem;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:.25rem}
+footer.sim{padding:1.2rem 1.6rem 2rem;color:var(--muted);font-size:.8rem;text-align:center;border-top:1px solid var(--line);background:#fff}
+
+/* ── Guided tour ─────────────────────────────────────────────────────── */
+.tour-highlight{position:relative;z-index:55;outline:3px solid #2563eb;outline-offset:4px;border-radius:12px;
+  box-shadow:0 0 0 9999px rgba(15,23,42,.45)}
+.tourbox{position:fixed;right:16px;bottom:16px;width:330px;max-width:calc(100vw - 32px);z-index:70;
+  background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(15,23,42,.28);overflow:hidden}
+.tourbox header{background:var(--ink);color:#fff;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:700}
+.tourbox header .n{background:rgba(255,255,255,.14);border-radius:20px;padding:.1rem .5rem;font-size:.7rem}
+.tourbox .body{padding:.85rem;font-size:.84rem;color:#334155}
+.tourbox .body h4{margin:0 0 .35rem;font-size:.9rem;color:var(--ink)}
+.tourbox .foot{display:flex;gap:.4rem;padding:0 .85rem .85rem}
+.tourbox .foot .btn{flex:1;padding:.4rem .5rem;font-size:.8rem}
+.tourfab{position:fixed;right:16px;bottom:16px;z-index:70}
+
+@media (max-width:900px){
+  .shell{flex-direction:column}
+  .sidebar{width:100%;flex:none;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--ink-2)}
+  .main{padding:1rem;width:100%}
+  .app-header{padding:1.2rem 1.1rem;border-radius:16px}
+  .app-header-title{font-size:1.3rem}
+}
+@media (max-width:420px){
+  body{font-size:14px}
+  .main{padding:.8rem}
+  .metric-card{min-width:100%}
+  .result-summary-card{min-width:45%}
+  .tourbox{right:8px;left:8px;width:auto}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-tag">Simulation</span>
+  <span class="topbar-title">Transfer Eligibility Checker</span>
+  <span class="topbar-spacer"></span>
+  <label for="roleSel">Signed in as</label>
+  <select id="roleSel" aria-label="Demo role">
+    <option value="operator">Rokeya Sultana — Operations Analyst</option>
+    <option value="reviewer">Nurul Amin — Regional Reviewer</option>
+    <option value="admin">Kamrul Hasan — Governance Administrator</option>
+  </select>
+  <span class="role-pill" id="rolePill">Operator</span>
+  <button id="tourBtn" type="button">Guided tour</button>
+</div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main" id="main"></main>
+</div>
+
+<footer class="sim">Simulation with invented data. The production system is private.</footer>
+
+<div id="tourRoot"></div>
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════════════════
+   1. SEEDED RANDOM — stable across reloads
+   ═══════════════════════════════════════════════════════════════════════ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const RNG = mulberry32(20260929);
+const rnd  = () => RNG();
+const ri   = (a,b) => a + Math.floor(rnd()*(b-a+1));
+const pick = arr => arr[Math.floor(rnd()*arr.length)];
+const chance = p => rnd() < p;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. INVENTED DATA POOLS
+   Every name, place, ID, balance and date below is fabricated. Nothing is
+   read from the repository, its database, or any config file.
+   ═══════════════════════════════════════════════════════════════════════ */
+const PLACES = ["Kajolnagar","Shimulpur","Doyalganj","Bhatipara","Nilgaon","Torulia",
+                "Ashrafganj","Rampara","Joynagar","Sonatola","Beelpar","Chandrima"];
+const DIVISIONS = ["Uttarpar Division","Meghna Basin Division","Shitolpur Division","Nabaganj Division"];
+const MEMBER_FIRST = ["Rokeya","Shefali","Morjina","Anwara","Jahanara","Rahima","Sultana","Nasima",
+  "Parvin","Momtaz","Shirin","Rowshan","Kohinoor","Dilruba","Ferdousi","Ayesha","Rabeya","Hosneara",
+  "Monwara","Sahera","Bilkis","Amena","Halima","Ruksana","Selina","Tahmina","Shahanaz","Jorina","Marium","Nargis"];
+const MEMBER_LAST = ["Begum","Khatun","Akhter","Bibi","Nessa","Parvin","Sultana","Ara"];
+const STAFF = ["Abul Kashem","Nurul Amin","Shamsul Haque","Jahangir Alam","Mizanur Rahman","Habibur Rahman",
+  "Kamrul Hasan","Delwar Hossain","Rafiqul Islam","Anisur Rahman","Shahidul Islam","Golam Mostafa",
+  "Aminul Haque","Badrul Alam","Firoz Mahmud","Sohel Rana","Tanvir Ahmed","Masud Karim","Jasim Uddin",
+  "Ruhul Amin","Salma Chowdhury","Nazma Yeasmin","Ishrat Jahan","Farhana Kabir","Mahbub Alam",
+  "Shafiqur Rahman","Aktaruzzaman","Bellal Hossain","Nazrul Kabir","Moinul Islam"];
+const SAMITY_WORD = ["Alok","Doyel","Shapla","Bokul","Nodi","Joba","Kishlay","Aparajita","Konok","Tarulata"];
+const APPROVERS = ["Shahnaz Kabir","Ashraful Hoque","Rownak Jahan","Nasir Uddin Ahmed"];
+const DESIGNATIONS = ["JD","DD","AD","Manager"];
+/* Loan components are RULE CONSTANTS, not row data: they appear in the loan-row
+   detection regex at tasks/microzen_parser.py:116 */
+const COMPONENTS = ["JAGORON","AGROSOR","BUNIAD","SUFOLON","ENRICH"];
+/* Departments — app.py:1802 (6) and engine/admin_panel.py:875 (7, adds Senior Management) */
+const DEPARTMENTS_SIDEBAR = ["MIS","Finance & Accounts","ICT","Program/Operation","Supervisor/Reviewer","Branch/Area/Region"];
+const DEPARTMENTS_RECIPIENT = DEPARTMENTS_SIDEBAR.concat(["Senior Management"]);
+/* The real template points at the production ERP host. Replaced here so a public
+   demo does not advertise an internal system. Shape is identical to app.py:1782. */
+const URL_TEMPLATE = "https://erp.example-mfi.net/member/detail/{member_id_clean}";
+const TRANSFER_REASONS = ["Member relocated to destination samity area","Samity merged under cluster reorganisation",
+  "Officer portfolio rebalancing","Member requested closer collection point","Branch catchment revision",""];
+
+/* ── Hierarchy at the scale the brief prescribes ─────────────────────── */
+function buildHierarchy(){
+  const divisions=[],regions=[],areas=[],branches=[],officers=[];
+  let p=0;
+  DIVISIONS.forEach(dv=>{
+    divisions.push(dv);
+    for(let r=0;r<3;r++){
+      const zone = PLACES[p++ % PLACES.length] + " Zone";
+      regions.push({zone:zone,division:dv});
+      ["Sadar","North"].forEach(suffix=>{
+        const area = zone.replace(" Zone","") + " " + suffix + " Area";
+        areas.push({area:area,zone:zone,division:dv});
+        for(let b=0;b<3;b++){
+          const prog = b===2 ? "PMf" : "PME";
+          const branch = zone.replace(" Zone","") + " " + ["Bazar","Ghat","Para"][b] + " Branch (" + prog + ")";
+          branches.push({branch:branch,area:area,zone:zone,division:dv,program:(prog==="PMf"?"PMF":"PME")});
+          const n = ri(4,6);
+          for(let o=0;o<n;o++){
+            officers.push({name:pick(STAFF),id:String(ri(1000000000,1999999999)),
+                           branch:branch,area:area,zone:zone,division:dv});
+          }
+        }
+      });
+    }
+  });
+  return {divisions:divisions,regions:regions,areas:areas,branches:branches,officers:officers};
+}
+const HIER = buildHierarchy();
+const officersOf = b => HIER.officers.filter(o=>o.branch===b);
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. BUSINESS RULES — copied from source, not re-invented
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* tasks/transfer_eligibility_logic.py:18  to_number() */
+function toNumber(v){
+  if(v===null||v===undefined) return 0;
+  if(typeof v==="number") return isFinite(v)?v:0;
+  let t=String(v).trim(); if(!t) return 0;
+  [",","৳","Tk","BDT","tk","bdt"].forEach(tok=>{t=t.split(tok).join("");});
+  const n=parseFloat(t.trim()); return isNaN(n)?0:n;
+}
+/* tasks/transfer_eligibility_logic.py:38  is_primary_product() */
+function isPrimaryProduct(v){
+  if(v===null||v===undefined) return false;
+  return String(v).trim().toLowerCase().indexOf("primary")!==-1;
+}
+/* tasks/transfer_eligibility_logic.py:44  is_active_status()
+   The green tick is often missing from the scrape, so active is inferred
+   from outstanding greater than zero. */
+function isActiveStatus(v,outstanding){
+  outstanding = outstanding||0;
+  if(v===true) return true;
+  if(v===false||v===null||v===undefined) return outstanding>0;
+  const t=String(v).trim().toLowerCase();
+  const ACTIVE=["true","yes","y","active","1","✓","✔","green tick","green","inferred active"];
+  const INACTIVE=["false","no","n","inactive","0","x","✗","✘","red cross","red"];
+  if(ACTIVE.indexOf(t)!==-1) return true;
+  if(INACTIVE.indexOf(t)!==-1) return false;
+  return outstanding>0;
+}
+/* tasks/transfer_eligibility_logic.py:76  evaluate_loans()
+   Both confidence flags default true so older callers stay unaffected. */
+function evaluateLoans(loans, loanSectionFound, profileOk){
+  if(loanSectionFound===undefined) loanSectionFound=true;
+  if(profileOk===undefined) profileOk=true;
+  let primaryWith="No", primaryBal=0, primaryOver=0;
+  let activeCount=0, totalOut=0, totalOver=0; const details=[];
+  (loans||[]).forEach(function(loan){
+    const product = loan.loan_product||"";
+    const outstanding = toNumber(loan.outstanding_balance);
+    const overdue = toNumber(loan.overdue_amount);
+    const active = isActiveStatus(loan.active_status, outstanding);
+    const primary = isPrimaryProduct(product);
+    if(active && outstanding>0){
+      activeCount++; totalOut+=outstanding; totalOver+=overdue;
+      details.push(product+" | Outstanding: "+fmt2(outstanding)+" | Overdue: "+fmt2(overdue));
+    }
+    if(primary && active && outstanding>0){
+      primaryWith="Yes";
+      primaryBal=Math.max(primaryBal,outstanding);
+      primaryOver=Math.max(primaryOver,overdue);
+    }
+  });
+  let result,confidence,message,needsReview=false,reviewReason="";
+  if(primaryWith==="Yes"){
+    result="Not Eligible"; confidence="High";
+    message="Member is not eligible for transfer because active Primary loan with outstanding balance was found.";
+  } else if(!profileOk){
+    result="Manual Review"; confidence="None"; needsReview=true;
+    reviewReason="Member profile could not be read reliably.";
+    message="Manual review required: the member profile did not parse, so eligibility could not be determined automatically. Verify in Microzen.";
+  } else if(!loanSectionFound){
+    result="Manual Review"; confidence="None"; needsReview=true;
+    reviewReason="Loan table was not found in the captured page.";
+    message="Manual review required: the loan information could not be read, so an Eligible result cannot be trusted. Verify loans in Microzen.";
+  } else {
+    result="Eligible"; confidence=(loans&&loans.length)?"High":"Medium";
+    message="Member is eligible for transfer based on automated pre-check. No active Primary loan with outstanding balance was found.";
+    if(!loans||!loans.length){
+      message+=" (Note: no loan rows were parsed — confirm the member genuinely has no loans if this is unexpected.)";
+    }
+  }
+  return {primary_loan_with_balance:primaryWith, primary_loan_balance:primaryBal,
+    primary_loan_overdue:primaryOver, active_loans_count:activeCount,
+    total_outstanding:totalOut, total_overdue:totalOver,
+    active_loan_details:details.join("; "), eligibility_result:result,
+    result_message:message, confidence:confidence,
+    needs_manual_review:needsReview, review_reason:reviewReason, status:"COMPLETED"};
+}
+/* engine/database.py:264  _derive_flags()
+   Severity is HIGH when the overdue sits on a Primary loan, otherwise MEDIUM
+   at 1000 or above and LOW below it. Both flag types can fire on one member. */
+function deriveFlags(elig){
+  const flags=[];
+  const totalOverdue=toNumber(elig.total_overdue);
+  const primaryOverdue=toNumber(elig.primary_loan_overdue);
+  const result=(elig.eligibility_result||"").toLowerCase();
+  if(totalOverdue>0||primaryOverdue>0){
+    const amount=Math.max(totalOverdue,primaryOverdue);
+    const severity = primaryOverdue>0 ? "HIGH" : (amount>=1000 ? "MEDIUM" : "LOW");
+    flags.push({type:"OVERDUE_ON_TRANSFER",severity:severity,
+      reason:"Member submitted for transfer has overdue balance of "+fmt2(amount)
+        +(primaryOverdue>0?" on a Primary loan":"")+". Justification required from the requester."});
+  }
+  if(result==="not eligible"){
+    flags.push({type:"NOT_ELIGIBLE_BUT_SUBMITTED",severity:"HIGH",
+      reason:"Member has an active Primary loan with balance but was submitted for transfer."});
+  }
+  return flags;
+}
+/* engine/database.py:370 */
+const overdueFlagOf = e => (toNumber(e.total_overdue)>0||toNumber(e.primary_loan_overdue)>0)?1:0;
+/* engine/database.py:32 */
+const APP_VERSION="1.0", RULE_VERSION="primary-loan-v1";
+/* engine/database.py:142 — the five workflow states */
+const FLAG_STATUSES=["open","justification_requested","justified","accepted","escalated"];
+
+/* ── formatting helpers ──────────────────────────────────────────────── */
+function fmt2(n){return (Math.round((+n||0)*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmt0(n){return Math.round(+n||0).toLocaleString("en-US");}
+function money(n){n=+n||0;
+  if(Math.abs(n)>=1e7) return (n/1e7).toFixed(2)+" Cr";
+  if(Math.abs(n)>=1e5) return (n/1e5).toFixed(2)+" L";
+  return fmt0(n);}
+function esc(s){return String(s===null||s===undefined?"":s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function pad(n,w){let s=String(n);while(s.length<w)s="0"+s;return s;}
+function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1,2)+"-"+pad(d.getDate(),2);}
+function pct(a,b){return b?Math.round(a*1000/b)/10:0;}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. GENERATED DATASET
+   ═══════════════════════════════════════════════════════════════════════ */
+let MEMBER_SEQ = 200000;
+function newMemberId(){ MEMBER_SEQ += ri(37,911); return pad(MEMBER_SEQ,8); }
+function memberName(){ return pick(MEMBER_FIRST)+" "+pick(MEMBER_LAST); }
+function samityName(){ return pick(SAMITY_WORD)+" Mohila Shamity-"+pad(ri(1,9),2); }
+function clusterName(){ return "Cluster-"+pad(ri(2,9),2)+" "+pick(SAMITY_WORD)+" Samity"; }
+function phoneNo(){ return "01"+ri(3,9)+String(ri(10000000,99999999)); }
+
+/* One transfer request row, before anything is read from the ERP. */
+function makeRequest(rowNo, dateStr, requester){
+  const fromBranch = pick(HIER.branches);
+  const fromOffs = officersOf(fromBranch.branch);
+  const fromOff = fromOffs.length?pick(fromOffs):pick(HIER.officers);
+  let toBranch = pick(HIER.branches);
+  let guard=0;
+  while(toBranch.branch===fromBranch.branch && guard++<8) toBranch = pick(HIER.branches);
+  const toOffs = officersOf(toBranch.branch);
+  const toOff = toOffs.length?pick(toOffs):pick(HIER.officers);
+  const raw = newMemberId();
+  return {
+    input_row: rowNo,
+    member_id_raw: raw,
+    member_id_clean: String(parseInt(raw,10)),
+    member_name: memberName(),
+    samity: samityName(),
+    samity_id: String(ri(100000000,999999999)),
+    from_officer: fromOff.name, from_officer_id: fromOff.id,
+    input_branch: fromBranch.branch,
+    area: fromBranch.area,
+    input_region_zone: fromBranch.zone,
+    division: fromBranch.division,
+    program: fromBranch.program,
+    to_samity: clusterName(), to_samity_id: String(ri(100000000,999999999)),
+    to_officer: toOff.name, to_officer_id: toOff.id,
+    to_branch: toBranch.branch, to_area: toBranch.area, to_zone: toBranch.zone,
+    approver_name: pick(APPROVERS), approver_designation: pick(DESIGNATIONS),
+    transfer_date: dateStr, transfer_by: requester,
+    transfer_reason: pick(TRANSFER_REASONS),
+    profile_url: URL_TEMPLATE.replace("{member_id_clean}", String(parseInt(raw,10)))
+  };
+}
+
+/* What the scraper would read back off the rendered ERP pages.
+   Shapes follow tasks/microzen_parser.py:57 (profile), :143 (loans), :207 (savings). */
+function scrapeMember(req, opts){
+  opts = opts||{};
+  const component = pick(COMPONENTS);
+  const profileOk = opts.forceProfileFail ? false : !chance(0.015);
+  const loanSectionFound = opts.forceLoanFail ? false : !chance(0.03);
+  const loans=[];
+  if(profileOk && loanSectionFound){
+    const hasPrimary = chance(opts.primaryRate===undefined?0.42:opts.primaryRate);
+    if(hasPrimary){
+      const amount = ri(12,60)*1000;
+      const outstanding = Math.round(amount*(0.2+rnd()*0.7));
+      const overdue = chance(0.55) ? Math.round(outstanding*(0.05+rnd()*0.35)) : 0;
+      loans.push({loan_product:component+" Primary", loan_term:pick(["46 Kisti","23 Kisti","WEEKLY","MONTHLY"]),
+        loan_amount:amount, installment_amount:Math.round(amount/46),
+        total_payable:Math.round(amount*1.12), outstanding_balance:outstanding,
+        overdue_amount:overdue, active_status:"Inferred Active",
+        progress_text:ri(10,90)+"% Complete"});
+    }
+    if(chance(0.30)){
+      const amount2 = ri(5,20)*1000;
+      const out2 = chance(0.5)?Math.round(amount2*rnd()*0.6):0;
+      loans.push({loan_product:pick(COMPONENTS)+" Secondary", loan_term:"46 Kisti",
+        loan_amount:amount2, installment_amount:Math.round(amount2/46),
+        total_payable:Math.round(amount2*1.1), outstanding_balance:out2,
+        overdue_amount:(out2>0&&chance(0.3))?Math.round(out2*0.2):0,
+        active_status: out2>0?"Inferred Active":"Inactive or Closed",
+        progress_text:ri(20,99)+"% Complete"});
+    }
+  }
+  const weekly=ri(0,40)*500, voluntary=ri(0,30)*50, monthly=ri(0,20)*250;
+  const profile = profileOk ? {
+    member_name:req.member_name, member_code:req.member_id_raw,
+    member_status:"Active", loan_component:component, microzen_program:component,
+    microzen_zone:req.input_region_zone, area:req.area,
+    branch:req.input_branch, samity:req.samity, phone:phoneNo()
+  } : {member_name:"",member_code:"",member_status:"",loan_component:"",microzen_program:"",
+       microzen_zone:"",area:"",branch:"",samity:"",phone:""};
+  const savings = {weekly_savings_balance:weekly, voluntary_savings_balance:voluntary,
+    monthly_savings_balance:monthly, total_savings_balance:weekly+voluntary+monthly,
+    savings_details:"Weekly Savings: "+fmt2(weekly)+"; Voluntary Savings: "+fmt2(voluntary)
+                    +"; Monthly Savings: "+fmt2(monthly)};
+  const eligibility = evaluateLoans(loans, loanSectionFound, profileOk);
+  return {profile:profile, loans:loans, savings:savings, eligibility:eligibility,
+          status:"COMPLETED", error_message:"", data_quality:{profile_ok:profileOk,loan_section_found:loanSectionFound}};
+}
+
+/* ── Historical runs. Quarter-end months carry a deliberate overdue spike,
+      and two requesters repeat, so the pattern reports have something true
+      to find rather than noise. ───────────────────────────────────────── */
+const REPEAT_REQUESTERS = [STAFF[3], STAFF[11]];
+const DB = {runs:[], checks:[], flags:[], notifications:[], audit:[], recipients:[], settings:{}};
+let RUN_SEQ=0, CHECK_SEQ=0, FLAG_SEQ=0, AUDIT_SEQ=0;
+
+function persistRun(results, operator, source, outputFile, when){
+  /* mirrors engine/database.py:320 persist_run() */
+  RUN_SEQ++;
+  const runId=RUN_SEQ;
+  const d=when||new Date();
+  const runDate=iso(d), runMonth=runDate.slice(0,7), runYear=d.getFullYear();
+  let eligible=0,notEligible=0,manual=0,errors=0,flaggedTotal=0;
+  results.forEach(function(r){
+    const e=r.eligibility||{}; const res=(e.eligibility_result||"").toLowerCase();
+    if(res==="eligible") eligible++;
+    else if(res==="not eligible") notEligible++;
+    else if(res==="manual review") manual++;
+    if(r.status==="ERROR") errors++;
+    CHECK_SEQ++;
+    const parts=[r.from_officer,r.input_branch].filter(Boolean);
+    const partsTo=[r.to_officer,r.to_branch,r.to_samity].filter(Boolean);
+    const chk={
+      id:CHECK_SEQ, run_id:runId, zone:r.input_region_zone, run_date:runDate,
+      run_month:runMonth, run_year:runYear, input_row:r.input_row,
+      member_id_raw:r.member_id_raw, member_id_clean:r.member_id_clean,
+      member_name:(r.profile&&r.profile.member_name)||r.member_name,
+      member_code:(r.profile&&r.profile.member_code)||"",
+      member_status:(r.profile&&r.profile.member_status)||"",
+      requested_from:parts.join(" / "), requested_to:partsTo.join(" / "),
+      requested_by:r.transfer_by, transfer_date:r.transfer_date,
+      input_branch:r.input_branch, input_region_zone:r.input_region_zone,
+      microzen_zone:(r.profile&&r.profile.microzen_zone)||"",
+      area:(r.profile&&r.profile.area)||r.area,
+      branch:(r.profile&&r.profile.branch)||r.input_branch,
+      samity:(r.profile&&r.profile.samity)||r.samity,
+      phone:(r.profile&&r.profile.phone)||"",
+      loan_component:(r.profile&&r.profile.loan_component)||"",
+      primary_loan_with_balance:e.primary_loan_with_balance||"",
+      primary_loan_balance:e.primary_loan_balance||0,
+      primary_loan_overdue:e.primary_loan_overdue||0,
+      active_loans_count:e.active_loans_count||0,
+      total_outstanding:e.total_outstanding||0,
+      total_overdue:e.total_overdue||0,
+      total_savings:(r.savings&&r.savings.total_savings_balance)||0,
+      eligibility_result:e.eligibility_result||"", confidence:e.confidence||"",
+      needs_manual_review:e.needs_manual_review?1:0,
+      overdue_flag:overdueFlagOf(e), result_message:e.result_message||"",
+      status:r.status||"", error_message:r.error_message||"",
+      snapshot_folder:"logs/microzen_batch_runs/transfer_batch_"+runDate.replace(/-/g,"")+"/"+pad(r.input_row,4)+"_"+r.member_id_raw,
+      created_at:runDate+"T"+pad(ri(9,18),2)+":"+pad(ri(0,59),2)+":00",
+      from_officer:r.from_officer, from_officer_id:r.from_officer_id,
+      to_zone:r.to_zone, to_area:r.to_area, to_branch:r.to_branch,
+      to_samity:r.to_samity, to_samity_id:r.to_samity_id,
+      to_officer:r.to_officer, to_officer_id:r.to_officer_id,
+      approver_name:r.approver_name, transfer_reason:r.transfer_reason
+    };
+    DB.checks.push(chk);
+    deriveFlags(e).forEach(function(f){
+      FLAG_SEQ++;
+      DB.flags.push({flag_id:FLAG_SEQ, run_id:runId, member_check_id:chk.id,
+        member_id_raw:chk.member_id_raw, member_name:chk.member_name, zone:chk.zone,
+        requested_by:chk.requested_by, type:f.type, severity:f.severity, reason:f.reason,
+        status:"open", justification_text:"", justified_by:"", reviewed_by:"",
+        created_at:chk.created_at, updated_at:chk.created_at, run_month:runMonth, run_year:runYear, run_date:runDate});
+      flaggedTotal++;
+    });
+  });
+  DB.runs.push({run_id:runId, started_at:runDate+"T10:00:00", finished_at:runDate+"T10:12:00",
+    operator:operator, source:source, files_processed:1, total_members:results.length,
+    eligible:eligible, not_eligible:notEligible, manual_review:manual, errors:errors,
+    flagged:flaggedTotal, app_version:APP_VERSION, rule_version:RULE_VERSION,
+    run_date:runDate, run_month:runMonth, run_year:runYear, status:"COMPLETED",
+    output_file:outputFile});
+  logAudit(operator,"RUN_SAVED","run_id="+runId, results.length+" members, "+flaggedTotal+" flag(s)", runDate);
+  return {run_id:runId,total:results.length,eligible:eligible,not_eligible:notEligible,
+          manual_review:manual,errors:errors,flagged:flaggedTotal};
+}
+/* Fixed "today" so seeded audit rows do not drift day to day. Live actions
+   taken by the visitor still stamp the real current date via iso(new Date()). */
+const DEMO_TODAY="2026-09-18";
+function logAudit(actor,action,target,details,dateStr){
+  AUDIT_SEQ++;
+  const d=dateStr||DEMO_TODAY;
+  DB.audit.push({id:AUDIT_SEQ,actor:actor,action:action,target:target,details:details,
+    timestamp:d+"T"+pad(ri(9,18),2)+":"+pad(ri(0,59),2)+":"+pad(ri(0,59),2)});
+}
+
+/* Seven months of history ending last month. */
+(function seedHistory(){
+  const base=new Date(2026,8,18); /* fixed so the demo never drifts */
+  for(let back=7;back>=1;back--){
+    const d=new Date(base.getFullYear(), base.getMonth()-back, 1);
+    const month=d.getMonth()+1;
+    const quarterEnd=(month===3||month===6||month===9||month===12);
+    const runsThisMonth = quarterEnd?2:1;
+    for(let k=0;k<runsThisMonth;k++){
+      /* quarter-end runs are pushed to the last week and carry more overdue */
+      const day = quarterEnd ? ri(25,28) : ri(4,22);
+      const when=new Date(d.getFullYear(),d.getMonth(),day);
+      const n = quarterEnd?ri(16,24):ri(9,16);
+      const results=[];
+      for(let i=1;i<=n;i++){
+        const requester = chance(quarterEnd?0.55:0.25) ? pick(REPEAT_REQUESTERS) : pick(STAFF);
+        const req=makeRequest(i, iso(when), requester);
+        const scraped=scrapeMember(req,{primaryRate: quarterEnd?0.62:0.38});
+        results.push(Object.assign({},req,scraped));
+      }
+      persistRun(results, pick(STAFF), "upload",
+        "output/generated_excels/transfer_eligibility_result_"+iso(when).replace(/-/g,"")+"_"+pad(ri(100000,999999),6)+".xlsx",
+        when);
+    }
+  }
+  /* a handful of flags already worked, so the workflow screen is not all "open" */
+  DB.flags.forEach(function(f,i){
+    if(i%9===0){ f.status="justified"; f.justification_text="Repayment plan agreed with the member before transfer."; f.reviewed_by=pick(STAFF); }
+    else if(i%14===0){ f.status="escalated"; f.reviewed_by=pick(STAFF); f.justification_text="No response from the requesting officer within 3 working days."; }
+    else if(i%11===0){ f.status="accepted"; f.reviewed_by=pick(STAFF); f.justification_text="Exception approved by the regional manager."; }
+  });
+})();
+
+/* Recipient directory — invented contacts only. */
+(function seedRecipients(){
+  let id=0;
+  HIER.regions.forEach(function(rg){
+    ["MIS","Finance & Accounts","Program/Operation","Supervisor/Reviewer"].forEach(function(dept){
+      id++;
+      const person=pick(STAFF);
+      const slug=person.toLowerCase().replace(/[^a-z]+/g,".").replace(/^\.|\.$/g,"");
+      DB.recipients.push({id:id, active:1, department:dept,
+        role:"Regional "+dept.split(" ")[0]+" Focal", coverage_level:"Region",
+        covered_program:"PMF", covered_division:rg.division, covered_region:rg.zone,
+        covered_zone:rg.zone, coverage_group_id:dept.slice(0,3).toUpperCase()+"-G"+id,
+        person_name:person, designation:pick(["MIS Officer","Accounts Officer","Program Officer","Reviewer"]),
+        email:slug+"@example-mfi.net", cc_email:"", whatsapp:"",
+        preferred_channel:pick(["Email","Both"]), recipient_type:(dept==="Finance & Accounts"?"CC":"To"),
+        notify_eligible:1, notify_not_eligible:1, notify_manual_review:1,
+        notify_error:(dept==="MIS"?1:0), remarks:""});
+    });
+  });
+})();
+DB.settings = {operator_name:"Rokeya Sultana", profile_url_template:URL_TEMPLATE,
+  default_departments:"MIS;Finance & Accounts;Program/Operation;Supervisor/Reviewer",
+  default_run_mode:"Test — first 5 rows", email_method:"Outlook (COM — recommended)",
+  email_display_only:"true", email_sender_name:"Transfer Eligibility Checker",
+  email_bcc_audit:"", par_alert_threshold:"3", smtp_port:"587"};
+logAudit("admin","SETTING_CHANGED","operator_name","value=Rokeya Sultana");
+logAudit("admin","RECIPIENTS_IMPORTED","imported="+DB.recipients.length,"from config/focal_person_mapping.xlsx");
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. APP STATE
+   ═══════════════════════════════════════════════════════════════════════ */
+const ROLES = {
+  operator:{label:"Operator", who:"Rokeya Sultana", title:"Operations Analyst",
+    modes:["operations"], canRun:true,
+    adminTabs:[]},
+  reviewer:{label:"Reviewer", who:"Nurul Amin", title:"Regional Reviewer",
+    modes:["operations","admin"], canRun:false,
+    adminTabs:[0,1,2,3]},
+  admin:{label:"Administrator", who:"Kamrul Hasan", title:"Governance Administrator",
+    modes:["operations","admin"], canRun:true,
+    adminTabs:[0,1,2,3,4,5,6,7]}
+};
+const S = {
+  role:"operator", mode:"operations", tab:0, adminTab:0,
+  fileName:null, sheetName:"STF", startRow:4, headerRow:3, useHeaderMatch:true,
+  runMode:"Test — first 5 rows",
+  departments:["MIS","Finance & Accounts","Program/Operation","Supervisor/Reviewer"],
+  urlTemplate:URL_TEMPLATE,
+  rawRows:[], requests:[], selected:[], resolved:[],
+  results:[], summary:null, lastSaved:null, running:false,
+  emailDrafts:{}, notifSent:{},
+  username:"", password:"", runScope:"First 2 members", headless:false,
+  filters:{year:"All",month:"All",zone:"All",branch:"All",from:"All",to:"All",comp:"All",elig:"All",flagged:false},
+  flagFilter:"open", selectedFlag:null, selectedRun:null,
+  toast:null
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. UI HELPERS
+   ═══════════════════════════════════════════════════════════════════════ */
+const $  = s => document.querySelector(s);
+function h(html){const t=document.createElement("template");t.innerHTML=html.trim();return t.content;}
+function card(title,sub,inner){
+  return '<div class="section-card"><div class="section-card-title">'+title+'</div>'
+       + (sub?'<div class="section-card-sub">'+sub+'</div>':'')
+       + (inner||'') + '</div>';
+}
+function empty(icon,title,sub){
+  return '<div class="empty-state"><div class="empty-state-icon">'+icon+'</div>'
+       + '<div class="empty-state-title">'+esc(title)+'</div>'
+       + '<div class="empty-state-sub">'+sub+'</div></div>';
+}
+function metricRow(cards){
+  return '<div class="metric-row">'+cards.map(function(c){
+    return '<div class="metric-card '+(c.color||"slate")+'">'
+      +'<div class="metric-card-label">'+esc(c.label)+'</div>'
+      +'<div class="metric-card-value">'+esc(c.value)+'</div>'
+      +'<div class="metric-card-sub">'+esc(c.sub||"")+'</div></div>';
+  }).join("")+'</div>';
+}
+/* cols: [{k,label,num,cls}] ; cls(row,value) -> css class */
+function table(cols,rows,opts){
+  opts=opts||{};
+  if(!rows.length) return '<div class="cap" style="padding:.6rem">'+esc(opts.emptyText||"No rows.")+'</div>';
+  let html='<div class="tw" style="max-height:'+(opts.height||380)+'px"><table><thead><tr>';
+  cols.forEach(function(c){html+='<th'+(c.num?' class="num"':'')+'>'+esc(c.label)+'</th>';});
+  html+='</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html+='<tr>';
+    cols.forEach(function(c){
+      let v=typeof c.k==="function"?c.k(r):r[c.k];
+      if(c.fmt) v=c.fmt(v,r);
+      const cls=(c.cls?c.cls(r,v):"")||"";
+      html+='<td class="'+(c.num?'num ':'')+cls+'">'+(c.raw?v:esc(v===null||v===undefined?"":v))+'</td>';
+    });
+    html+='</tr>';
+  });
+  return html+'</tbody></table></div>';
+}
+const eligCls = v => ({"eligible":"cell-eligible","not eligible":"cell-not-eligible",
+  "manual review":"cell-manual-review","error":"cell-error"})[String(v).toLowerCase()]||"";
+function toast(msg,kind){
+  S.toast={msg:msg,kind:kind||"ok"};
+  render();
+  setTimeout(function(){ if(S.toast&&S.toast.msg===msg){S.toast=null;render();} },4200);
+}
+function csvEscape(v){ v=String(v===null||v===undefined?"":v);
+  return /[",\n]/.test(v) ? '"'+v.split('"').join('""')+'"' : v; }
+function downloadCSV(filename, cols, rows){
+  const head=cols.map(c=>csvEscape(c.label)).join(",");
+  const body=rows.map(function(r){
+    return cols.map(function(c){
+      let v=typeof c.k==="function"?c.k(r):r[c.k];
+      if(c.csv) v=c.csv(v,r);
+      return csvEscape(v);
+    }).join(",");
+  }).join("\n");
+  const blob=new Blob(["﻿"+head+"\n"+body],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},400);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7. INPUT READING — header matching, engine/input_resolver.py
+   ═══════════════════════════════════════════════════════════════════════ */
+/* Field map mirrors config/input_column_config.xlsx: key, label, fallback
+   column letter, aliases, section. Bengali labels are the real field labels
+   that the reader matches on; they are UI vocabulary, not member data. */
+const FIELD_MAP = [
+  {key:"member_id",        label:"সদস্য আইডি", col:"D", section:"any",
+   aliases:["member id","memberid","member_id","সদস্য আইডি"]},
+  {key:"member_name",      label:"Member Name", col:"C", section:"before", aliases:["member name","name","member_name"]},
+  {key:"input_branch",     label:"Branch (current)", col:"I", section:"before", aliases:["branch name","branch","input_branch"]},
+  {key:"input_region_zone",label:"Zone (current)", col:"K", section:"before", aliases:["zone name","zone","region","input_region_zone"]},
+  {key:"from_officer",     label:"Current officer", col:"G", section:"before", aliases:["officer name","officer","from_officer"]},
+  {key:"from_officer_id",  label:"Current officer ID", col:"H", section:"before", aliases:["officer id","staff id","from_officer_id"]},
+  {key:"to_samity",        label:"Destination samity / cluster", col:"S", section:"after", aliases:["cluster name","samity name","cluster","to_samity"]},
+  {key:"to_officer",       label:"Destination officer", col:"U", section:"after", aliases:["officer name","officer","to_officer"]},
+  {key:"to_branch",        label:"Destination branch", col:"W", section:"after", aliases:["branch name","branch","to_branch"]},
+  {key:"to_zone",          label:"Destination zone", col:"Y", section:"after", aliases:["zone name","zone","to_zone"]},
+  {key:"approver_name",    label:"Approver", col:"AA", section:"approver", aliases:["approver","approved by","name","approver_name"]},
+  {key:"transfer_date",    label:"Transfer date", col:"AD", section:"any", aliases:["transfer date","date","transfer_date"]},
+  {key:"transfer_by",      label:"Requested by", col:"AE", section:"any", aliases:["requested by","transfer by","submitted by","transfer_by"]},
+  {key:"transfer_reason",  label:"Reason for transfer", col:"AC", section:"any", aliases:["reason","justification","transfer_reason"]}
+];
+function normHeader(s){return String(s||"").toLowerCase().replace(/[\s_\-\/]+/g," ").trim();}
+/* engine/input_resolver.py:119 describe_resolution() — the three states the
+   resolution panel colours: header match, letter fallback, not found. */
+function resolveColumns(headers){
+  const norm=headers.map(normHeader);
+  return FIELD_MAP.map(function(f){
+    let idx=-1;
+    if(S.useHeaderMatch){
+      for(let i=0;i<norm.length&&idx<0;i++){
+        if(f.aliases.some(a=>norm[i]===normHeader(a))) idx=i;
+      }
+      if(idx<0) for(let i=0;i<norm.length&&idx<0;i++){
+        if(f.aliases.some(a=>norm[i].indexOf(normHeader(a))!==-1)) idx=i;
+      }
+    }
+    let how = idx>=0 ? "Header name" : null;
+    if(idx<0){
+      const li=colLetterToIndex(f.col);
+      if(li>=0 && li<headers.length){ idx=li; how="Column letter (fallback)"; }
+      else how="NOT FOUND";
+    }
+    return {Field:f.label, Key:f.key, Column:(idx>=0?indexToColLetter(idx):"—"),
+            "Matched by":how, _idx:idx};
+  });
+}
+function colLetterToIndex(letters){
+  let n=0; letters=String(letters).toUpperCase();
+  for(let i=0;i<letters.length;i++){ n=n*26+(letters.charCodeAt(i)-64); }
+  return n-1;
+}
+function indexToColLetter(i){
+  let s=""; i=i+1;
+  while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); }
+  return s;
+}
+/* Built-in sample "zone file". Two rows share a member ID on purpose so the
+   duplicate warning at app.py:2006 has something to fire on. */
+function buildSampleRows(){
+  const header=["Serial","Member Name","Member ID","Samity Name","Samity ID","Officer Name","Officer ID",
+    "Branch Name","Area Name","Zone Name","Cluster Name","Cluster ID","Officer Name ","Officer ID ",
+    "Branch Name ","Area Name ","Zone Name ","Approver","Designation","Reason","Transfer Date","Requested By"];
+  const rows=[header];
+  const day=new Date(2026,8,14);
+  const requester=pick(REPEAT_REQUESTERS);
+  const reqs=[];
+  for(let i=1;i<=14;i++){
+    const r=makeRequest(i, iso(day), chance(0.6)?requester:pick(STAFF));
+    reqs.push(r);
+  }
+  reqs[9].member_id_raw = reqs[2].member_id_raw;      /* duplicate on purpose */
+  reqs[9].member_id_clean = reqs[2].member_id_clean;
+  reqs.forEach(function(r){
+    rows.push([r.input_row,r.member_name,r.member_id_raw,r.samity,r.samity_id,r.from_officer,r.from_officer_id,
+      r.input_branch,r.area,r.input_region_zone,r.to_samity,r.to_samity_id,r.to_officer,r.to_officer_id,
+      r.to_branch,r.to_area,r.to_zone,r.approver_name,r.approver_designation,r.transfer_reason,
+      r.transfer_date,r.transfer_by]);
+  });
+  return rows;
+}
+function parseCSV(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    } else if(c==='"') q=true;
+    else if(c===","){ row.push(cur); cur=""; }
+    else if(c==="\n"){ row.push(cur); rows.push(row); row=[]; cur=""; }
+    else if(c!=="\r") cur+=c;
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==""));
+}
+/* app.py:1893 — Read Transfer Requests */
+function readRequests(){
+  if(!S.rawRows.length){ toast("No file loaded.","err"); return; }
+  const headers=S.rawRows[0];
+  S.resolved=resolveColumns(headers);
+  const idx={}; S.resolved.forEach(function(r){ idx[r.Key]=r._idx; });
+  const get=(row,key)=>{ const i=idx[key]; return (i>=0&&i<row.length)?String(row[i]||"").trim():""; };
+  const out=[];
+  for(let i=1;i<S.rawRows.length;i++){
+    const row=S.rawRows[i];
+    const raw=get(row,"member_id");
+    if(!raw) continue;
+    const clean=String(parseInt(raw,10)||raw);
+    const branch=get(row,"input_branch");
+    const bmeta=HIER.branches.filter(b=>b.branch===branch)[0];
+    out.push({
+      input_row:i, member_id_raw:raw, member_id_clean:clean,
+      member_name:get(row,"member_name"),
+      samity:"", from_officer:get(row,"from_officer"), from_officer_id:get(row,"from_officer_id"),
+      input_branch:branch, input_region_zone:get(row,"input_region_zone"),
+      area:bmeta?bmeta.area:"", division:bmeta?bmeta.division:"", program:bmeta?bmeta.program:"",
+      to_samity:get(row,"to_samity"), to_officer:get(row,"to_officer"),
+      to_branch:get(row,"to_branch"), to_zone:get(row,"to_zone"),
+      to_area:(HIER.branches.filter(b=>b.branch===get(row,"to_branch"))[0]||{}).area||"",
+      approver_name:get(row,"approver_name"), transfer_date:get(row,"transfer_date"),
+      transfer_by:get(row,"transfer_by"), transfer_reason:get(row,"transfer_reason"),
+      profile_url:S.urlTemplate.replace("{member_id_clean}",clean)
+    });
+  }
+  S.requests=out;
+  const limit = S.runMode.indexOf("Test")===0 ? 5 : out.length;
+  S.selected=applyMapping(out.slice(0,limit));
+  S.emailDrafts=buildEmailDrafts(S.selected);
+  S.results=[]; S.summary=null; S.lastSaved=null;
+  if(S.selected.length) toast("✓  "+S.selected.length+" transfer request(s) ready for Microzen check.","ok");
+  else toast("No transfer request rows found. Check the start row and column mapping.","warn");
+}
+/* hierarchy + recipient matching, app.py apply_mapping_to_requests */
+function applyMapping(rows){
+  return rows.map(function(r){
+    const b=HIER.branches.filter(x=>x.branch===r.input_branch)[0];
+    const matched=!!b;
+    const recips=DB.recipients.filter(function(x){
+      return x.active===1 && S.departments.indexOf(x.department)!==-1 &&
+             x.covered_zone===(b?b.zone:r.input_region_zone);
+    });
+    const to=recips.filter(x=>x.recipient_type==="To");
+    const cc=recips.filter(x=>x.recipient_type==="CC");
+    return Object.assign({},r,{
+      mapped_program:b?b.program:"", mapped_division:b?b.division:"",
+      mapped_region:b?b.zone:"", mapped_area:b?b.area:"", mapped_branch:b?b.branch:"",
+      hierarchy_match_status: matched?"Matched":"No hierarchy match",
+      recipient_names: recips.map(x=>x.person_name).join("; "),
+      recipient_to: to.map(x=>x.email).join("; "),
+      recipient_cc: cc.map(x=>x.email).join("; "),
+      notification_departments: recips.map(x=>x.department).filter(function(v,i,a){return a.indexOf(v)===i;}).join("; "),
+      recipient_match_status: recips.length?"Matched":"No focal person found"
+    });
+  });
+}
+/* app.py:975 build_email_drafts() — subject and body copied verbatim */
+function buildEmailDrafts(rows){
+  const grouped={};
+  rows.forEach(function(r){
+    const key=r.mapped_region||r.input_region_zone||"Unmapped Region";
+    (grouped[key]=grouped[key]||[]).push(r);
+  });
+  const drafts={};
+  Object.keys(grouped).forEach(function(region){
+    const rs=grouped[region];
+    const uniq=a=>a.filter(function(v,i,x){return v&&x.indexOf(v)===i;}).sort();
+    const to=uniq([].concat.apply([],rs.map(r=>String(r.recipient_to||"").split("; "))));
+    const cc=uniq([].concat.apply([],rs.map(r=>String(r.recipient_cc||"").split("; "))));
+    const depts=uniq([].concat.apply([],rs.map(r=>String(r.notification_departments||"").split("; "))));
+    drafts[region]={
+      subject:"Transfer Eligibility Pre-Check Draft - "+region+" - "+rs.length+" Member(s)",
+      to:to.join("; "), cc:cc.join("; "),
+      body:"Dear Concerned,\n\nA transfer eligibility pre-check draft has been prepared for "+region+".\n\n"
+        +"Summary:\nTotal request(s): "+rs.length+"\n"
+        +"Notification department(s): "+(depts.length?depts.join(", "):"Not selected")+"\n"
+        +"Current status: Pending Microzen check\n\n"
+        +"The final eligibility decision will be generated after Microzen profile, loan, and savings data are extracted.\n\n"
+        +"Important note:\nThis automation is a pre-check and review preparation tool. It is not final transfer approval.\n\n"
+        +"Regards,\nTransfer Eligibility Checker\n"
+    };
+  });
+  return drafts;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8. SIDEBAR  (app.py:1602-1838)
+   ═══════════════════════════════════════════════════════════════════════ */
+function renderSidebar(){
+  const role=ROLES[S.role];
+  const canAdmin=role.modes.indexOf("admin")!==-1;
+  let html='<div class="sb-brand"><div class="sb-brand-mark">\u{1F501}</div><div class="sb-brand-text">'
+    +'<div class="sb-brand-name">Transfer Checker</div>'
+    +'<div class="sb-brand-sub">Microzen Pre-Check · v'+APP_VERSION+'</div></div></div>';
+  html+='<div class="seg" role="group" aria-label="Navigation" id="navSeg">'
+    +'<button type="button" data-mode="operations" aria-pressed="'+(S.mode==="operations")+'">\u{1F4CB}  Operations</button>'
+    +'<button type="button" data-mode="admin" aria-pressed="'+(S.mode==="admin")+'"'+(canAdmin?"":" disabled title=\"Administrator or Reviewer only\"")+'>⚙️  Admin</button>'
+    +'</div>';
+  if(S.mode==="admin"){
+    html+='<div class="sb-hint" style="padding-top:.6rem;">Admin mode — manage runs, flags, settings, and data. '
+      +'Switch back to \u{1F4CB} Operations to run new checks.</div>';
+    $("#sidebar").innerHTML=html; wireSidebar(); return;
+  }
+  const fileOn=!!S.fileName, reqOn=S.selected.length>0, runOn=!!S.summary;
+  html+='<div class="sb-status">'
+    +statusRow(fileOn,"File",S.fileName||"Not uploaded")
+    +statusRow(reqOn,"Requests",reqOn?(S.selected.length+" ready"):"Pending")
+    +statusRow(runOn,"Microzen run",runOn?"Complete":"Pending")
+    +'</div>';
+  html+='<div class="sb-group-label"><span>\u{1F4C4}</span>Your file<span class="sb-line"></span></div>';
+  html+='<div class="dropzone" id="drop" tabindex="0" role="button" aria-label="Upload transfer request file">'
+    +(S.fileName?('<strong>'+esc(S.fileName)+'</strong><br>Drop another CSV to replace'):'Drop a CSV here, or click to choose')
+    +'</div><input type="file" id="fileInput" accept=".csv,text/csv" class="sr-only">'
+    +'<button class="btn btn-block" id="loadSample" type="button" style="margin-top:.45rem">Load sample zone file</button>';
+  if(fileOn){
+    html+='<label class="fld" for="sheetSel">Sheet</label>'
+      +'<select id="sheetSel"><option>STF</option><option>Sheet1</option></select>'
+      +'<label class="fld" for="startRow">Data starts at row</label>'
+      +'<input type="number" id="startRow" min="1" value="'+S.startRow+'">';
+    html+='<details class="exp" style="background:transparent;border-color:#334155;margin-top:.6rem">'
+      +'<summary style="color:#e2e8f0">⚙️  Reading rules  ·  Member ID = D</summary><div class="exp-body">'
+      +'<label class="opt"><input type="checkbox" id="hdrMatch" '+(S.useHeaderMatch?"checked":"")+'> Find columns by header name (recommended)</label>'
+      +'<div class="sb-hint">Locates each field by its column heading and section, so columns can be added or reordered without breaking. The letters are used only as a fallback.</div>'
+      +'<label class="fld" for="headerRow">Header row (where the column names are)</label>'
+      +'<input type="number" id="headerRow" min="1" value="'+S.headerRow+'">'
+      +'<label class="fld" for="urlTpl">Profile URL template</label>'
+      +'<input type="text" id="urlTpl" value="'+esc(S.urlTemplate)+'">'
+      +'<div class="sb-hint">Use {member_id_clean} where the cleaned member ID should go.</div>'
+      +'</div></details>';
+    html+='<div class="sb-group-label"><span>▶</span>This run<span class="sb-line"></span></div>'
+      +'<div class="sb-hint" style="margin-bottom:.3rem">How many rows to prepare</div>'
+      +'<label class="opt"><input type="radio" name="runmode" value="Test — first 5 rows" '+(S.runMode.indexOf("Test")===0?"checked":"")+'> Test — first 5 rows</label>'
+      +'<label class="opt"><input type="radio" name="runmode" value="Full run — all rows" '+(S.runMode.indexOf("Full")===0?"checked":"")+'> Full run — all rows</label>'
+      +'<label class="fld">Notify departments</label><div class="chiplist" id="deptChips">'
+      + DEPARTMENTS_SIDEBAR.map(d=>'<span class="chip" role="button" tabindex="0" data-d="'+esc(d)+'" aria-pressed="'+(S.departments.indexOf(d)!==-1)+'">'+esc(d)+'</span>').join("")
+      +'</div><div class="sb-hint" style="margin-top:.3rem">Recipients are matched by mapped Region / Microzen Zone.</div>';
+    html+='<div class="sb-group-label"><span>✓</span>Actions<span class="sb-line"></span></div>'
+      +'<button class="btn btn-primary btn-block" id="readBtn" type="button">Read Transfer Requests</button>'
+      +'<button class="btn btn-block" id="clearBtn" type="button" style="margin-top:.4rem">Clear / Reset</button>';
+  } else {
+    html+='<div class="sb-hint" style="padding-top:.5rem;">Upload a transfer request file above to unlock the rest of the setup.</div>';
+  }
+  $("#sidebar").innerHTML=html; wireSidebar();
+}
+function statusRow(on,label,val){
+  return '<div class="sb-status-row"><span class="sb-status-dot '+(on?"on":"off")+'"></span>'
+    +'<span class="sb-status-label">'+esc(label)+'</span>'
+    +'<span class="sb-status-value" title="'+esc(val)+'">'+esc(val)+'</span></div>';
+}
+function wireSidebar(){
+  const seg=$("#navSeg");
+  if(seg) seg.querySelectorAll("button").forEach(function(b){
+    b.onclick=function(){ if(b.disabled) return; S.mode=b.dataset.mode; render(); };
+  });
+  const drop=$("#drop"), fi=$("#fileInput");
+  if(drop){
+    drop.onclick=()=>fi.click();
+    drop.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click();} };
+    drop.ondragover=e=>{e.preventDefault();drop.classList.add("drag");};
+    drop.ondragleave=()=>drop.classList.remove("drag");
+    drop.ondrop=function(e){ e.preventDefault(); drop.classList.remove("drag");
+      if(e.dataTransfer.files&&e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
+    fi.onchange=function(){ if(fi.files&&fi.files[0]) loadFile(fi.files[0]); };
+  }
+  const ls=$("#loadSample");
+  if(ls) ls.onclick=function(){
+    S.rawRows=buildSampleRows(); S.fileName="Zone_07_Transfer_Requests.csv";
+    S.requests=[];S.selected=[];S.results=[];S.summary=null;S.resolved=[];
+    toast("Sample zone file loaded. Click Read Transfer Requests.","info");
+  };
+  const bind=(id,ev,fn)=>{const el=$("#"+id); if(el) el.addEventListener(ev,fn);};
+  bind("sheetSel","change",e=>{S.sheetName=e.target.value;});
+  bind("startRow","change",e=>{S.startRow=+e.target.value||4;});
+  bind("headerRow","change",e=>{S.headerRow=+e.target.value||3;});
+  bind("hdrMatch","change",e=>{S.useHeaderMatch=e.target.checked;});
+  bind("urlTpl","change",e=>{S.urlTemplate=e.target.value;});
+  document.querySelectorAll('input[name="runmode"]').forEach(function(r){
+    r.onchange=function(){ S.runMode=r.value; };
+  });
+  const chips=$("#deptChips");
+  if(chips) chips.querySelectorAll(".chip").forEach(function(c){
+    const toggle=function(){
+      const d=c.dataset.d, i=S.departments.indexOf(d);
+      if(i===-1) S.departments.push(d); else S.departments.splice(i,1);
+      render();
+    };
+    c.onclick=toggle;
+    c.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();} };
+  });
+  bind("readBtn","click",function(){ readRequests(); render(); });
+  bind("clearBtn","click",function(){
+    S.requests=[];S.selected=[];S.results=[];S.summary=null;S.resolved=[];S.emailDrafts={};S.lastSaved=null;
+    render();
+  });
+}
+function loadFile(file){
+  const fr=new FileReader();
+  fr.onload=function(){
+    try{
+      const rows=parseCSV(String(fr.result));
+      if(!rows.length){ toast("Cannot read file: it appears to be empty.","err"); return; }
+      S.rawRows=rows; S.fileName=file.name;
+      S.requests=[];S.selected=[];S.results=[];S.summary=null;S.resolved=[];
+      toast("File loaded. Click Read Transfer Requests.","info");
+    }catch(err){ toast("Could not read transfer requests: "+err.message,"err"); }
+  };
+  fr.onerror=function(){ toast("Could not read the file.","err"); };
+  fr.readAsText(file);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   9. HEADER + STEP INDICATOR  (app.py:1041-1066, 1575-1599)
+   ═══════════════════════════════════════════════════════════════════════ */
+function appHeader(){
+  const open=DB.flags.filter(f=>f.status==="open").length;
+  const badge= open>0 ? '<span class="hdr-flag">⚠️ '+open+' open flag'+(open!==1?"s":"")+'</span>' : "";
+  return '<div class="app-header" id="appHeader"><div class="app-header-left">'
+    +'<div class="app-header-badge">PRE-CHECK AUTOMATION</div>'
+    +'<div class="app-header-title">Transfer Eligibility Checker'+badge+'</div>'
+    +'<div class="app-header-subtitle">PME → PMF / internal operational unit transfer pre-check. '
+    +'Upload transfer requests, map hierarchy, run Microzen automation, and generate eligibility output.</div></div>'
+    +'<div class="app-header-right">'
+    +'<div class="app-header-stat"><div class="app-header-stat-label">Session started</div>'
+    +'<div class="app-header-stat-value">18 Sep 2026</div></div>'
+    +'<div class="app-header-stat"><div class="app-header-stat-label">Rule</div>'
+    +'<div class="app-header-stat-value">No active Primary loan</div></div></div></div>';
+}
+function stepIndicator(active){
+  const steps=[["1","Upload","Transfer request Excel"],["2","Map","Column & hierarchy mapping"],
+               ["3","Run Check","Microzen automation"],["4","Review","Download & communicate"]];
+  let html='<div class="steps-bar">';
+  steps.forEach(function(s,i){
+    const state = i<active?"done":(i===active?"active":"pending");
+    html+='<div class="step-item"><div class="step-circle '+state+'">'+s[0]+'</div><div class="step-label">'
+      +'<div class="step-label-main'+(state==="pending"?" pending-text":"")+'">'+s[1]+'</div>'
+      +'<div class="step-label-sub">'+s[2]+'</div></div></div>';
+    if(i<steps.length-1) html+='<div class="step-connector'+(i<active?" done":"")+'"></div>';
+  });
+  return html+'</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   10. PLAYWRIGHT SEQUENCE DIAGRAM
+   Steps follow engine/microzen_batch_runner.py:59-170, engine/login.py:13,
+   engine/member_profile.py:17, tasks/microzen_extractors.py:80.
+   The real code has no logout: the run ends by closing the browser context
+   at microzen_batch_runner.py:171, so the last node says Close session.
+   ═══════════════════════════════════════════════════════════════════════ */
+const PW_STEPS=[
+  {id:"launch", t:"Launch Chromium",  d:"headless off by default so the operator can watch"},
+  {id:"login",  t:"Login",            d:"fill username + password, click Submit"},
+  {id:"verify", t:"Verify login",     d:"still on /login? fail fast with a clear message"},
+  {id:"warm",   t:"Warm-up",          d:"prime the app root, 3.5s settle"},
+  {id:"nav",    t:"Navigate to member",d:"goto profile URL, domcontentloaded"},
+  {id:"profile",t:"Read profile",     d:"capture body text, tables, screenshot"},
+  {id:"loans",  t:"Click Loans, read",d:"tab click, scroll, capture"},
+  {id:"savings",t:"Click Savings, read",d:"tab click, capture"},
+  {id:"parse",  t:"Parse + apply rule",d:"one retry if nothing parsed"},
+  {id:"close",  t:"Close session",    d:"context.close(), browser.close()"}
+];
+function pwDiagram(activeId){
+  let nodes="";
+  PW_STEPS.forEach(function(s,i){
+    const on = activeId===s.id;
+    const done = activeId && PW_STEPS.findIndex(x=>x.id===activeId)>i;
+    const fill = on?"#2563eb":(done?"#0d9488":"#ffffff");
+    const stroke = on?"#1d4ed8":(done?"#0d9488":"#cbd5e1");
+    const tx = (on||done)?"#ffffff":"#475569";
+    const y = 26 + i*46;
+    nodes+='<g><rect x="14" y="'+y+'" width="26" height="26" rx="13" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2"/>'
+      +'<text x="27" y="'+(y+17)+'" font-size="12" font-weight="700" fill="'+tx+'" text-anchor="middle">'+(i+1)+'</text>'
+      +'<text x="52" y="'+(y+12)+'" font-size="12.5" font-weight="700" fill="#0f172a">'+esc(s.t)+'</text>'
+      +'<text x="52" y="'+(y+26)+'" font-size="11" fill="#94a3b8">'+esc(s.d)+'</text>';
+    if(i<PW_STEPS.length-1){
+      nodes+='<line x1="27" y1="'+(y+26)+'" x2="27" y2="'+(y+46)+'" stroke="'+(done?"#0d9488":"#e2e8f0")+'" stroke-width="2"/>';
+    }
+    nodes+='</g>';
+  });
+  /* retry loop marker between parse and nav */
+  nodes+='<path d="M 8 '+(26+8*46+13)+' q -7 -100 0 -190" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4 3"/>'
+    +'<text x="-118" y="12" transform="rotate(-90)" font-size="10" fill="#d97706">retry once</text>';
+  return '<svg viewBox="0 0 430 '+(26+PW_STEPS.length*46)+'" width="100%" role="img" '
+    +'aria-label="Browser automation sequence: launch, login, verify, warm up, navigate, read profile, loans and savings, parse, close session">'
+    +nodes+'</svg>';
+}
+function pwPanel(activeId){
+  return card("How the figures are obtained",
+    "The ERP exposes no API for member loan and savings data, so the tool drives a real browser session and reads the rendered pages.",
+    '<div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">'
+    +'<div style="flex:1;min-width:250px">'+pwDiagram(activeId)+'</div>'
+    +'<div style="flex:1;min-width:230px">'
+    +'<div class="alert alert-warn" style="margin-bottom:.6rem"><strong>No API available.</strong> '
+    +'Balances are read from the rendered page, not fetched as data. That is why a failed read becomes '
+    +'<em>Manual Review</em> rather than a guess.</div>'
+    +'<div class="kv"><span class="k">Wait strategy</span><span class="v">domcontentloaded, never networkidle</span></div>'
+    +'<div class="kv"><span class="k">Login failure</span><span class="v">detected once, fails the batch</span></div>'
+    +'<div class="kv"><span class="k">Warm-up</span><span class="v">fixes first-member failure</span></div>'
+    +'<div class="kv"><span class="k">Per member</span><span class="v">2 attempts, then record ERROR</span></div>'
+    +'<div class="kv"><span class="k">Evidence kept</span><span class="v">HTML, text, 3 screenshots</span></div>'
+    +'</div></div>');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   11. OPERATIONS MODE  (app.py:1841-2630)
+   ═══════════════════════════════════════════════════════════════════════ */
+const OPS_TABS=["\u{1F4C4}  Excel Preview","\u{1F4CB}  Transfer Requests","\u{1F5FA}️  Hierarchy & Recipients",
+  "⚡  Run Microzen Check","\u{1F4CA}  Reports","✉️  Email Drafts","\u{1F4CC}  Next Steps"];
+
+function renderOperations(){
+  let html=appHeader();
+  if(S.toast) html+='<div class="alert alert-'+({ok:"ok",err:"err",warn:"warn",info:"info"}[S.toast.kind])+'">'+esc(S.toast.msg)+'</div>';
+  if(!S.fileName){
+    html+=stepIndicator(0);
+    html+=card("How it works","Four steps from raw Excel to eligibility decision.",
+      '<div class="welcome-grid">'
+      +[["s1","1","Upload","Upload the transfer request file from the sidebar. Set the sheet name and start row."],
+        ["s2","2","Map","Confirm column mapping, hierarchy match, and focal person recipients per region."],
+        ["s3","3","Run Check","Enter Microzen credentials and run the automated eligibility check in the browser."],
+        ["s4","4","Review & Share","Download the final eligibility output and use the generated email drafts."]]
+      .map(c=>'<div class="welcome-card"><div class="welcome-step-num '+c[0]+'">'+c[1]+'</div>'
+        +'<div class="welcome-card-title">'+c[2]+'</div><div class="welcome-card-desc">'+c[3]+'</div></div>').join("")
+      +'</div>');
+    html+=pwPanel(null);
+    html+='<details class="exp" id="welcomeReports"><summary>\u{1F4CA}  Open governance reports (all past runs)</summary>'
+      +'<div class="exp-body">'+renderReports()+'</div></details>';
+    $("#main").innerHTML=html; wireOps(); return;
+  }
+  const hasReq=S.selected.length>0, hasRes=!!S.summary;
+  html+=stepIndicator(!hasReq?1:(hasRes?3:2));
+  const eligN=S.results.filter(r=>(r.eligibility||{}).eligibility_result==="Eligible").length;
+  const notN =S.results.filter(r=>(r.eligibility||{}).eligibility_result==="Not Eligible").length;
+  html+=metricRow([
+    {label:"Total in file",value:S.requests.length||"—",sub:S.fileName,color:"blue"},
+    {label:"Selected for run",value:S.selected.length||"—",sub:S.runMode.indexOf("Full")===0?"Full run":"Test mode",color:"slate"},
+    {label:"Eligible",value:hasRes?eligN:"—",sub:hasRes?"After Microzen check":"Run check to see",color:eligN?"green":"slate"},
+    {label:"Not Eligible",value:hasRes?notN:"—",sub:notN?"Active Primary loan found":"Run check to see",color:notN?"red":"slate"},
+    {label:"Processed",value:hasRes?S.results.length:"—",sub:S.results.length?"members checked":"Not started",color:S.results.length?"amber":"slate"}
+  ]);
+  html+='<div class="tabs" role="tablist" id="opsTabs">'+OPS_TABS.map(function(t,i){
+    return '<button type="button" role="tab" aria-selected="'+(S.tab===i)+'" data-i="'+i+'">'+t+'</button>';
+  }).join("")+'</div><div id="tabPanel" role="tabpanel">'+opsTabBody()+'</div>';
+  $("#main").innerHTML=html; wireOps();
+}
+
+function opsTabBody(){
+  switch(S.tab){
+    case 0: return tabPreview();
+    case 1: return tabRequests();
+    case 2: return tabMapping();
+    case 3: return tabRun();
+    case 4: return renderReports();
+    case 5: return tabEmail();
+    default: return tabNext();
+  }
+}
+function tabPreview(){
+  const rows=S.rawRows.slice(0,11);
+  if(!rows.length) return card("Source Excel Preview","",empty("\u{1F4C4}","Nothing to preview","Load a file first."));
+  const head=rows[0];
+  const cols=head.map(function(hh,i){return {k:r=>r[i],label:hh||indexToColLetter(i)};});
+  return card("Source Excel Preview",
+    "First 10 rows of the selected sheet — verify the data looks correct before reading requests.",
+    table(cols,rows.slice(1),{height:340}));
+}
+function tabRequests(){
+  if(!S.requests.length) return empty("\u{1F4CB}","No requests loaded yet",
+    'Click <strong>Read Transfer Requests</strong> in the sidebar after uploading a file.');
+  let html="";
+  const counts={}; S.requests.forEach(r=>{counts[r.member_id_raw]=(counts[r.member_id_raw]||0)+1;});
+  const dups=Object.keys(counts).filter(k=>counts[k]>1);
+  if(dups.length){
+    const affected=dups.reduce((a,k)=>a+counts[k],0);
+    html+='<div class="alert alert-warn">⚠️ <strong>'+dups.length+' duplicate member ID(s)</strong> found in this upload ('
+      +affected+' rows affected). Duplicates: '+esc(dups.slice(0,10).join(", "))
+      +'. Each will be checked independently — verify intentional before running.</div>';
+  }
+  const cols=[{k:"input_row",label:"input_row",num:true},{k:"member_id_raw",label:"member_id_raw"},
+    {k:"member_name",label:"member_name"},{k:"from_officer",label:"from_officer"},
+    {k:"input_branch",label:"input_branch"},{k:"input_region_zone",label:"input_region_zone"},
+    {k:"to_officer",label:"to_officer"},{k:"to_branch",label:"to_branch"},
+    {k:"transfer_by",label:"transfer_by"},{k:"transfer_date",label:"transfer_date"}];
+  html+=card('Transfer Requests  <span class="badge badge-blue">'+S.requests.length+' rows</span>',
+    "Raw rows read from the input file before hierarchy/focal mapping.",
+    table(cols,S.requests,{height:420}));
+  if(S.resolved.length){
+    const nf=S.resolved.filter(r=>r["Matched by"]==="NOT FOUND").length;
+    const fb=S.resolved.filter(r=>r["Matched by"]==="Column letter (fallback)").length;
+    const badge = nf?'<span class="badge badge-red">'+nf+' not found</span>'
+      : fb?'<span class="badge badge-amber">'+fb+' via fallback letter</span>'
+      : '<span class="badge badge-green">all matched by header</span>';
+    const rcols=[{k:"Field",label:"Field"},{k:"Key",label:"Key"},{k:"Column",label:"Column"},
+      {k:"Matched by",label:"Matched by",cls:function(r,v){
+        return v==="Header name"?"m-header":(v==="NOT FOUND"?"m-none":"m-letter");}}];
+    html+='<details class="exp" '+(nf?"open":"")+'><summary>\u{1F50E}  Column resolution — verify the app found the right columns</summary>'
+      +'<div class="exp-body"><div class="section-card-sub">How each field was located in your sheet. '+badge+'</div>'
+      +table(rcols,S.resolved,{height:420})+'</div></details>';
+  }
+  return html;
+}
+function tabMapping(){
+  if(!S.selected.length) return empty("\u{1F5FA}️","No mapping data yet",
+    "Read transfer requests first to see hierarchy and recipient matching.");
+  const uh=S.selected.filter(r=>/no hierarchy|not found|empty/i.test(r.hierarchy_match_status)).length;
+  const ur=S.selected.filter(r=>/no focal|not found|empty/i.test(r.recipient_match_status)).length;
+  const hb=uh?'<span class="badge badge-red">'+uh+' issues</span>':'<span class="badge badge-green">All matched</span>';
+  const rb=ur?'<span class="badge badge-red">'+ur+' issues</span>':'<span class="badge badge-green">All matched</span>';
+  const cols=[{k:"input_row",label:"input_row",num:true},{k:"member_id_raw",label:"member_id_raw"},
+    {k:"input_branch",label:"input_branch"},{k:"input_region_zone",label:"input_region_zone"},
+    {k:"mapped_program",label:"mapped_program"},{k:"mapped_division",label:"mapped_division"},
+    {k:"mapped_region",label:"mapped_region"},{k:"mapped_area",label:"mapped_area"},
+    {k:"mapped_branch",label:"mapped_branch"},
+    {k:"hierarchy_match_status",label:"hierarchy_match_status",
+     cls:(r,v)=>/no /i.test(v)?"cell-not-eligible":"cell-eligible"},
+    {k:"recipient_names",label:"recipient_names"},{k:"recipient_to",label:"recipient_to"},
+    {k:"recipient_cc",label:"recipient_cc"},
+    {k:"recipient_match_status",label:"recipient_match_status",
+     cls:(r,v)=>/no /i.test(v)?"cell-not-eligible":"cell-eligible"}];
+  return card("Hierarchy & Recipient Mapping","Hierarchy: "+hb+" &nbsp;&nbsp; Recipients: "+rb,
+      table(cols,S.selected,{height:440}))
+    +'<details class="exp"><summary>Export draft mapping (optional)</summary><div class="exp-body">'
+    +'<div class="alert alert-info">This exports the mapping before Microzen runs — useful for reviewing input data. '
+    +'The final eligibility output is generated in the Run Microzen Check tab.</div>'
+    +'<button class="btn btn-block" id="draftBtn" type="button">Generate Draft Mapping CSV</button></div></details>';
+}
+/* ── Run tab ─────────────────────────────────────────────────────────── */
+function tabRun(){
+  if(!S.selected.length) return empty("⚡","Ready to run",
+    "Read transfer requests first, then return here to run the Microzen check.");
+  const role=ROLES[S.role];
+  const scopeMap={"First 2 members":2,"First 5 members":5,"All selected members":null};
+  const maxItems=scopeMap[S.runScope];
+  const actual=maxItems?Math.min(S.selected.length,maxItems):S.selected.length;
+  let html='<div class="grid2" style="align-items:flex-start">';
+  html+='<div style="flex:1.6">'
+    +'<div class="credential-panel" id="credPanel"><div class="credential-panel-title">\u{1F512}  Microzen Credentials</div>'
+    +'<div class="grid2"><div><label class="fld-lab" style="color:#94a3b8" for="mzUser">Username</label>'
+    +'<input id="mzUser" type="text" placeholder="Enter username" value="'+esc(S.username)+'"></div>'
+    +'<div><label class="fld-lab" style="color:#94a3b8" for="mzPass">Password</label>'
+    +'<input id="mzPass" type="password" placeholder="Enter password" value="'+esc(S.password)+'"></div></div>'
+    +'<div class="cap">Credentials are used only for this session and are never saved to any file.</div></div>';
+  html+='<div class="section-card"><div class="grid2">'
+    +'<div><div class="fld-lab">Run scope</div>'
+    + ["First 2 members","First 5 members","All selected members"].map(function(o){
+        return '<label class="opt" style="color:#334155"><input type="radio" name="scope" value="'+o+'" '
+        +(S.runScope===o?"checked":"")+'> '+o+'</label>';}).join("")
+    +'<div class="cap">Always test with 2 first to confirm login and parsing work correctly.</div></div>'
+    +'<div><div class="fld-lab">Browser</div>'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" id="headless" '+(S.headless?"checked":"")+'> Run browser hidden</label>'
+    +'<div class="cap">Keep unchecked while testing so you can see what the bot is doing.</div></div>'
+    +'</div>'
+    +'<div class="alert alert-info" style="margin-top:.7rem">Will process <strong>'+actual+'</strong> member(s) from '+S.selected.length+' selected row(s).</div>'
+    + (role.canRun
+        ? '<button class="btn btn-primary btn-block" id="runBtn" type="button"'+(S.running?" disabled":"")+'>'
+          +(S.running?"Running…":"Run Microzen Check  →  "+actual+" member(s)")+'</button>'
+        : '<button class="btn btn-block" type="button" disabled>Run Microzen Check — not permitted for '+role.label+'</button>'
+          +'<div class="cap" style="margin-top:.4rem">Reviewers can read results and work flags, but cannot start an ERP session.</div>')
+    +'<div id="runProgress"></div></div></div>';
+  html+='<div style="flex:1">'+card("Before you run","Follow this checklist for a clean first run.",
+    '<ul style="margin:0;padding-left:1.1rem;font-size:.84rem;color:#334155;line-height:1.75">'
+    +'<li>Confirm the file is a <strong>local copy</strong> (not open in OneDrive)</li>'
+    +'<li>Use <strong>First 2 members</strong> for the initial test</li>'
+    +'<li>Keep <strong>browser visible</strong> (headless unchecked)</li>'
+    +'<li>Review the output before running the full batch</li>'
+    +'<li>Final approval remains with the responsible department</li></ul>')
+    +card("System status","",'<span class="badge badge-green">✓  Automation engine ready</span>')
+    +'</div></div>';
+  html+='<div id="pwHolder">'+pwPanel(S.running?S.pwActive:null)+'</div>';
+  if(S.summary) html+=runResults();
+  return html;
+}
+function runResults(){
+  const results=S.results, sm=S.summary;
+  const of=r=>String((r.eligibility||{}).eligibility_result||"").toLowerCase();
+  const elig=results.filter(r=>of(r)==="eligible").length;
+  const notE=results.filter(r=>of(r)==="not eligible").length;
+  const man =results.filter(r=>of(r)==="manual review").length;
+  let note="";
+  if(man) note='<div class="section-card-sub" style="color:#92400e;">⚠️ '+man
+    +' member(s) need manual review — the loan or profile data could not be read reliably. '
+    +'Do not treat these as Eligible. Open the snapshot folder and verify in Microzen.</div>';
+  let html='<div class="section-card"><div class="section-card-title">Run Results</div>'+note
+    +'<div class="result-summary-grid">'
+    +sumCard("total",sm.total,"Processed")+sumCard("eligible",elig,"Eligible")
+    +sumCard("not-eligible",notE,"Not Eligible")+sumCard("error",man,"Manual Review")
+    +sumCard("error",sm.errors,"Errors")+'</div></div>';
+  /* app.py:1007 flatten_microzen_result() — these are the real column labels */
+  const cols=[
+    {k:"input_row",label:"Row",num:true},{k:"member_id_raw",label:"Member ID"},
+    {k:r=>(r.profile||{}).member_name,label:"Member Name"},
+    {k:r=>(r.profile||{}).loan_component,label:"Loan Component"},
+    {k:r=>(r.profile||{}).microzen_zone,label:"Zone / Region"},
+    {k:r=>(r.profile||{}).area,label:"Area"},{k:r=>(r.profile||{}).branch,label:"Branch"},
+    {k:r=>(r.profile||{}).samity,label:"Samity"},
+    {k:r=>(r.eligibility||{}).primary_loan_with_balance,label:"Primary Loan?"},
+    {k:r=>(r.eligibility||{}).primary_loan_balance,label:"Primary Balance",num:true,fmt:fmt2},
+    {k:r=>(r.eligibility||{}).primary_loan_overdue,label:"Primary Overdue",num:true,fmt:fmt2},
+    {k:r=>(r.eligibility||{}).total_outstanding,label:"Total Outstanding",num:true,fmt:fmt2},
+    {k:r=>(r.savings||{}).total_savings_balance,label:"Total Savings",num:true,fmt:fmt2},
+    {k:r=>(r.eligibility||{}).eligibility_result,label:"Eligibility",cls:(r,v)=>eligCls(v)},
+    {k:r=>(r.eligibility||{}).confidence,label:"Confidence"},
+    {k:r=>(r.eligibility||{}).result_message,label:"Reason"},
+    {k:"status",label:"Status"}];
+  html+=card("Member Results","Review eligibility decisions before downloading the final output.",
+    table(cols,results,{height:420})
+    +'<button class="btn btn-primary btn-block" id="dlResults" type="button" style="margin-top:.7rem">⬇  Download Final Eligibility Output (CSV)</button>'
+    +'<div class="cap" style="margin-top:.35rem">Location in the real app: <code>output/generated_excels/</code></div>');
+  if(S.lastSaved){
+    const f=S.lastSaved.flagged?(" · ⚠️ "+S.lastSaved.flagged+" integrity flag(s) raised"):" · no integrity flags";
+    html+='<div class="alert alert-ok">Saved to central database — Run #'+S.lastSaved.run_id+'  ('
+      +S.lastSaved.total+' member(s)'+f+'). This record is now permanent until an admin clears it.</div>';
+  }
+  return html;
+}
+function sumCard(cls,n,label){
+  return '<div class="result-summary-card '+cls+'"><div class="result-summary-number">'+n
+    +'</div><div class="result-summary-label">'+label+'</div></div>';
+}
+/* Simulated batch — mirrors the runner's staging and per-member feed. */
+function startRun(){
+  const scopeMap={"First 2 members":2,"First 5 members":5,"All selected members":null};
+  const maxItems=scopeMap[S.runScope];
+  const batch=maxItems?S.selected.slice(0,maxItems):S.selected.slice();
+  if(!S.username||!S.password){ toast("Enter your Microzen username and password before running.","err"); return; }
+  S.running=true; S.results=[]; S.summary=null; S.lastSaved=null; S.pwActive="launch";
+  render();
+  const prog=$("#runProgress");
+  const feed=[];
+  const stages=["launch","login","verify","warm"];
+  let si=0;
+  function paint(pctv,text){
+    if(!prog) return;
+    prog.innerHTML='<div class="progress"><span style="width:'+pctv+'%"></span></div>'
+      +'<div class="cap" style="margin-bottom:.4rem">'+esc(text)+'</div>'
+      +'<div class="feed">'+feed.slice(0,12).join("<br>")+'</div>';
+    const holder=$("#pwHolder"); if(holder) holder.innerHTML=pwPanel(S.pwActive);
+  }
+  function boot(){
+    if(si<stages.length){
+      S.pwActive=stages[si];
+      paint(4+si*3, {launch:"Starting browser…",login:"Logging in…",
+        verify:"Confirming the session is authenticated…",
+        warm:"Warm-up: priming the app root so the first member does not fail…"}[stages[si]]);
+      si++; setTimeout(boot,520); return;
+    }
+    step(0);
+  }
+  function step(i){
+    if(i>=batch.length){ finish(batch); return; }
+    const req=batch[i];
+    S.pwActive="nav";
+    paint(Math.round(16+ (i/batch.length)*80), "Checking member "+(i+1)+" of "+batch.length+"  ·  ID "+req.member_id_raw);
+    const sub=["profile","loans","savings","parse"];
+    let k=0;
+    (function inner(){
+      if(k<sub.length){ S.pwActive=sub[k]; k++; paint(Math.round(16+((i+k/5)/batch.length)*80),
+        "Checking member "+(i+1)+" of "+batch.length+"  ·  ID "+req.member_id_raw); setTimeout(inner,150); return; }
+      const scraped=scrapeMember(req,{});
+      const row=Object.assign({},req,scraped);
+      S.results.push(row);
+      const e=row.eligibility||{}; const res=e.eligibility_result||"";
+      const icon = row.status==="ERROR"?"⚠️"
+        : res==="Eligible"?"✅" : res==="Not Eligible"?"⛔"
+        : res==="Manual Review"?"\u{1F50E}" : "•";
+      feed.unshift(icon+"  <strong>"+esc(row.member_id_raw)+"</strong> — "
+        +esc((row.profile||{}).member_name||row.member_name||row.member_id_raw)+" — "+esc(res||row.status));
+      setTimeout(function(){step(i+1);},200);
+    })();
+  }
+  function finish(batch){
+    S.pwActive="close"; paint(100,"Writing output…");
+    setTimeout(function(){
+      S.summary={total:S.results.length,
+        completed:S.results.filter(r=>r.status==="COMPLETED").length,
+        errors:S.results.filter(r=>r.status==="ERROR").length, results:S.results};
+      S.lastSaved=persistRun(S.results, S.username||"local-operator","upload",
+        "output/generated_excels/transfer_eligibility_result_20260918_"+pad(ri(100000,999999),6)+".xlsx", new Date(2026,8,18));
+      S.running=false; S.pwActive=null;
+      toast("Microzen transfer eligibility check completed.","ok");
+      render();
+    },600);
+  }
+  boot();
+}
+function tabEmail(){
+  const regions=Object.keys(S.emailDrafts);
+  if(!regions.length) return empty("✉️","No drafts yet",
+    "Read transfer requests first to generate region-based email drafts.");
+  let html=card("Email Drafts by Region",
+    'Click <strong>Open in Outlook</strong> to open a styled HTML email for this region in Outlook for review before sending. '
+    +'Or use <strong>Mark as Sent</strong> if you sent manually.','');
+  regions.forEach(function(region){
+    const d=S.emailDrafts[region], sent=!!S.notifSent[region];
+    html+='<details class="exp" '+(sent?"":"open")+'><summary>'+(sent?"✅":"\u{1F4CD}")+'  '+esc(region)+(sent?"  · sent":"")+'</summary>'
+      +'<div class="exp-body"><div class="grid2">'
+      +'<div><label class="fld-lab">To</label><input class="txt" readonly value="'+esc(d.to)+'"></div>'
+      +'<div><label class="fld-lab">CC</label><input class="txt" readonly value="'+esc(d.cc)+'"></div></div>'
+      +'<label class="fld-lab">Subject</label><input class="txt" readonly value="'+esc(d.subject)+'">'
+      +'<label class="fld-lab">Body (plain text draft)</label>'
+      +'<textarea class="txt" rows="8" readonly>'+esc(d.body)+'</textarea>'
+      + (sent?'' : '<div class="grid2" style="margin-top:.6rem">'
+        +'<button class="btn btn-primary" type="button" data-outlook="'+esc(region)+'">\u{1F4E7} Open in Outlook</button>'
+        +'<button class="btn" type="button" data-sent="'+esc(region)+'">Mark as Sent</button></div>')
+      +'</div></details>';
+  });
+  return html;
+}
+function tabNext(){
+  const steps=[["Step 1 — Upload","Upload a local copy of the transfer request file. Do not run directly from OneDrive during testing."],
+   ["Step 2 — Read Requests","Click <strong>Read Transfer Requests</strong> in the sidebar. Confirm the Transfer Requests tab shows the expected rows."],
+   ["Step 3 — Check Mapping","Review the Hierarchy & Recipients tab. Resolve any red hierarchy or recipient warnings before running."],
+   ["Step 4 — Run Microzen Check (2 rows first)","Go to Run Microzen Check. Enter credentials. Choose <strong>First 2 members</strong>. Keep browser visible. Click Run."],
+   ["Step 5 — Review Output","Download the final eligibility output. Verify the Eligibility column matches what you see in the browser."],
+   ["Step 6 — Full Run","After confirming 2-member output is correct, re-run with First 5 or All selected members."],
+   ["Step 7 — Communicate","Copy email drafts from the Email Drafts tab into Outlook and send after supervisor review."]];
+  const trouble=[["PermissionError on Excel file","File open in Excel or locked by OneDrive","Close Excel, copy file locally, run from the local copy"],
+   ["Login fails / timeout","Microzen background requests keep running","Use domcontentloaded wait — avoid networkidle"],
+   ["Loans/savings not captured","Tab click missed or page structure changed","Check screenshot and table files in snapshot folder"],
+   ["Eligibility result looks wrong","Loan product name or balance parsing issue","Check 02_loans_tables.txt and item_result.json in snapshot folder"],
+   ["ModuleNotFoundError","Script not run from project root","Activate the virtual environment from the project root"]];
+  return card("Recommended Workflow","Follow this sequence for a clean, verified run.",
+      steps.map(s=>'<div style="margin-bottom:.7rem"><strong>'+s[0]+'</strong><br>'
+        +'<span style="font-size:.85rem;color:#475569">'+s[1]+'</span></div>').join(""))
+    + card("Troubleshooting Quick Reference","",
+      table([{k:r=>r[0],label:"Problem"},{k:r=>r[1],label:"Likely Cause"},{k:r=>r[2],label:"Fix"}],trouble,{height:300}));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   12. GOVERNANCE REPORTS  (app.py:1100-1560, engine/database.py queries)
+   ═══════════════════════════════════════════════════════════════════════ */
+function uniqSorted(arr){return arr.filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort();}
+function filteredChecks(){
+  const f=S.filters;
+  return DB.checks.filter(function(c){
+    if(f.year!=="All"   && String(c.run_year)!==f.year) return false;
+    if(f.month!=="All"  && c.run_month!==f.month) return false;
+    if(f.zone!=="All"   && c.zone!==f.zone) return false;
+    if(f.branch!=="All" && c.branch!==f.branch) return false;
+    if(f.from!=="All"   && c.from_officer!==f.from) return false;
+    if(f.to!=="All"     && c.to_officer!==f.to) return false;
+    if(f.comp!=="All"   && c.loan_component!==f.comp) return false;
+    if(f.elig!=="All"   && c.eligibility_result!==f.elig) return false;
+    if(f.flagged        && !c.overdue_flag) return false;
+    return true;
+  });
+}
+function sel(id,label,options,value,width){
+  return '<div style="flex:1;min-width:'+(width||130)+'px"><label class="fld-lab" for="'+id+'">'+esc(label)+'</label>'
+    +'<select class="txt" id="'+id+'">'+options.map(o=>'<option'+(String(o)===String(value)?" selected":"")+'>'+esc(o)+'</option>').join("")+'</select></div>';
+}
+function renderReports(){
+  const d=DB.checks;
+  const years=uniqSorted(d.map(c=>String(c.run_year)));
+  const months=uniqSorted(d.map(c=>c.run_month)).reverse();
+  const zones=uniqSorted(d.map(c=>c.zone));
+  const branches=uniqSorted(d.map(c=>c.branch));
+  const froms=uniqSorted(d.map(c=>c.from_officer));
+  const tos=uniqSorted(d.map(c=>c.to_officer));
+  const comps=uniqSorted(d.map(c=>c.loan_component));
+  let html=card("Governance Reports",
+    "Every stored transfer request — filter by zone, branch, officer, component, and date range. "
+    +"These reports read the permanent database, not just this session.",
+    '<div class="grid2" id="repFilters" style="gap:.6rem">'
+    +sel("fYear","Year",["All"].concat(years),S.filters.year,100)
+    +sel("fMonth","Month",["All"].concat(months),S.filters.month,120)
+    +sel("fZone","Unit / Zone",["All"].concat(zones),S.filters.zone,150)
+    +sel("fBranch","Branch",["All"].concat(branches),S.filters.branch,170)
+    +'</div><div class="grid2" style="gap:.6rem;margin-top:.5rem">'
+    +sel("fFrom","From Officer",["All"].concat(froms),S.filters.from,150)
+    +sel("fTo","To Officer",["All"].concat(tos),S.filters.to,150)
+    +sel("fComp","Loan Component",["All"].concat(comps),S.filters.comp,140)
+    +sel("fElig","Eligibility",["All","Eligible","Not Eligible","Manual Review"],S.filters.elig,130)
+    +'<div style="flex:0 0 130px;display:flex;align-items:flex-end;padding-bottom:.4rem">'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" id="fFlag" '+(S.filters.flagged?"checked":"")+'> Flagged only</label></div>'
+    +'</div>');
+  const rows=filteredChecks();
+  if(!rows.length) return html+'<div class="alert alert-info">No records match the selected filters.</div>';
+  const sum=(k)=>rows.reduce((a,c)=>a+(+c[k]||0),0);
+  const flagged=rows.filter(c=>c.overdue_flag).length;
+  html+=metricRow([
+    {label:"Transfer Requests",value:rows.length,sub:"members in selection",color:"blue"},
+    {label:"Outstanding in Motion",value:money(sum("total_outstanding")),sub:"loan balance being moved",color:"slate"},
+    {label:"Overdue at Risk",value:money(sum("total_overdue")),sub:"overdue balance being moved",color:"red"},
+    {label:"Savings Involved",value:money(sum("total_savings")),sub:"member savings being moved",color:"green"},
+    {label:"Overdue-Flagged",value:flagged,sub:"need justification",color:"amber"}
+  ]);
+  const by=(arr,keyfn)=>{const m={};arr.forEach(function(r){const k=keyfn(r)||"(not recorded)";(m[k]=m[k]||[]).push(r);});return m;};
+  const agg=(g)=>Object.keys(g).map(function(k){
+    const v=g[k];
+    return {key:k,n:v.length,
+      eligible:v.filter(x=>x.eligibility_result==="Eligible").length,
+      notEligible:v.filter(x=>x.eligibility_result==="Not Eligible").length,
+      manual:v.filter(x=>x.eligibility_result==="Manual Review").length,
+      flagged:v.filter(x=>x.overdue_flag).length,
+      out:v.reduce((a,x)=>a+(+x.total_outstanding||0),0),
+      over:v.reduce((a,x)=>a+(+x.total_overdue||0),0),
+      sav:v.reduce((a,x)=>a+(+x.total_savings||0),0)};
+  });
+  const flagRate=r=>pct(r.flagged,r.n);
+
+  /* 1 */
+  const r1=agg(by(rows,r=>r.zone)).sort((a,b)=>b.n-a.n);
+  html+=card("1 · Unit-wise Transfer Summary","Requests, decisions, and portfolio moved per zone/unit.",
+    table([{k:"key",label:"Zone / Unit"},{k:"n",label:"Members",num:true},
+      {k:"eligible",label:"Eligible",num:true},{k:"notEligible",label:"Not Eligible",num:true},
+      {k:"manual",label:"Manual Review",num:true},
+      {k:"flagged",label:"Flagged",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"out",label:"Outstanding",num:true,fmt:money},{k:"over",label:"Overdue",num:true,fmt:money},
+      {k:"sav",label:"Savings",num:true,fmt:money}],r1,{height:280}));
+
+  /* 2 */
+  const r2=agg(by(rows,r=>r.requested_by)).sort((a,b)=>b.flagged-a.flagged||b.n-a.n);
+  html+=card("2 · Requester Accountability","Who submitted these transfers, and how many of theirs carry overdue balance.",
+    table([{k:"key",label:"Requested By"},{k:"n",label:"Submitted",num:true},
+      {k:"flagged",label:"Overdue Submitted",num:true,cls:(r,v)=>v>=5?"sev-HIGH":(v>=2?"sev-MEDIUM":"")},
+      {k:"notEligible",label:"Not Eligible",num:true},
+      {k:r=>flagRate(r),label:"Flag Rate %",num:true},
+      {k:"over",label:"Overdue Moved",num:true,fmt:money}],r2,{height:300}));
+
+  /* 3 */
+  const r3=agg(by(rows,r=>r.run_month)).sort((a,b)=>a.key<b.key?-1:1);
+  const maxN=Math.max.apply(null,r3.map(x=>x.n).concat([1]));
+  html+=card("3 · Monthly Trend","Transfer volume and overdue volume by month. Quarter-end months are marked.",
+    '<div class="bars">'+r3.map(function(m){
+      const q=["03","06","09","12"].indexOf(m.key.slice(5))!==-1;
+      return '<div class="b" title="'+esc(m.key)+': '+m.n+' transfers, '+m.flagged+' overdue">'
+        +'<i style="height:'+Math.round(m.flagged/maxN*100)+'px;background:#dc2626"></i>'
+        +'<i style="height:'+Math.round((m.n-m.flagged)/maxN*100)+'px;background:#2563eb"></i>'
+        +'<b>'+esc(m.key.slice(2))+(q?" ★":"")+'</b></div>';
+    }).join("")+'</div>'
+    +'<div class="legend"><span><i style="background:#2563eb"></i>Clean transfers</span>'
+    +'<span><i style="background:#dc2626"></i>Overdue transfers</span><span>★ quarter-end month</span></div>');
+
+  /* 4 */
+  const fl=DB.flags.filter(function(f){
+    const c=DB.checks.filter(x=>x.id===f.member_check_id)[0];
+    return c && rows.indexOf(c)!==-1;
+  });
+  html+=card("4 · Integrity Flag Register","Every flag raised on the current selection.",
+    table([{k:"flag_id",label:"ID",num:true},{k:"run_month",label:"Month"},{k:"zone",label:"Zone"},
+      {k:"member_id_raw",label:"Member ID"},{k:"member_name",label:"Name"},
+      {k:"requested_by",label:"Requested By"},{k:"type",label:"Flag"},
+      {k:"severity",label:"Severity",cls:(r,v)=>"sev-"+v},
+      {k:"status",label:"Status",cls:(r,v)=>"st-"+v}],fl,{height:300,emptyText:"No flags in this selection."}));
+
+  /* 5 */
+  const r5=agg(by(rows,r=>r.to_officer)).sort((a,b)=>b.flagged-a.flagged||b.over-a.over);
+  html+=card("5 · Receiving-Officer Dumping Watch",
+    "Officers receiving the most overdue members. A receiving officer who keeps absorbing other people's arrears is the other half of the pattern.",
+    table([{k:"key",label:"Receiving Officer"},{k:"n",label:"Received",num:true},
+      {k:"flagged",label:"Overdue Received",num:true,cls:(r,v)=>v>=5?"sev-HIGH":(v>=2?"sev-MEDIUM":"")},
+      {k:r=>flagRate(r),label:"Flag Rate %",num:true},
+      {k:"over",label:"Overdue Absorbed",num:true,fmt:money}],r5,{height:300}));
+
+  /* 6 */
+  const routeMap={};
+  rows.forEach(function(r){
+    const k=(r.from_officer||"?")+" → "+(r.to_officer||"?");
+    const e=routeMap[k]||(routeMap[k]={key:k,n:0,flagged:0,over:0,runs:{}});
+    e.n++; if(r.overdue_flag){e.flagged++;} e.over+=(+r.total_overdue||0); e.runs[r.run_id]=1;
+  });
+  const r6=Object.keys(routeMap).map(k=>routeMap[k]).map(function(e){e.distinct=Object.keys(e.runs).length;return e;})
+    .sort((a,b)=>b.flagged-a.flagged||b.n-a.n).slice(0,40);
+  html+=card("6 · Portfolio Flow (From → To Officer)","Officer-to-officer routes carrying loan balance.",
+    table([{k:"key",label:"Route"},{k:"n",label:"Transfers",num:true},
+      {k:"flagged",label:"Overdue",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"distinct",label:"Distinct Runs",num:true},
+      {k:"over",label:"Overdue Moved",num:true,fmt:money}],r6,{height:300}));
+
+  /* 7 — engine/database.py:1167 get_branch_breakdown */
+  const r7=agg(by(rows,r=>r.branch)).sort((a,b)=>b.flagged-a.flagged||b.n-a.n);
+  html+=card("7 · Branch-Level Breakdown","Branch-level stats within the current selection.",
+    table([{k:"key",label:"Branch"},{k:"n",label:"Members",num:true},
+      {k:"eligible",label:"Eligible",num:true},{k:"notEligible",label:"Not Eligible",num:true},
+      {k:"manual",label:"Manual Review",num:true},
+      {k:"flagged",label:"Flagged",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"out",label:"Outstanding",num:true,fmt:money},{k:"over",label:"Overdue",num:true,fmt:money},
+      {k:"sav",label:"Savings",num:true,fmt:money},
+      {k:r=>flagRate(r),label:"Flag Rate %",num:true}],r7,{height:300}));
+
+  /* 8 — engine/database.py:1196 get_officer_scorecard */
+  const r8=agg(by(rows,r=>r.requested_by)).map(function(e){
+    const zs={}; rows.forEach(function(r){ if(r.requested_by===e.key) zs[r.zone]=1; });
+    e.clean=e.n-e.flagged; e.zones=Object.keys(zs).length; return e;
+  }).sort((a,b)=>b.flagged-a.flagged||flagRate(b)-flagRate(a));
+  html+=card("8 · Officer Accountability Scorecard","Submissions, clean versus flagged ratio, and PAR rate per officer.",
+    table([{k:"key",label:"Officer"},{k:"n",label:"Total Submissions",num:true},
+      {k:"clean",label:"Clean",num:true},
+      {k:"flagged",label:"Flagged",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:r=>flagRate(r),label:"Flag Rate %",num:true,cls:(r,v)=>v>=50?"sev-HIGH":(v>=25?"sev-MEDIUM":"")},
+      {k:"over",label:"Overdue Moved",num:true,fmt:money},
+      {k:"out",label:"Outstanding Moved",num:true,fmt:money},
+      {k:"zones",label:"Zones Active",num:true}],r8,{height:300}));
+
+  /* 9 — engine/database.py:1230 get_day_of_month_analysis
+     NOTE: the production query sets BOTH is_month_end and is_quarter_end from
+     the same condition, day >= 25, so the quarter-end marker is not actually
+     quarter-aware at day level. Replicated here rather than corrected, per the
+     brief's instruction to copy formulas exactly. The month-level version at
+     database.py:793 does it properly using months 3, 6, 9, 12. */
+  const dayMap={};
+  rows.forEach(function(r){
+    const day=parseInt(String(r.transfer_date||r.run_date).slice(8,10),10)||1;
+    const e=dayMap[day]||(dayMap[day]={day:day,n:0,overdue:0,amt:0});
+    e.n++; if(r.overdue_flag){e.overdue++; e.amt+=(+r.total_overdue||0);}
+  });
+  const r9=Object.keys(dayMap).map(k=>dayMap[k]).sort((a,b)=>a.day-b.day);
+  const maxDay=Math.max.apply(null,r9.map(x=>x.n).concat([1]));
+  html+=card("9 · Day-of-Month Transfer Spike",
+    "Transfers by day of month. A cluster in the last week is the month-end and quarter-close signal.",
+    '<div class="bars">'+r9.map(function(d){
+      const late=d.day>=25;
+      return '<div class="b" title="Day '+d.day+': '+d.n+' transfers, '+d.overdue+' overdue">'
+        +'<i style="height:'+Math.round(d.overdue/maxDay*100)+'px;background:#dc2626"></i>'
+        +'<i style="height:'+Math.round((d.n-d.overdue)/maxDay*100)+'px;background:'+(late?"#d97706":"#2563eb")+'"></i>'
+        +'<b>'+d.day+'</b></div>';
+    }).join("")+'</div>'
+    +'<div class="legend"><span><i style="background:#2563eb"></i>Transfers</span>'
+    +'<span><i style="background:#d97706"></i>Day 25+</span><span><i style="background:#dc2626"></i>Overdue</span></div>'
+    +table([{k:"day",label:"Day of Month",num:true},{k:"n",label:"Total Transfers",num:true},
+      {k:"overdue",label:"Overdue Transfers",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"amt",label:"Overdue Amount",num:true,fmt:money},
+      {k:r=>r.day>=25?"Yes":"No",label:"Month-End?"},
+      {k:r=>r.day>=25?"Yes":"No",label:"Quarter-End?"}],r9,{height:240}));
+
+  /* 10 — engine/database.py:1259 get_component_breakdown */
+  const r10=agg(by(rows,r=>r.loan_component)).sort((a,b)=>b.n-a.n);
+  html+=card("10 · Loan Component Breakdown","Transfers by loan component. Empty components show as (not recorded).",
+    table([{k:"key",label:"Component"},{k:"n",label:"Members",num:true},
+      {k:"eligible",label:"Eligible",num:true},{k:"notEligible",label:"Not Eligible",num:true},
+      {k:"flagged",label:"Flagged",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:r=>flagRate(r),label:"Flag Rate %",num:true},
+      {k:"out",label:"Outstanding",num:true,fmt:money}],r10,{height:260}));
+
+  /* 11 */
+  const repeat=r2.filter(x=>x.flagged>=2);
+  const qMonths=r3.filter(m=>["03","06","09","12"].indexOf(m.key.slice(5))!==-1);
+  const qRate=qMonths.length?pct(qMonths.reduce((a,m)=>a+m.flagged,0),qMonths.reduce((a,m)=>a+m.n,0)):0;
+  const nRate=pct(rows.filter(c=>c.overdue_flag).length,rows.length);
+  const routes=r6.filter(x=>x.flagged>=2&&x.distinct>=2);
+  html+=card("11 · Systemic Patterns Summary","The three cross-run signals, read together.",
+    '<div class="grid2">'
+    +'<div class="section-card" style="box-shadow:none;margin:0"><div class="section-card-title">Repeat offenders</div>'
+    +'<div class="metric-card-value">'+repeat.length+'</div>'
+    +'<div class="cap">requesters with 2 or more overdue submissions</div></div>'
+    +'<div class="section-card" style="box-shadow:none;margin:0"><div class="section-card-title">Quarter-end skew</div>'
+    +'<div class="metric-card-value">'+qRate+'%</div>'
+    +'<div class="cap">overdue rate in Mar/Jun/Sep/Dec vs '+nRate+'% overall</div></div>'
+    +'<div class="section-card" style="box-shadow:none;margin:0"><div class="section-card-title">Persistent routes</div>'
+    +'<div class="metric-card-value">'+routes.length+'</div>'
+    +'<div class="cap">officer pairs carrying overdue in 2 or more runs</div></div>'
+    +'</div>'
+    +'<button class="btn" id="expReport" type="button" style="margin-top:.8rem">⬇  Export current selection (CSV)</button>');
+  return html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   13. ADMIN & GOVERNANCE CONTROL PANEL  (engine/admin_panel.py)
+   ═══════════════════════════════════════════════════════════════════════ */
+const ADMIN_TABS=["\u{1F4CA}  Overview","\u{1F550}  Run History","\u{1F6A8}  Flag Workflow",
+  "\u{1F4C8}  Systemic Patterns","\u{1F465}  Recipients","✉️  Email","⚙️  Settings","\u{1F5C3}️  Data Management"];
+
+function dbStats(){
+  const open=DB.flags.filter(f=>f.status==="open").length;
+  const dates=DB.runs.map(r=>r.run_date).sort();
+  return {runs_count:DB.runs.length, member_checks_count:DB.checks.length,
+    integrity_flags_count:DB.flags.length, notifications_log_count:DB.notifications.length,
+    audit_log_count:DB.audit.length, open_flags:open,
+    first_run:dates[0]||"—", last_run:dates[dates.length-1]||"—",
+    last_operator:(DB.runs.length?DB.runs[DB.runs.length-1].operator:"—"),
+    total_eligible:DB.checks.filter(c=>c.eligibility_result==="Eligible").length,
+    total_not_eligible:DB.checks.filter(c=>c.eligibility_result==="Not Eligible").length,
+    total_flagged:DB.checks.filter(c=>c.overdue_flag).length,
+    db_size_kb:Math.round(488 + DB.checks.length*0.9)};
+}
+function renderAdmin(){
+  const allowed=ROLES[S.role].adminTabs;
+  if(allowed.indexOf(S.adminTab)===-1) S.adminTab=allowed.length?allowed[0]:0;
+  let html='<div class="app-header" style="margin-bottom:1.2rem"><div class="app-header-left">'
+    +'<div class="app-header-badge">ADMIN &amp; GOVERNANCE</div>'
+    +'<div class="app-header-title">Control Panel</div>'
+    +'<div class="app-header-subtitle">System health · Run history · Flag workflow · Systemic patterns · '
+    +'Settings · Data management — no code changes required.</div></div></div>';
+  if(S.toast) html+='<div class="alert alert-'+({ok:"ok",err:"err",warn:"warn",info:"info"}[S.toast.kind])+'">'+esc(S.toast.msg)+'</div>';
+  if(!allowed.length){
+    html+=empty("\u{1F512}","Admin panel not available for this role","Switch to Administrator or Reviewer in the header.");
+    $("#main").innerHTML=html; return;
+  }
+  html+='<div class="tabs" role="tablist" id="admTabs">'+ADMIN_TABS.map(function(t,i){
+    const ok=allowed.indexOf(i)!==-1;
+    return '<button type="button" role="tab" aria-selected="'+(S.adminTab===i)+'" data-i="'+i+'"'
+      +(ok?"":' disabled title="Administrator only"')+'>'+t+'</button>';
+  }).join("")+'</div><div role="tabpanel">'+adminBody()+'</div>';
+  $("#main").innerHTML=html; wireAdmin();
+}
+function adminBody(){
+  switch(S.adminTab){
+    case 0: return admOverview();
+    case 1: return admRunHistory();
+    case 2: return admFlags();
+    case 3: return admPatterns();
+    case 4: return admRecipients();
+    case 5: return admEmail();
+    case 6: return admSettings();
+    default: return admData();
+  }
+}
+function admOverview(){
+  const s=dbStats();
+  let html=metricRow([
+    {label:"Total Runs",value:s.runs_count,sub:"stored permanently",color:"blue"},
+    {label:"Members Checked",value:fmt0(s.member_checks_count),sub:"across all runs",color:"slate"},
+    {label:"Integrity Flags",value:s.integrity_flags_count,sub:"total raised",color:"amber"},
+    {label:"Open Flags",value:s.open_flags,sub:"need justification",color:s.open_flags?"red":"green"}
+  ]);
+  const left=[["Eligible (all-time)",s.total_eligible],["Not Eligible (all-time)",s.total_not_eligible],
+    ["Flagged (all-time)",s.total_flagged],["DB file size",s.db_size_kb+" KB"],
+    ["First run",s.first_run],["Last run",s.last_run],["Last operator",s.last_operator]];
+  const right=[["Runs",s.runs_count],["Member Checks",s.member_checks_count],
+    ["Integrity Flags",s.integrity_flags_count],["Notifications",s.notifications_log_count],
+    ["Audit Log entries",s.audit_log_count]];
+  html+='<div class="grid2">'
+    +card("Database Health","",left.map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v">'+esc(r[1])+'</span></div>').join(""))
+    +card("Table Row Counts","",right.map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v blue">'+fmt0(r[1])+'</span></div>').join(""))
+    +'</div>';
+  return html;
+}
+function admRunHistory(){
+  if(!DB.runs.length) return '<div class="alert alert-info">No runs stored yet. Run a Microzen check first.</div>';
+  const runs=DB.runs.slice().reverse();
+  let html=card("Run History","Every batch run ever stored. Select a run below to see the full member list.",
+    table([{k:"run_id",label:"ID",num:true},{k:"run_date",label:"Date"},{k:"operator",label:"Operator"},
+      {k:"source",label:"Source"},{k:"total_members",label:"Total",num:true},
+      {k:"eligible",label:"Eligible",num:true},{k:"not_eligible",label:"Not Eligible",num:true},
+      {k:"manual_review",label:"Manual Review",num:true},{k:"errors",label:"Errors",num:true},
+      {k:"flagged",label:"Flags",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:r=>r.output_file.split("/").pop(),label:"Output File"}],runs,{height:340}));
+  const sid=S.selectedRun||runs[0].run_id;
+  const run=DB.runs.filter(r=>r.run_id===sid)[0];
+  const members=DB.checks.filter(c=>c.run_id===sid).sort((a,b)=>a.input_row-b.input_row);
+  html+=card("Run Drill-down","Select a Run ID to see every member in that run.",
+    '<label class="fld-lab" for="runSel">Run ID</label><select class="txt" id="runSel" style="max-width:340px">'
+    +runs.map(r=>'<option value="'+r.run_id+'"'+(r.run_id===sid?" selected":"")+'>Run #'+r.run_id+' — '+esc(r.run_date)+'</option>').join("")
+    +'</select>'
+    +'<div class="metric-row" style="margin-top:.8rem">'
+    +'<div class="metric-card blue"><div class="metric-card-label">Total</div><div class="metric-card-value">'+run.total_members+'</div><div class="metric-card-sub"></div></div>'
+    +'<div class="metric-card green"><div class="metric-card-label">Eligible</div><div class="metric-card-value">'+run.eligible+'</div><div class="metric-card-sub"></div></div>'
+    +'<div class="metric-card '+(run.flagged?"red":"slate")+'"><div class="metric-card-label">Flags</div><div class="metric-card-value">'+run.flagged+'</div><div class="metric-card-sub"></div></div>'
+    +'</div>'
+    /* admin_panel.py:293 shows raw DB column names here, not friendly labels */
+    +table([{k:"input_row",label:"input_row",num:true},{k:"member_id_raw",label:"member_id_raw"},
+      {k:"member_name",label:"member_name"},{k:"zone",label:"zone"},{k:"branch",label:"branch"},
+      {k:"eligibility_result",label:"eligibility_result",cls:(r,v)=>eligCls(v)},
+      {k:"overdue_flag",label:"overdue_flag",num:true,cls:(r,v)=>v?"flagcell":""},
+      {k:"total_outstanding",label:"total_outstanding",num:true,fmt:fmt2},
+      {k:"total_overdue",label:"total_overdue",num:true,fmt:fmt2},
+      {k:"from_officer",label:"from_officer"},{k:"to_officer",label:"to_officer"},
+      {k:"requested_by",label:"requested_by"},{k:"status",label:"status"}],members,
+      {height:380,emptyText:"No member records found for this run."})
+    +'<button class="btn btn-block" id="dlRun" type="button" style="margin-top:.7rem">⬇  Download Output for Run #'+sid+' (CSV)</button>');
+  return html;
+}
+function admFlags(){
+  let html=card("Integrity Flag Workflow",
+    "Add justification, update status, and record the reviewer for each flag. "
+    +"Status flow: open → justification_requested → justified → accepted / escalated.",
+    '<label class="fld-lab" for="flagFilter">Filter by status</label>'
+    +'<select class="txt" id="flagFilter" style="max-width:300px">'
+    +["open","all"].concat(FLAG_STATUSES.filter(s=>s!=="open"))
+      .map(o=>'<option'+(o===S.flagFilter?" selected":"")+'>'+o+'</option>').join("")
+    +'</select>');
+  const flags=DB.flags.filter(f=>S.flagFilter==="all"||f.status===S.flagFilter)
+    .sort((a,b)=>b.flag_id-a.flag_id);
+  if(!flags.length) return html+'<div class="alert alert-ok">No flags match the current filter. ✓</div>';
+  html+=card("",'',table([{k:"flag_id",label:"ID",num:true},{k:"run_month",label:"Month"},
+    {k:"zone",label:"Zone"},{k:"member_id_raw",label:"Member ID"},{k:"member_name",label:"Name"},
+    {k:"requested_by",label:"Requested By"},{k:"type",label:"Flag"},
+    {k:"severity",label:"Severity",cls:(r,v)=>"sev-"+v},
+    {k:"status",label:"Status",cls:(r,v)=>"st-"+v},
+    {k:"reason",label:"Reason"}],flags,{height:300}));
+  const sf=DB.flags.filter(f=>f.flag_id===S.selectedFlag)[0]||flags[0];
+  html+=card("Update a Flag","Select a flag ID to update its status and add justification.",
+    '<label class="fld-lab" for="flagSel">Flag ID</label>'
+    +'<select class="txt" id="flagSel" style="max-width:420px">'
+    +flags.map(f=>'<option value="'+f.flag_id+'"'+(f.flag_id===sf.flag_id?" selected":"")+'>#'+f.flag_id+' — '+esc(f.member_id_raw)+' — '+esc(f.type)+'</option>').join("")
+    +'</select>'
+    +'<div class="sb-status" style="background:#f8fafc;border-color:#e2e8f0;margin-top:.7rem">'
+    +'<div class="kv"><span class="k">Member</span><span class="v">'+esc(sf.member_id_raw+" — "+sf.member_name)+'</span></div>'
+    +'<div class="kv"><span class="k">Flag type</span><span class="v">'+esc(sf.type)+'</span></div>'
+    +'<div class="kv"><span class="k">Severity</span><span class="v">'+esc(sf.severity)+'</span></div>'
+    +'<div class="kv"><span class="k">Current status</span><span class="v">'+esc(sf.status)+'</span></div>'
+    +'<div style="font-size:.8rem;color:#94a3b8;padding:.35rem 0 .1rem">'+esc(sf.reason)+'</div></div>'
+    +'<div class="grid2">'
+    +'<div><label class="fld-lab" for="newStatus">New status</label><select class="txt" id="newStatus">'
+    +FLAG_STATUSES.map(o=>'<option'+(o===sf.status?" selected":"")+'>'+o+'</option>').join("")+'</select></div>'
+    +'<div><label class="fld-lab" for="reviewer">Reviewer name</label>'
+    +'<input class="txt" id="reviewer" placeholder="Who is reviewing this flag?" value="'+esc(sf.reviewed_by||"")+'"></div></div>'
+    +'<label class="fld-lab" for="justif">Justification / notes</label>'
+    +'<textarea class="txt" id="justif" rows="4" placeholder="Enter the requester’s justification or reviewer notes here…">'+esc(sf.justification_text||"")+'</textarea>'
+    +'<button class="btn btn-primary" id="updFlag" type="button" style="margin-top:.6rem">Update Flag Status</button>');
+  return html;
+}
+function admPatterns(){
+  const checks=DB.checks;
+  const by=(keyfn)=>{const m={};checks.forEach(function(r){const k=keyfn(r)||"(not recorded)";(m[k]=m[k]||[]).push(r);});return m;};
+  /* 1 — Repeat Offender Watch */
+  const g=by(r=>r.requested_by);
+  const repeat=Object.keys(g).map(function(k){
+    const v=g[k], od=v.filter(x=>x.overdue_flag);
+    const runs={}; v.forEach(x=>runs[x.run_id]=1);
+    const ds=v.map(x=>x.run_date).sort();
+    return {key:k,total:v.length,overdue:od.length,
+      notEligible:v.filter(x=>x.eligibility_result==="Not Eligible").length,
+      amt:od.reduce((a,x)=>a+(+x.total_overdue||0),0),
+      runs:Object.keys(runs).length,first:ds[0],last:ds[ds.length-1]};
+  }).filter(x=>x.overdue>=2).sort((a,b)=>b.overdue-a.overdue||b.amt-a.amt);
+  let html=card("Repeat Offender Watch",
+    "Requesters who have submitted overdue members across multiple runs. A single person repeatedly "
+    +"appearing here is the strongest indicator of deliberate PAR migration rather than isolated mistakes.",
+    (repeat.length?table([{k:"key",label:"Requester"},{k:"total",label:"Total Submitted",num:true},
+      {k:"overdue",label:"Overdue Submitted",num:true,cls:(r,v)=>v>=5?"sev-HIGH":(v>=2?"sev-MEDIUM":"")},
+      {k:"notEligible",label:"Not Eligible",num:true},
+      {k:"amt",label:"Overdue Amount Moved",num:true,fmt:money},
+      {k:"runs",label:"Runs Involved",num:true},{k:"first",label:"First Seen"},{k:"last",label:"Last Seen"}],
+      repeat,{height:300})+'<button class="btn" id="expRepeat" type="button" style="margin-top:.6rem">⬇  Export Repeat Offender list (CSV)</button>'
+     :'<div class="alert alert-ok">No requesters found with 2 or more overdue submission(s). This is a healthy signal. ✓</div>'));
+  /* 2 — Quarter-End Overdue Spike */
+  const gm=by(r=>r.run_month);
+  const months=Object.keys(gm).sort().map(function(k){
+    const v=gm[k], od=v.filter(x=>x.overdue_flag);
+    return {key:k,total:v.length,overdue:od.length,amt:od.reduce((a,x)=>a+(+x.total_overdue||0),0),
+      q:["03","06","09","12"].indexOf(k.slice(5))!==-1};
+  });
+  const mx=Math.max.apply(null,months.map(m=>m.total).concat([1]));
+  html+=card("Quarter-End Overdue Spike Analysis",
+    "Monthly overdue transfer volume. Spikes in March, June, September, or December are the classic "
+    +"portfolio window-dressing signal — overdue members rushed out before quarter-close to make PAR metrics look better.",
+    '<div class="bars">'+months.map(function(m){
+      return '<div class="b" title="'+esc(m.key)+'"><i style="height:'+Math.round(m.overdue/mx*100)+'px;background:#dc2626"></i>'
+        +'<i style="height:'+Math.round((m.total-m.overdue)/mx*100)+'px;background:#2563eb"></i>'
+        +'<b>'+esc(m.key.slice(2))+(m.q?" ★":"")+'</b></div>';}).join("")+'</div>'
+    +'<div class="legend"><span><i style="background:#2563eb"></i>Total transfers</span>'
+    +'<span><i style="background:#dc2626"></i>Overdue transfers</span></div>'
+    +table([{k:"key",label:"Month"},{k:"total",label:"Total Transfers",num:true},
+      {k:"overdue",label:"Overdue Transfers",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"amt",label:"Overdue Amount",num:true,fmt:money},
+      {k:r=>r.q?"Yes":"No",label:"Quarter-End Month?",cls:(r,v)=>v==="Yes"?"sev-MEDIUM":""}],months,{height:260}));
+  /* 3 — Persistent Officer Dumping Routes */
+  const rm={};
+  checks.forEach(function(r){
+    const k=(r.from_officer||"?")+"||"+(r.to_officer||"?");
+    const e=rm[k]||(rm[k]={from:r.from_officer,to:r.to_officer,total:0,overdue:0,amt:0,runs:{},last:""});
+    e.total++; if(r.overdue_flag){e.overdue++;e.amt+=(+r.total_overdue||0);}
+    e.runs[r.run_id]=1; if(r.run_date>e.last) e.last=r.run_date;
+  });
+  const routes=Object.keys(rm).map(k=>rm[k]).map(function(e){e.distinct=Object.keys(e.runs).length;return e;})
+    .filter(e=>e.overdue>=2&&e.distinct>=2).sort((a,b)=>b.overdue-a.overdue);
+  html+=card("Persistent Officer Dumping Routes",
+    "Officer-to-officer transfer routes that repeatedly carry overdue members across multiple runs. "
+    +"A route appearing in 2 or more runs with overdue balance is evidence of systemic dumping, not coincidence.",
+    (routes.length?table([{k:"from",label:"From Officer"},{k:"to",label:"To Officer"},
+      {k:"total",label:"Total Transfers",num:true},
+      {k:"overdue",label:"Overdue Transfers",num:true,cls:(r,v)=>v>0?"flagcell":""},
+      {k:"amt",label:"Overdue Amount",num:true,fmt:money},
+      {k:"distinct",label:"Distinct Runs",num:true},{k:"last",label:"Last Seen"}],routes,{height:280})
+      +'<button class="btn" id="expRoutes" type="button" style="margin-top:.6rem">⬇  Export Dumping Routes (CSV)</button>'
+     :'<div class="alert alert-ok">No persistent routes found with 2 or more overdue transfer(s). ✓</div>'));
+  return html;
+}
+function admRecipients(){
+  const total=DB.recipients.length, active=DB.recipients.filter(r=>r.active===1).length;
+  const depts=uniqSorted(DB.recipients.map(r=>r.department)).length;
+  const zones=uniqSorted(DB.recipients.map(r=>r.covered_zone)).length;
+  let html=metricRow([{label:"Total Recipients",value:total,color:"blue"},
+    {label:"Active",value:active,color:"green"},{label:"Departments",value:depts,color:"slate"},
+    {label:"Zones Covered",value:zones,color:"slate"}]);
+  html+=card("Import from Excel","Load recipients from the focal person mapping workbook.",
+    '<label class="opt" style="color:#334155"><input type="checkbox" id="fullRefresh"> Full refresh (deactivate existing, import all from Excel)</label>'
+    +'<div class="cap" style="margin-bottom:.5rem">If checked, existing active recipients are deactivated first.</div>'
+    +'<button class="btn btn-primary" id="impRecip" type="button">Import from Excel</button>');
+  const rows=DB.recipients.filter(r=>r.active===1);
+  html+=card("Recipients  ",rows.length+" shown",
+    table([{k:"id",label:"ID",num:true},
+      {k:r=>r.active,label:"Active",cls:(r,v)=>v===1?"cell-eligible":"cell-not-eligible"},
+      {k:"person_name",label:"Name"},{k:"designation",label:"Title"},{k:"department",label:"Dept"},
+      {k:"email",label:"Email"},{k:"cc_email",label:"CC"},{k:"coverage_level",label:"Coverage"},
+      {k:"covered_zone",label:"Zone"},{k:"recipient_type",label:"Type"},
+      {k:"preferred_channel",label:"Channel"}],rows,{height:340}));
+  html+=card("Add / Edit Recipient","Add a new recipient or paste an ID to edit.",
+    '<div class="grid2">'
+    +'<div><label class="fld-lab">Full name *</label><input class="txt" id="rName"></div>'
+    +'<div><label class="fld-lab">Email *</label><input class="txt" id="rEmail"></div></div>'
+    +'<div class="grid2">'
+    +'<div><label class="fld-lab">Department</label><select class="txt" id="rDept">'
+    +DEPARTMENTS_RECIPIENT.map(d=>'<option>'+esc(d)+'</option>').join("")+'</select></div>'
+    +'<div><label class="fld-lab">Recipient type</label><select class="txt" id="rType"><option>To</option><option>CC</option></select></div>'
+    +'<div><label class="fld-lab">Coverage level</label><select class="txt" id="rCov">'
+    +["Region","ALL","Program","Division","Branch"].map(o=>'<option>'+o+'</option>').join("")+'</select></div>'
+    +'<div><label class="fld-lab">Preferred channel</label><select class="txt" id="rChan">'
+    +["Email","WhatsApp","Both"].map(o=>'<option>'+o+'</option>').join("")+'</select></div></div>'
+    +'<div class="grid2" style="margin-top:.4rem">'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" checked> Notify: Eligible</label>'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" checked> Notify: Not Eligible</label>'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" checked> Notify: Manual Review</label>'
+    +'<label class="opt" style="color:#334155"><input type="checkbox"> Notify: Errors</label></div>'
+    +'<button class="btn btn-primary" id="saveRecip" type="button" style="margin-top:.6rem">Save Recipient</button>');
+  return html;
+}
+function admEmail(){
+  const open=DB.flags.filter(f=>f.status==="open");
+  const high=open.filter(f=>f.severity==="HIGH");
+  return card("Send Email","Compose and send a governance email directly from this panel.",
+    '<div class="grid2">'
+    +'<div><label class="fld-lab" for="emType">Email type</label><select class="txt" id="emType">'
+    +["Custom message","Monthly Governance Summary","PAR Alert — open flags"].map(o=>'<option>'+esc(o)+'</option>').join("")
+    +'</select></div>'
+    +'<div><label class="fld-lab">To (separate multiple with ;)</label><input class="txt" id="emTo" placeholder="name@example-mfi.net"></div></div>'
+    +'<label class="fld-lab">Subject</label><input class="txt" id="emSubj" value="Transfer Eligibility — ">'
+    +'<label class="fld-lab">Email body (HTML supported)</label><textarea class="txt" rows="5" id="emBody"></textarea>'
+    +'<div class="alert alert-info" style="margin-top:.6rem">Body auto-generated from the governance database for the summary and alert types.</div>'
+    +'<div class="grid2"><button class="btn" id="emPreview" type="button">Preview HTML</button>'
+    +'<button class="btn btn-primary" id="emSend" type="button">Open in Outlook</button></div>'
+    +'<div id="emPreviewBox"></div>')
+  + card("Send Justification Requests","Send a justification-request email for each open HIGH flag.",
+    (high.length
+      ? '<div class="alert alert-info">'+high.length+' HIGH severity flag(s) awaiting justification.</div>'
+        +'<label class="fld-lab" for="jFlag">Select flag</label><select class="txt" id="jFlag">'
+        +high.slice(0,60).map(f=>'<option value="'+f.flag_id+'">#'+f.flag_id+' — '+esc(f.member_id_raw)+' — '+esc(f.requested_by)+'</option>').join("")
+        +'</select><label class="fld-lab">Send to (supervisor email)</label>'
+        +'<input class="txt" id="jTo" placeholder="supervisor@example-mfi.net">'
+        +'<button class="btn btn-primary" id="jSend" type="button" style="margin-top:.6rem">Send Justification Request</button>'
+      : '<div class="alert alert-ok">No HIGH severity flags awaiting justification. ✓</div>'));
+}
+function admSettings(){
+  const st=DB.settings;
+  return card("System Settings",
+    "These values are stored in the governance database and used as defaults throughout the application. "
+    +"No file or code changes required.",
+    '<div class="grid2">'
+    +'<div><label class="fld-lab" for="setOp">Operator / Analyst Name</label>'
+    +'<input class="txt" id="setOp" value="'+esc(st.operator_name)+'">'
+    +'<div class="cap">Shown on every run record and audit log entry.</div>'
+    +'<label class="fld-lab" for="setUrl">Default Profile URL Template</label>'
+    +'<input class="txt" id="setUrl" value="'+esc(st.profile_url_template)+'">'
+    +'<div class="cap">Use {member_id_clean} as the placeholder for the member ID.</div></div>'
+    +'<div><label class="fld-lab">Default Notification Departments</label>'
+    +'<div class="chiplist">'+DEPARTMENTS_SIDEBAR.map(function(d){
+        const on=st.default_departments.split(";").indexOf(d)!==-1;
+        return '<span class="chip" style="background:'+(on?"#dbeafe":"#f1f5f9")+';color:'+(on?"#1e40af":"#475569")
+          +';border-color:#cbd5e1">'+esc(d)+'</span>';}).join("")+'</div>'
+    +'<div class="cap">Pre-selected in the sidebar for every new session.</div>'
+    +'<label class="fld-lab" for="setRun">Default Run Mode</label><select class="txt" id="setRun">'
+    +["Test — first 5 rows","Full run — all rows"].map(o=>'<option'+(o===st.default_run_mode?" selected":"")+'>'+o+'</option>').join("")
+    +'</select></div></div>'
+    +'<button class="btn btn-primary" id="saveSettings" type="button" style="margin-top:.7rem">Save Settings</button>')
+  + card("Email Configuration",
+    "Configure how emails are sent. Outlook COM is recommended for Windows users — no passwords needed.",
+    '<div class="grid2"><div><label class="fld-lab" for="emMethod">Sending method</label>'
+    +'<select class="txt" id="emMethod">'+["Outlook (COM — recommended)","SMTP"].map(o=>'<option'+(o===DB.settings.email_method?" selected":"")+'>'+esc(o)+'</option>').join("")+'</select>'
+    +'<label class="opt" style="color:#334155"><input type="checkbox" checked> Open in Outlook for review before sending (Outlook only)</label>'
+    +'<label class="fld-lab">Always-BCC (audit copy)</label><input class="txt" placeholder="compliance@example.org">'
+    +'<div class="cap">Every outgoing email is silently BCC’d to this address for audit.</div></div>'
+    +'<div><label class="fld-lab">Sender display name</label><input class="txt" value="Transfer Eligibility Checker">'
+    +'<label class="fld-lab">PAR Alert — auto-send when flags ≥</label><input class="txt" type="number" value="'+esc(DB.settings.par_alert_threshold)+'" min="1" max="50">'
+    +'<div class="alert alert-ok" style="margin-top:.6rem">✓ Outlook COM — no credentials needed. Emails use your logged-in Outlook account.</div></div></div>'
+    +'<button class="btn btn-primary" id="saveEmailCfg" type="button" style="margin-top:.6rem">Save Email Config</button>')
+  + card("Application Info","",
+    [["App Version",APP_VERSION],["Rule Version",RULE_VERSION],
+     ["Database Path","data/transfer_governance.db"],["Admin Panel","engine/admin_panel.py"]]
+    .map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v"><code style="font-size:.8rem;color:#2563eb">'+esc(r[1])+'</code></span></div>').join(""));
+}
+function admData(){
+  const s=dbStats();
+  let html=metricRow([
+    {label:"DB File Size",value:s.db_size_kb+" KB",sub:"data/transfer_governance.db",color:"slate"},
+    {label:"Snapshot Folders",value:DB.runs.length,sub:"~"+(DB.checks.length*3.1).toFixed(0)+" MB on disk",color:"slate"},
+    {label:"Member Records",value:fmt0(s.member_checks_count),sub:"rows in member_checks",color:"blue"},
+    {label:"Open Flags",value:s.open_flags,sub:"unresolved",color:s.open_flags?"red":"green"}
+  ]);
+  html+='<div class="grid2">'
+    +card("Export Archive","Download all governance data as a multi-sheet workbook. Run this BEFORE clearing data.",
+      '<button class="btn btn-block" id="genArchive" type="button">Generate Archive</button>'
+      +'<div class="cap" style="margin-top:.4rem">Sheets: Run History, Source Files, Member Checks, Integrity Flags, Notifications, Audit Log, Settings.</div>')
+    +card("Clear All Data",
+      "Permanently deletes all runs, member checks, and flags. The audit log itself is preserved. "
+      +"This action is irreversible — export an archive first.",
+      '<div class="alert alert-warn">⚠️ Export the archive first. The audit log entry for this action will survive, '
+      +'but all operational data will be gone.</div>'
+      +'<label class="fld-lab" for="delConfirm">Type DELETE to confirm</label>'
+      +'<input class="txt" id="delConfirm" placeholder="DELETE">'
+      +'<label class="fld-lab" for="delReason">Reason for clearing (will be recorded in audit log)</label>'
+      +'<input class="txt" id="delReason" placeholder="e.g. End of quarter archive">'
+      +'<button class="btn btn-danger btn-block" id="clearAll" type="button" style="margin-top:.6rem">Clear All Data</button>')
+    +'</div>';
+  const audit=DB.audit.slice().reverse().slice(0,50);
+  html+=card("Audit Log","Last 50 system actions — who did what, and when.",
+    table([{k:"timestamp",label:"When"},{k:"actor",label:"By"},{k:"action",label:"Action"},
+      {k:"target",label:"Target"},{k:"details",label:"Details"}],audit,{height:380,emptyText:"No audit entries yet."}));
+  return html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   14. WIRING
+   ═══════════════════════════════════════════════════════════════════════ */
+function on(id,ev,fn){const el=document.getElementById(id); if(el) el.addEventListener(ev,fn);}
+function wireOps(){
+  const tabs=document.getElementById("opsTabs");
+  if(tabs) tabs.querySelectorAll("button").forEach(function(b){
+    b.onclick=function(){ S.tab=+b.dataset.i; render(); };
+  });
+  on("draftBtn","click",function(){
+    downloadCSV("draft_mapping.csv",
+      [{k:"input_row",label:"Input Row"},{k:"member_id_raw",label:"Member ID"},
+       {k:"mapped_region",label:"Region"},{k:"mapped_branch",label:"Branch"},
+       {k:"recipient_to",label:"To"},{k:"recipient_cc",label:"CC"},
+       {k:"hierarchy_match_status",label:"Hierarchy Match"}],S.selected);
+    toast("Draft mapping exported.","ok");
+  });
+  document.querySelectorAll('input[name="scope"]').forEach(function(r){
+    r.onchange=function(){ S.runScope=r.value; render(); };
+  });
+  on("headless","change",e=>{S.headless=e.target.checked;});
+  on("mzUser","input",e=>{S.username=e.target.value;});
+  on("mzPass","input",e=>{S.password=e.target.value;});
+  on("runBtn","click",startRun);
+  on("dlResults","click",function(){
+    downloadCSV("transfer_eligibility_result.csv",[
+      {k:"input_row",label:"Input Row"},{k:"member_id_raw",label:"Member ID Raw"},
+      {k:"member_id_clean",label:"Member ID Clean"},{k:"profile_url",label:"Profile URL"},
+      {k:r=>(r.profile||{}).member_name,label:"Member Name"},
+      {k:r=>(r.profile||{}).loan_component,label:"Loan Component"},
+      {k:r=>(r.profile||{}).microzen_zone,label:"Microzen Zone"},
+      {k:r=>(r.profile||{}).branch,label:"Branch"},{k:r=>(r.profile||{}).samity,label:"Samity"},
+      {k:r=>(r.eligibility||{}).primary_loan_with_balance,label:"Primary Loan With Balance"},
+      {k:r=>(r.eligibility||{}).primary_loan_balance,label:"Primary Loan Balance"},
+      {k:r=>(r.eligibility||{}).primary_loan_overdue,label:"Primary Loan Overdue"},
+      {k:r=>(r.eligibility||{}).total_outstanding,label:"Total Outstanding"},
+      {k:r=>(r.eligibility||{}).total_overdue,label:"Total Overdue"},
+      {k:r=>(r.savings||{}).total_savings_balance,label:"Total Savings Balance"},
+      {k:r=>(r.eligibility||{}).eligibility_result,label:"Eligibility Result"},
+      {k:r=>(r.eligibility||{}).confidence,label:"Confidence"},
+      {k:r=>(r.eligibility||{}).needs_manual_review?"Yes":"No",label:"Needs Manual Review"},
+      {k:r=>(r.eligibility||{}).result_message,label:"Result Message"},
+      {k:"status",label:"Status"}],S.results);
+    toast("Eligibility output downloaded.","ok");
+  });
+  document.querySelectorAll("[data-outlook]").forEach(function(b){
+    b.onclick=function(){
+      const region=b.dataset.outlook;
+      DB.notifications.push({id:DB.notifications.length+1,run_id:(S.lastSaved||{}).run_id||null,
+        recipient:S.emailDrafts[region].to,channel:"email",
+        subject:S.emailDrafts[region].subject,status:"opened_in_outlook",sent_at:iso(new Date())});
+      S.notifSent[region]=true;
+      toast("Opened in Outlook for review via Outlook COM.","ok");
+      render();
+    };
+  });
+  document.querySelectorAll("[data-sent]").forEach(function(b){
+    b.onclick=function(){
+      const region=b.dataset.sent;
+      DB.notifications.push({id:DB.notifications.length+1,run_id:(S.lastSaved||{}).run_id||null,
+        recipient:S.emailDrafts[region].to,channel:"email",
+        subject:S.emailDrafts[region].subject,status:"sent_manually",sent_at:iso(new Date())});
+      S.notifSent[region]=true; toast("Marked as sent and logged.","ok"); render();
+    };
+  });
+  wireReportFilters();
+}
+function wireReportFilters(){
+  const m={fYear:"year",fMonth:"month",fZone:"zone",fBranch:"branch",
+           fFrom:"from",fTo:"to",fComp:"comp",fElig:"elig"};
+  Object.keys(m).forEach(function(id){
+    on(id,"change",function(e){ S.filters[m[id]]=e.target.value; render(); });
+  });
+  on("fFlag","change",function(e){ S.filters.flagged=e.target.checked; render(); });
+  on("expReport","click",function(){
+    downloadCSV("governance_selection.csv",[
+      {k:"run_date",label:"Run Date"},{k:"zone",label:"Zone"},{k:"branch",label:"Branch"},
+      {k:"member_id_raw",label:"Member ID"},{k:"member_name",label:"Member Name"},
+      {k:"requested_by",label:"Requested By"},{k:"from_officer",label:"From Officer"},
+      {k:"to_officer",label:"To Officer"},{k:"loan_component",label:"Component"},
+      {k:"total_outstanding",label:"Outstanding"},{k:"total_overdue",label:"Overdue"},
+      {k:"eligibility_result",label:"Eligibility"},{k:"overdue_flag",label:"Overdue Flag"}],
+      filteredChecks());
+    toast("Selection exported.","ok");
+  });
+}
+function wireAdmin(){
+  const tabs=document.getElementById("admTabs");
+  if(tabs) tabs.querySelectorAll("button").forEach(function(b){
+    b.onclick=function(){ if(b.disabled) return; S.adminTab=+b.dataset.i; render(); };
+  });
+  on("runSel","change",e=>{S.selectedRun=+e.target.value; render();});
+  on("dlRun","click",function(){
+    const sid=S.selectedRun||DB.runs[DB.runs.length-1].run_id;
+    downloadCSV("run_"+sid+"_output.csv",[
+      {k:"input_row",label:"input_row"},{k:"member_id_raw",label:"member_id_raw"},
+      {k:"member_name",label:"member_name"},{k:"zone",label:"zone"},{k:"branch",label:"branch"},
+      {k:"eligibility_result",label:"eligibility_result"},{k:"overdue_flag",label:"overdue_flag"},
+      {k:"total_outstanding",label:"total_outstanding"},{k:"total_overdue",label:"total_overdue"},
+      {k:"from_officer",label:"from_officer"},{k:"to_officer",label:"to_officer"},
+      {k:"requested_by",label:"requested_by"},{k:"status",label:"status"}],
+      DB.checks.filter(c=>c.run_id===sid));
+    toast("Run output downloaded.","ok");
+  });
+  on("flagFilter","change",e=>{S.flagFilter=e.target.value; S.selectedFlag=null; render();});
+  on("flagSel","change",e=>{S.selectedFlag=+e.target.value; render();});
+  on("updFlag","click",function(){
+    const id=+(document.getElementById("flagSel")||{}).value;
+    const f=DB.flags.filter(x=>x.flag_id===id)[0];
+    if(!f) return;
+    const ns=(document.getElementById("newStatus")||{}).value;
+    const rv=(document.getElementById("reviewer")||{}).value||"";
+    const jt=(document.getElementById("justif")||{}).value||"";
+    f.status=ns; f.reviewed_by=rv; f.justification_text=jt; f.updated_at=iso(new Date());
+    logAudit(ROLES[S.role].who,"FLAG_STATUS_CHANGED","flag_id="+id,"new_status="+ns+", reviewed_by="+rv);
+    toast("Flag #"+id+" updated to "+ns+".","ok");
+    S.selectedFlag=null; render();
+  });
+  on("expRepeat","click",function(){
+    const g={}; DB.checks.forEach(function(r){(g[r.requested_by]=g[r.requested_by]||[]).push(r);});
+    const rows=Object.keys(g).map(function(k){
+      const v=g[k],od=v.filter(x=>x.overdue_flag);
+      return {requester:k,total:v.length,overdue:od.length,
+        amt:od.reduce((a,x)=>a+(+x.total_overdue||0),0)};
+    }).filter(x=>x.overdue>=2);
+    downloadCSV("repeat_offenders_20260929.csv",[{k:"requester",label:"Requester"},
+      {k:"total",label:"Total Submitted"},{k:"overdue",label:"Overdue Submitted"},
+      {k:"amt",label:"Overdue Amount Moved"}],rows);
+    toast("Repeat offender list exported.","ok");
+  });
+  on("expRoutes","click",function(){
+    const rm={};
+    DB.checks.forEach(function(r){
+      const k=(r.from_officer||"?")+"||"+(r.to_officer||"?");
+      const e=rm[k]||(rm[k]={from:r.from_officer,to:r.to_officer,total:0,overdue:0,amt:0,runs:{}});
+      e.total++; if(r.overdue_flag){e.overdue++;e.amt+=(+r.total_overdue||0);} e.runs[r.run_id]=1;
+    });
+    const rows=Object.keys(rm).map(k=>rm[k]).map(function(e){e.distinct=Object.keys(e.runs).length;return e;})
+      .filter(e=>e.overdue>=2&&e.distinct>=2);
+    downloadCSV("dumping_routes_20260929.csv",[{k:"from",label:"From Officer"},{k:"to",label:"To Officer"},
+      {k:"total",label:"Total Transfers"},{k:"overdue",label:"Overdue Transfers"},
+      {k:"amt",label:"Overdue Amount"},{k:"distinct",label:"Distinct Runs"}],rows);
+    toast("Dumping routes exported.","ok");
+  });
+  on("impRecip","click",()=>toast("✓ Imported "+DB.recipients.length+" recipients (skipped 0 blank/invalid rows).","ok"));
+  on("saveRecip","click",function(){
+    const n=(document.getElementById("rName")||{}).value, e=(document.getElementById("rEmail")||{}).value;
+    if(!n||!e){ toast("Name and Email are required.","err"); return; }
+    const id=DB.recipients.length+1;
+    DB.recipients.push({id:id,active:1,department:(document.getElementById("rDept")||{}).value,
+      role:"Focal",coverage_level:(document.getElementById("rCov")||{}).value,covered_program:"PMF",
+      covered_division:"",covered_region:"",covered_zone:"",coverage_group_id:"NEW-G"+id,
+      person_name:n,designation:"",email:e,cc_email:"",whatsapp:"",
+      preferred_channel:(document.getElementById("rChan")||{}).value,
+      recipient_type:(document.getElementById("rType")||{}).value,
+      notify_eligible:1,notify_not_eligible:1,notify_manual_review:1,notify_error:0,remarks:""});
+    logAudit(ROLES[S.role].who,"RECIPIENT_ADDED","id="+id,n);
+    toast("Recipient saved.","ok"); render();
+  });
+  on("emPreview","click",function(){
+    const box=document.getElementById("emPreviewBox");
+    /* engine/email_sender.py:221 _html_wrap() — header eyebrow, title, footer */
+    if(box) box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:10px;margin-top:.7rem;overflow:hidden">'
+      +'<div style="background:#0f172a;color:#f0f9ff;padding:14px 18px">'
+      +'<div style="font-size:11px;letter-spacing:.09em;color:#94a3b8">PRE-CHECK AUTOMATION</div>'
+      +'<div style="font-size:17px;font-weight:700">Transfer Eligibility Checker</div></div>'
+      +'<div style="padding:16px 18px;font-size:13px;color:#334155">Preview of the generated HTML email body.</div>'
+      +'<div style="padding:12px 18px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b">'
+      +'This message was generated by the Transfer Eligibility Checker automation.<br>'
+      +'<strong>This is a pre-check only — final approval remains with the responsible department.</strong><br>'
+      +'Deterministic rule: member is Not Eligible if active Primary loan with balance &gt; 0.</div></div>';
+  });
+  on("emSend","click",function(){
+    const to=(document.getElementById("emTo")||{}).value;
+    if(!to){ toast("Enter at least one recipient address.","err"); return; }
+    DB.notifications.push({id:DB.notifications.length+1,run_id:null,recipient:to,channel:"email",
+      subject:(document.getElementById("emSubj")||{}).value,status:"opened_in_outlook",sent_at:iso(new Date())});
+    toast("Opened in Outlook for review via outlook_com.","ok"); render();
+  });
+  on("jSend","click",function(){
+    const to=(document.getElementById("jTo")||{}).value;
+    if(!to){ toast("Enter the supervisor’s email address.","err"); return; }
+    const id=+(document.getElementById("jFlag")||{}).value;
+    const f=DB.flags.filter(x=>x.flag_id===id)[0];
+    if(f){ f.status="justification_requested"; f.updated_at=iso(new Date());
+      logAudit(ROLES[S.role].who,"FLAG_STATUS_CHANGED","flag_id="+id,"new_status=justification_requested, reviewed_by="); }
+    toast("Justification request sent and flag status updated.","ok"); render();
+  });
+  on("saveSettings","click",function(){
+    DB.settings.operator_name=(document.getElementById("setOp")||{}).value||DB.settings.operator_name;
+    DB.settings.profile_url_template=(document.getElementById("setUrl")||{}).value||DB.settings.profile_url_template;
+    DB.settings.default_run_mode=(document.getElementById("setRun")||{}).value||DB.settings.default_run_mode;
+    logAudit(ROLES[S.role].who,"SETTING_CHANGED","operator_name","value="+DB.settings.operator_name);
+    toast("Settings saved. They will take effect on the next page load.","ok"); render();
+  });
+  on("saveEmailCfg","click",()=>toast("Email configuration saved.","ok"));
+  on("genArchive","click",function(){
+    downloadCSV("transfer_governance_archive.csv",[
+      {k:"run_id",label:"run_id"},{k:"run_date",label:"run_date"},{k:"operator",label:"operator"},
+      {k:"total_members",label:"total_members"},{k:"eligible",label:"eligible"},
+      {k:"not_eligible",label:"not_eligible"},{k:"manual_review",label:"manual_review"},
+      {k:"flagged",label:"flagged"},{k:"rule_version",label:"rule_version"}],DB.runs);
+    toast("Archive generated.","ok");
+  });
+  on("clearAll","click",function(){
+    const c=(document.getElementById("delConfirm")||{}).value||"";
+    const r=(document.getElementById("delReason")||{}).value||"";
+    /* admin_panel.py:715 — exact, case-sensitive comparison after strip */
+    if(c.trim()!=="DELETE"){ toast("Type DELETE exactly to confirm. Nothing was cleared.","err"); return; }
+    if(!r.trim()){ toast("Provide a reason. Nothing was cleared.","err"); return; }
+    DB.flags.length=0; DB.notifications.length=0; DB.checks.length=0; DB.runs.length=0;
+    logAudit(ROLES[S.role].who,"DATA_CLEARED","all member/run data",r.trim());
+    S.results=[];S.summary=null;S.lastSaved=null;S.selectedRun=null;
+    toast("All operational data cleared. The audit log entry has been preserved.","ok");
+    render();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   15. GUIDED TOUR
+   ═══════════════════════════════════════════════════════════════════════ */
+const TOUR=[
+ {t:"What this replaces",sel:"#appHeader",
+  b:"Branch managers submit spreadsheets asking to move members between programmes and officers. Someone used to open every member in the ERP by hand. This tool does that pass and keeps the evidence. The live organisation runs about 19 zones; this simulation uses a smaller invented tree.",
+  go:function(){S.mode="operations";}},
+ {t:"Load a request file",sel:"#drop",
+  b:"Drop a CSV or press Load sample zone file. Columns are located by header name, not by column letter, so managers can add or reorder columns without breaking the reader.",
+  go:function(){S.mode="operations";}},
+ {t:"Read the requests",sel:"#opsTabs",
+  b:"Reading resolves each field and flags duplicates. Open Column resolution to see whether each field matched by header, fell back to a column letter, or was not found at all.",
+  go:function(){ if(!S.fileName){S.rawRows=buildSampleRows();S.fileName="Zone_07_Transfer_Requests.csv";}
+                 if(!S.requests.length) readRequests(); S.tab=1; }},
+ {t:"No API, so drive the browser",sel:"#pwHolder",
+  b:"The ERP exposes no API for loan and savings data. A real browser session logs in, opens each member, clicks Loans and Savings, and reads the rendered pages. Screenshots and page text are kept as evidence for every member.",
+  go:function(){S.tab=3;}},
+ {t:"Run the check",sel:"#credPanel",
+  b:"Enter any username and password, keep the scope at First 2 members, and run it. Watch the sequence diagram advance and the live feed fill in. Nothing leaves your machine.",
+  go:function(){S.tab=3;}},
+ {t:"The rule that decides",sel:"#tabPanel",
+  b:"A member is Not Eligible if they hold an active Primary loan with an outstanding balance. If the profile or loan table could not be read, the answer is Manual Review, never a false Eligible. That last part is the whole point: a silent scrape failure must not wave an overdue member through.",
+  go:function(){S.tab=3;}},
+ {t:"Where the fraud shows up",sel:"#tabPanel",
+  b:"Reports read every stored run, not just this session. Requester Accountability names who submits overdue members. Dumping Watch names who keeps receiving them. Day-of-Month shows the rush before quarter close.",
+  go:function(){S.tab=4;}},
+ {t:"Working a flag",sel:"#tabPanel",
+  b:"Flags move through open, justification requested, justified, then accepted or escalated. Overdue on a Primary loan is HIGH, otherwise MEDIUM above 1000 and LOW below. Switch role to Administrator to reach every admin tab.",
+  go:function(){S.role="admin";S.mode="admin";S.adminTab=2;}},
+ {t:"Destructive actions are gated",sel:"#tabPanel",
+  b:"Clearing the database needs the word DELETE typed exactly and a written reason, and the audit log survives the clear. Every run stores its rule version, so an old decision can always be traced to the logic that produced it.",
+  go:function(){S.role="admin";S.mode="admin";S.adminTab=7;}}
+];
+let tourIdx=-1;
+function clearHighlight(){
+  document.querySelectorAll(".tour-highlight").forEach(e=>e.classList.remove("tour-highlight"));
+}
+function showTour(i){
+  tourIdx=i;
+  if(i<0||i>=TOUR.length){ endTour(); return; }
+  const step=TOUR[i];
+  if(step.go) step.go();
+  render();
+  clearHighlight();
+  const el=document.querySelector(step.sel);
+  if(el){ el.classList.add("tour-highlight"); el.scrollIntoView({behavior:"smooth",block:"center"}); }
+  const root=document.getElementById("tourRoot");
+  root.innerHTML='<div class="tourbox" role="dialog" aria-label="Guided tour step '+(i+1)+'">'
+    +'<header><span class="n">'+(i+1)+' / '+TOUR.length+'</span> Guided tour'
+    +'<span style="flex:1"></span>'
+    +'<button type="button" id="tourX" style="background:transparent;border:0;color:#cbd5e1;cursor:pointer;font-size:1rem" aria-label="Close tour">×</button></header>'
+    +'<div class="body"><h4>'+esc(step.t)+'</h4>'+esc(step.b)+'</div>'
+    +'<div class="foot">'
+    +'<button class="btn" id="tourPrev" type="button"'+(i===0?" disabled":"")+'>Back</button>'
+    +'<button class="btn btn-primary" id="tourNext" type="button">'+(i===TOUR.length-1?"Finish":"Next")+'</button>'
+    +'</div></div>';
+  on("tourX","click",endTour);
+  on("tourPrev","click",()=>showTour(i-1));
+  on("tourNext","click",()=>showTour(i+1));
+  const nx=document.getElementById("tourNext"); if(nx) nx.focus();
+}
+function endTour(){
+  tourIdx=-1; clearHighlight();
+  document.getElementById("tourRoot").innerHTML="";
+}
+document.addEventListener("keydown",function(e){
+  if(tourIdx<0) return;
+  if(e.key==="Escape") endTour();
+  else if(e.key==="ArrowRight") showTour(tourIdx+1);
+  else if(e.key==="ArrowLeft"&&tourIdx>0) showTour(tourIdx-1);
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   16. RENDER + BOOT
+   ═══════════════════════════════════════════════════════════════════════ */
+function render(){
+  const role=ROLES[S.role];
+  if(role.modes.indexOf(S.mode)===-1) S.mode="operations";
+  document.getElementById("rolePill").textContent=role.label;
+  renderSidebar();
+  if(S.mode==="admin") renderAdmin(); else renderOperations();
+}
+document.getElementById("roleSel").addEventListener("change",function(e){
+  S.role=e.target.value;
+  const role=ROLES[S.role];
+  if(role.modes.indexOf(S.mode)===-1) S.mode="operations";
+  if(S.mode==="admin"&&role.adminTabs.indexOf(S.adminTab)===-1) S.adminTab=role.adminTabs[0]||0;
+  if(!role.canRun&&S.running) S.running=false;
+  render();
+});
+document.getElementById("tourBtn").addEventListener("click",function(){ showTour(0); });
+render();
+</script>
+</body>
+</html>

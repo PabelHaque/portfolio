@@ -93,3 +93,19 @@ without a server.
 - **Private repos are never linked as browsable.** A project marked
   `visibility: "private"` renders as *"Private repo — walkthrough on request"* rather than a
   link to a 404.
+
+## Simulations
+
+Working replicas of the systems with invented data, under `demos/`. Index: **https://pabelhaque.github.io/portfolio/demos/**
+
+| System | Open |
+|---|---|
+| Field-Staff Target System | `demos/PMUK_Field_Staff_Target_System/` |
+| SaiMarz | `demos/SaiMarz/` |
+| MFS Branch Wallet Portal | `demos/MFS_Branch_Wallet_Portal/` |
+| Transfer Eligibility Control Tower | `demos/Transfer_Eligibility_Control_Tower/` |
+| Special Permission Register | `demos/Special_Permission_Register/` |
+| Special Rebate Automation | `demos/Special_Rebate_Automation/` |
+| Document Extraction Engine | `demos/Document_Extraction_Engine/` |
+
+Each page is self-contained (no server), reproduces the real screens and business rules, and generates its data in the browser from a fixed seed. The production systems run against organisational data and stay private.

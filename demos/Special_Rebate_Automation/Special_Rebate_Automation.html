@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Special Rebate Automation — Replica Demo</title>
+<meta name="description" content="Standalone simulation of the Padakhep Special Rebate Member Processing Automation pipeline. Invented data only.">
+<style>
+/* ============================================================================
+   THEME
+   Palette copied from the real desktop GUI (gui.py) and the real Excel
+   output styling (src/report_builder.py) — this is a replica, not a redesign.
+   - Status colors:      gui.py lines 223-227 (pending/recheck/eligible/etc.)
+   - Header fill/font:   src/report_builder.py lines 35-36 (_HEADER_FILL/_HEADER_FONT)
+   - Alt-row fill:       src/report_builder.py line 37 (_ALT_FILL)
+   - Hyperlink color:    src/report_builder.py line 42
+   - Danger/stop color:  gui.py lines 404, 661 (#c0392b / hover #a93226)
+   - Info/send color:    gui.py line 464 (#1a5276 / hover #154360)
+   - Monospace log font: gui.py lines 373, 513 ("Courier New")
+   ============================================================================ */
+:root{
+  --bg:            #1e1e22;
+  --bg-card:       #26262c;
+  --bg-card-alt:   #2d2d34;
+  --bg-inset:      #17171a;
+  --border:        #3a3a42;
+  --text:          #e8e8ec;
+  --text-dim:      #9a9aa4;
+  --text-faint:    #6f6f79;
+  --accent:        #1f6aa5;
+  --accent-hover:  #17537f;
+  --accent-soft:   #234b6b;
+  --pending:       #f39c12;
+  --recheck:       #e67e22;
+  --eligible:      #2ecc71;
+  --not-eligible:  #e74c3c;
+  --duplicate:     #7f8c8d;
+  --total:         #95a5a6;
+  --danger:        #c0392b;
+  --danger-hover:  #a93226;
+  --info-btn:      #1a5276;
+  --info-btn-hover:#154360;
+  --xl-header:     #1F4E79;
+  --xl-alt:        #EBF3FF;
+  --xl-link:       #4a9eff;
+  --radius:        10px;
+  --mono: "Courier New", ui-monospace, monospace;
+  --sans: 'Nirmala UI', 'Noto Sans Bengali', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+a{ color:var(--xl-link); }
+button{ font-family:inherit; font-size:14px; cursor:pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+  outline:3px solid #5aa9ff; outline-offset:2px;
+}
+table{ border-collapse:collapse; width:100%; font-size:13px; }
+th,td{ padding:6px 8px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+th{ background:var(--xl-header); color:#fff; font-weight:700; position:sticky; top:0; }
+tbody tr:nth-child(even){ background:var(--bg-card-alt); }
+.table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); max-height:420px; overflow-y:auto; }
+
+/* ---------- layout shell ---------- */
+.app-header{
+  padding:14px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--bg-card);
+  position:sticky; top:0; z-index:20;
+}
+.app-header h1{ font-size:19px; margin:0; font-weight:700; }
+.app-header .sub{ color:var(--text-dim); font-size:12px; margin-top:2px; }
+.header-spacer{ flex:1; }
+.badge{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+  font-size:12px; font-weight:600; background:var(--bg-card-alt); border:1px solid var(--border); color:var(--text-dim);
+}
+.badge .dot{ width:8px; height:8px; border-radius:50%; background:var(--total); }
+
+.main-shell{ display:flex; max-width:1400px; margin:0 auto; align-items:flex-start; }
+
+.stepper{
+  display:flex; flex-direction:column; gap:4px; padding:16px 10px; width:230px; flex:none;
+  position:sticky; top:66px;
+}
+.stepper button{
+  display:flex; align-items:center; gap:10px; text-align:left; background:transparent; border:1px solid transparent;
+  color:var(--text-dim); padding:9px 10px; border-radius:8px; width:100%;
+}
+.stepper button .num{
+  width:22px; height:22px; border-radius:50%; background:var(--bg-card-alt); color:var(--text-dim);
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex:none;
+}
+.stepper button.active{ background:var(--accent-soft); color:#fff; border-color:var(--accent); }
+.stepper button.active .num{ background:var(--accent); color:#fff; }
+.stepper button.done .num{ background:var(--eligible); color:#0c1f14; }
+.stepper button:hover:not(.active){ background:var(--bg-card-alt); color:var(--text); }
+
+.content{ flex:1; min-width:0; padding:18px 20px 60px; }
+.stage{ display:none; }
+.stage.visible{ display:block; }
+.stage h2{ margin:0 0 4px; font-size:20px; }
+.stage p.desc{ color:var(--text-dim); margin:0 0 16px; font-size:13.5px; max-width:900px; }
+
+.card{ background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; }
+.card h3{ margin:0 0 10px; font-size:14px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
+.callout{
+  border-left:3px solid var(--accent); background:var(--bg-inset); padding:10px 12px; border-radius:6px;
+  font-size:13px; color:var(--text-dim); margin:10px 0;
+}
+.callout code, .cite{ font-family:var(--mono); font-size:12px; color:#8fd0ff; }
+.callout.warn{ border-color:var(--pending); }
+.callout.rule{ border-color:var(--eligible); }
+
+.btn{
+  background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:7px; font-weight:600;
+}
+.btn:hover{ background:var(--accent-hover); }
+.btn:disabled{ background:var(--bg-card-alt); color:var(--text-faint); cursor:not-allowed; }
+.btn.secondary{ background:var(--bg-card-alt); color:var(--text); border:1px solid var(--border); }
+.btn.secondary:hover{ background:#35353d; }
+.btn.danger{ background:var(--danger); }
+.btn.danger:hover{ background:var(--danger-hover); }
+.btn.info{ background:var(--info-btn); }
+.btn.info:hover{ background:var(--info-btn-hover); }
+.btn-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+
+.status-pill{ display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; }
+.status-eligible{ background:rgba(46,204,113,.15); color:var(--eligible); }
+.status-not-eligible{ background:rgba(231,76,60,.15); color:var(--not-eligible); }
+.status-error{ background:rgba(243,156,18,.18); color:var(--pending); }
+.status-duplicate{ background:rgba(127,140,141,.2); color:var(--duplicate); }
+.status-skipped{ background:rgba(127,140,141,.2); color:var(--duplicate); }
+
+.reason{ color:var(--text-dim); font-size:12px; max-width:340px; white-space:normal; }
+
+.tabs{ display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+.tabs button{
+  background:var(--bg-card-alt); color:var(--text-dim); border:1px solid var(--border); padding:7px 12px; border-radius:7px 7px 0 0; font-size:12.5px;
+}
+.tabs button.active{ background:var(--xl-header); color:#fff; border-color:var(--xl-header); }
+
+.kv{ display:grid; grid-template-columns:170px 1fr; gap:6px 14px; font-size:13px; }
+.kv dt{ color:var(--text-dim); }
+.kv dd{ margin:0; }
+
+.drop-zone{
+  border:2px dashed var(--border); border-radius:var(--radius); padding:22px; text-align:center; color:var(--text-dim);
+  font-size:13px; margin-top:10px; transition:border-color .15s, background .15s;
+}
+.drop-zone.drag{ border-color:var(--accent); background:var(--accent-soft); }
+
+.footer{
+  text-align:center; padding:24px 20px 40px; color:var(--text-faint); font-size:12.5px; border-top:1px solid var(--border);
+}
+
+/* ---------- Guided tour ---------- */
+.tour-toggle{ background:var(--info-btn); color:#fff; border:none; padding:8px 14px; border-radius:7px; font-weight:600; font-size:13px; }
+.tour-toggle:hover{ background:var(--info-btn-hover); }
+.tour-panel{
+  position:fixed; right:18px; bottom:18px; width:320px; max-width:calc(100vw - 36px);
+  background:var(--bg-card); border:1px solid var(--accent); border-radius:12px; padding:14px 16px;
+  box-shadow:0 10px 40px rgba(0,0,0,.5); z-index:100; display:none;
+}
+.tour-panel.open{ display:block; }
+.tour-panel h4{ margin:0 0 6px; font-size:14px; }
+.tour-panel p{ margin:0 0 10px; font-size:13px; color:var(--text-dim); }
+.tour-nav{ display:flex; justify-content:space-between; align-items:center; }
+.tour-step-count{ font-size:12px; color:var(--text-faint); }
+.tour-highlight{
+  outline:3px solid #ffd23f !important; outline-offset:3px; border-radius:8px;
+  box-shadow:0 0 0 6px rgba(255,210,63,.18) !important;
+}
+.tour-close{ background:none; border:none; color:var(--text-faint); font-size:18px; position:absolute; top:8px; right:10px; }
+
+.mono{ font-family:var(--mono); }
+.small{ font-size:12px; color:var(--text-dim); }
+.count-row{ display:flex; gap:18px; flex-wrap:wrap; margin-top:8px; }
+.count-chip{ font-size:12.5px; padding:6px 10px; border-radius:8px; background:var(--bg-inset); border:1px solid var(--border); }
+
+@media (max-width: 900px){
+  .main-shell{ flex-direction:column; align-items:stretch; }
+  .content{ width:100%; }
+  .stepper{ position:static; flex-direction:row; overflow-x:auto; width:100%; padding:10px; }
+  .stepper button{ width:auto; flex:none; }
+  .stepper button .num{ margin:0; }
+  .content{ padding:16px 14px 50px; }
+}
+@media (max-width: 480px){
+  .app-header h1{ font-size:16px; }
+  .stepper button span.label{ display:none; }
+  .tour-panel{ left:10px; right:10px; width:auto; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <h1>Special Rebate Automation <span style="color:var(--text-dim); font-weight:400;">— Replica Demo</span></h1>
+    <div class="sub">Outlook → Excel → Microzen → Eligibility → SMS → ICT report, simulated end to end</div>
+  </div>
+  <div class="header-spacer"></div>
+  <span class="badge" title="This tool has no multi-user permission model in production — one operator runs the pipeline. See src/main.py / gui.py.">
+    <span class="dot"></span> Operator: You (single-role tool)
+  </span>
+  <button class="tour-toggle" id="tourToggleBtn" aria-expanded="false" aria-controls="tourPanel">▶ Guided tour</button>
+</header>
+
+<div class="main-shell">
+  <nav class="stepper" id="stepper" aria-label="Pipeline stages"></nav>
+
+  <main class="content" id="content">
+
+    <!-- ================= STAGE 1 : INBOX ================= -->
+    <section class="stage" id="stage-1" data-stage="1">
+      <h2>1 · Zonal Admin Inbox</h2>
+      <p class="desc">Every month, zonal admins email an Excel attachment with member rebate rows. The real system connects to Outlook desktop (win32com), scans a date range, and matches by sender address, sender-name keyword, subject keyword, and attachment filename/extension.
+        <span class="cite">src/outlook_reader.py</span></p>
+
+      <div class="card">
+        <h3>Filters in effect (config/settings.yaml)</h3>
+        <div class="kv">
+          <dt>Sender keywords</dt><dd>"zone admin", "zonal admin", "zone administrator"</dd>
+          <dt>Subject keywords</dt><dd>"rebate", "special rebate", "রিবেট"</dd>
+          <dt>Attachment keywords</dt><dd>"rebate", "special", "sms", "রিবেট"</dd>
+          <dt>Accepted extensions</dt><dd>.xlsx, .xls</dd>
+          <dt>Date range for this demo run</dt>
+          <dd>
+            <label>From <input type="date" id="dateFrom" value="2026-09-01" style="background:var(--bg-inset); color:var(--text); border:1px solid var(--border); border-radius:5px; padding:3px 6px;"></label>
+            &nbsp;
+            <label>To <input type="date" id="dateTo" value="2026-09-30" style="background:var(--bg-inset); color:var(--text); border:1px solid var(--border); border-radius:5px; padding:3px 6px;"></label>
+          </dd>
+        </div>
+      </div>
+
+      <div class="card" id="inboxCard">
+        <h3>Matched emails</h3>
+        <div class="table-wrap"><table id="inboxTable"><thead>
+          <tr><th>Sender</th><th>Subject</th><th>Received</th><th>Attachment</th><th>Status</th></tr>
+        </thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="scanBtn">▶ Scan Outlook (simulate)</button>
+        <span class="small" id="inboxSummary"></span>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 2 : EXTRACTION ================= -->
+    <section class="stage" id="stage-2" data-stage="2">
+      <h2>2 · Extraction</h2>
+      <p class="desc">Each attachment is opened with the same structure as the master file: sheet "Special Rebate", rows 1–5 are a title block, data starts at row 6.
+        A row is extracted only if <strong>both</strong> Member ID (col G) and Rebate Amount (col H) are populated — otherwise it's silently skipped.
+        <span class="cite">src/attachment_extractor.py, BR-005, BR-010</span></p>
+
+      <div class="callout rule">
+        <strong>BR-006</strong> Member ID normalization: Bengali digits → ASCII; purely numeric IDs are zero-padded to 8 digits; alphanumeric IDs (e.g. a trailing letter suffix) are kept as-is and later skipped by Microzen (BR-017).<br>
+        <strong>BR-007</strong> Mobile normalization: strip non-digits; "880…"(13) → "0…"; "88…"(12) → "0…".<br>
+        <strong>BR-009</strong> (documented, not simulated here) — sheet discovery falls back through 5 strategies, and any additional sheet sharing the same column structure (e.g. a zone's "special Case" sheet) is auto-included.
+      </div>
+
+      <div class="card">
+        <h3>Extracted rows</h3>
+        <div class="table-wrap"><table id="extractTable"><thead>
+          <tr><th>Zone</th><th>Area</th><th>Branch</th><th>Name</th><th>Mobile</th><th>Member ID</th><th>Amount (৳)</th><th>Comment</th><th>Result</th></tr>
+        </thead><tbody></tbody></table></div>
+        <div class="count-row" id="extractSummary"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="extractBtn">▶ Run extraction</button>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 3 : DUPLICATE CHECK ================= -->
+    <section class="stage" id="stage-3" data-stage="3">
+      <h2>3 · Duplicate Check</h2>
+      <p class="desc">A row is a duplicate if the key <code class="cite">member_id|rebate_amount</code> already exists in the master file, the audit database, or earlier in this same batch.
+        Duplicates are logged but never proceed to Microzen or the master file. <span class="cite">src/duplicate_checker.py, BR-011, KPI-011</span></p>
+
+      <div class="card">
+        <h3>Result</h3>
+        <div class="table-wrap"><table id="dupTable"><thead>
+          <tr><th>Member ID</th><th>Name</th><th>Amount (৳)</th><th>Key</th><th>Outcome</th></tr>
+        </thead><tbody></tbody></table></div>
+        <div class="count-row" id="dupSummary"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="dupBtn">▶ Check duplicates</button>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 4 : MICROZEN ================= -->
+    <section class="stage" id="stage-4" data-stage="4">
+      <h2>4 · Microzen Verification</h2>
+      <p class="desc">For each unique row, the bot logs into Microzen (leading zeros stripped from the member ID for the profile URL), opens the member's last loan, and reads the disbursement date and পরের স্থিতি (post-transaction balance) from the first transaction row.
+        Only 8-digit purely numeric IDs are auto-verified. <span class="cite">src/microzen_bot.py, BR-017, BR-018, BR-019</span></p>
+
+      <div class="callout warn">
+        <strong>Rate limiting (BR-020):</strong> 1500 ms between members, 700 ms between loan pages, an 8-second breather every 30 members — simulated here as a quick progress animation, not real timing.
+      </div>
+
+      <div class="card">
+        <h3>Verification results</h3>
+        <div class="table-wrap"><table id="mzTable"><thead>
+          <tr><th>Member ID</th><th>Name</th><th>Disbursed</th><th>পরের স্থিতি</th><th>Service Charge</th><th>Status</th></tr>
+        </thead><tbody></tbody></table></div>
+        <div class="count-row" id="mzSummary"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="mzBtn">▶ Run Microzen verification</button>
+        <span class="small" id="mzProgress"></span>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 5 : ELIGIBILITY ================= -->
+    <section class="stage" id="stage-5" data-stage="5">
+      <h2>5 · Eligibility Calculation</h2>
+      <p class="desc">The confirmed three-tier formula, applied to every verified member. <span class="cite">src/rebate_calculator.py, BR-001–BR-004, KPI-001–003, KPI-006</span></p>
+
+      <div class="card">
+        <h3>Tier rule (copied verbatim)</h3>
+        <table style="font-size:13px;">
+          <thead><tr><th>Tier</th><th>Disbursement date</th><th>Formula</th><th>Citation</th></tr></thead>
+          <tbody>
+            <tr><td>Tier 1</td><td>≤ 31 Dec 2020</td><td>calculated_rebate = SUM(service charge) × <strong>100%</strong></td><td class="cite">rebate_calculator.py:265-267 / KPI-001</td></tr>
+            <tr><td>Tier 2</td><td>1 Jan 2021 – 31 Dec 2023</td><td>calculated_rebate = SUM(service charge) × <strong>50%</strong></td><td class="cite">rebate_calculator.py:268-270 / KPI-002</td></tr>
+            <tr><td>Tier 3</td><td>≥ 1 Jan 2024</td><td>No rebate — NOT_ELIGIBLE regardless of repayment</td><td class="cite">rebate_calculator.py:178-190 / KPI-003</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          Additional conditions: loan must be fully repaid (পরের স্থিতি = 0) — <span class="cite">BR-002</span>. If requested (col H) &gt; calculated → NOT_ELIGIBLE, excess recorded — <span class="cite">BR-003, KPI-006</span>. If requested is missing/unparseable → ERROR, not NOT_ELIGIBLE — <span class="cite">BR-004</span>.
+        </div>
+        <div class="callout warn">
+          <strong>Not simulated</strong> (documented for completeness): KPI-005's "held-back payment" exception — when a branch pays everything except the rebate first, then posts a small held-back amount later, the calculator uses the <em>previous</em> date's service charge instead of the last date's. Too intricate to demo meaningfully with invented data. See <span class="cite">src/rebate_calculator.py:19-35</span>.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Results</h3>
+        <div class="table-wrap"><table id="eligTable"><thead>
+          <tr><th>Member ID</th><th>Name</th><th>Tier</th><th>Requested</th><th>Calculated</th><th>Eligibility</th><th class="reason">Reason</th></tr>
+        </thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="eligBtn">▶ Calculate eligibility</button>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 6 : INELIGIBLE REMOVED ================= -->
+    <section class="stage" id="stage-6" data-stage="6">
+      <h2>6 · Ineligible Rows Removed</h2>
+      <p class="desc">
+        <strong>BR-033</strong> — the master Excel file is the client's running record of who has actually received the rebate SMS. It receives <strong>only</strong> ELIGIBLE members.
+        NOT_ELIGIBLE and ERROR rows are never written there — they stay fully queryable in the audit database and in the ICT report's "Not Eligible" / "Processing Errors" sheets.
+        This superseded the original REQ-000 baseline, which appended every row before eligibility was known.
+        <span class="cite">requirements/REQ-001-master-file-eligible-only.md</span>
+      </p>
+
+      <div class="card">
+        <h3>Removed from the master file</h3>
+        <div class="table-wrap"><table id="removedTable"><thead>
+          <tr><th>Member ID</th><th>Name</th><th>Status</th><th class="reason">Reason</th></tr>
+        </thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="callout rule">
+        Master file append writes only columns A–J, once, at the end of the run, and only for these ELIGIBLE rows. A timestamped backup is taken first, and existing rows are never overwritten. <span class="cite">BR-012, BR-013, BR-014, BR-016</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="removeBtn">▶ Apply master-file filter</button>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 7 : SMS LIST ================= -->
+    <section class="stage" id="stage-7" data-stage="7">
+      <h2>7 · SMS List</h2>
+      <p class="desc">For every ELIGIBLE member, the SMS text is generated from the approved rebate amount (cast to an integer). The same template string appears in four places in the real code and must stay in sync.
+        <span class="cite">src/sms_generator.py, config/sms_template.txt, KPI-009</span></p>
+
+      <div class="card">
+        <h3>Template</h3>
+        <div class="table-wrap" style="max-height:none;"><pre class="mono" style="white-space:pre-wrap; margin:0; padding:10px; font-size:13px;" id="smsTemplateBox"></pre></div>
+      </div>
+
+      <div class="card">
+        <h3>Generated SMS — eligible members</h3>
+        <div class="table-wrap"><table id="smsTable"><thead>
+          <tr><th>Member ID</th><th>Name</th><th>Mobile</th><th>Amount (৳)</th><th>SMS text</th></tr>
+        </thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="smsBtn">▶ Generate SMS list</button>
+        <button class="btn secondary" id="csvBtn" disabled>⬇ Export CSV</button>
+      </div>
+    </section>
+
+    <!-- ================= STAGE 8 : ICT REPORT + DRAFT ================= -->
+    <section class="stage" id="stage-8" data-stage="8">
+      <h2>8 · ICT Report &amp; Outlook Draft</h2>
+      <p class="desc">Two Excel files are produced: a timestamped "eligible only" file sent to ICT for bulk SMS dispatch, and a cumulative 5-sheet Records workbook rebuilt from the audit database every run.
+        <span class="cite">src/report_builder.py, BR-025</span></p>
+
+      <div class="card">
+        <h3>Special_Rebate_Records.xlsx — 5 sheets</h3>
+        <div class="tabs" id="reportTabs"></div>
+        <div class="table-wrap" id="reportTableWrap"><table id="reportTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card" id="draftCard">
+        <h3>Outlook Draft (simulated)</h3>
+        <div class="kv">
+          <dt>To</dt><dd id="draftTo"></dd>
+          <dt>Subject</dt><dd id="draftSubject"></dd>
+          <dt>Attachment</dt><dd id="draftAttachment"></dd>
+        </div>
+        <div class="callout" style="margin-top:12px;">
+          <pre class="mono" id="draftBody" style="white-space:pre-wrap; margin:0; font-size:13px; color:var(--text);"></pre>
+        </div>
+        <div class="btn-row">
+          <button class="btn info" id="draftBtn">💾 Save to Outlook Drafts (simulate)</button>
+          <span class="status-pill" id="draftStatus" style="display:none;"></span>
+        </div>
+        <div class="callout warn" style="margin-top:14px;">
+          <strong>This never sends automatically.</strong> The real code calls <code class="cite">mail.Save()</code>, never <code class="cite">mail.Send()</code> — the operator must open Outlook Drafts and send it manually.
+          <span class="cite">src/email_draft_builder.py:32-56, BR-026</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="footer">Simulation with invented data. The production system is private.</div>
+
+<!-- ================= GUIDED TOUR PANEL ================= -->
+<div class="tour-panel" id="tourPanel" role="dialog" aria-label="Guided tour">
+  <button class="tour-close" id="tourCloseBtn" aria-label="Close tour">×</button>
+  <h4 id="tourTitle"></h4>
+  <p id="tourBody"></p>
+  <div class="tour-nav">
+    <button class="btn secondary" id="tourPrevBtn">◀ Back</button>
+    <span class="tour-step-count" id="tourCount"></span>
+    <button class="btn" id="tourNextBtn">Next ▶</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   DUMMY DATA — everything below is invented. No real staff names, member
+   names, IDs, phone numbers, branch/zone/samity names, amounts or dates from
+   this repository or from any Padakhep system appear anywhere in this file.
+   The dataset is a fixed, hand-curated set (not randomly generated) so that
+   every business rule below has at least one deterministic example — this is
+   what makes it "stable across reloads" (see README note in the project
+   handover for why a hardcoded set was chosen over a PRNG for the built-in
+   sample). A seeded PRNG (mulberry32) IS used below for the optional
+   "drop your own CSV" path, to simulate a Microzen response for arbitrary
+   member IDs a visitor supplies.
+   ============================================================================ */
+
+// ---- seeded PRNG (mulberry32) + string hash, used only for uploaded/custom rows ----
+function hashStr(s){ let h=1779033703^s.length; for(let i=0;i<s.length;i++){ h=Math.imul(h^s.charCodeAt(i),3432918353); h=(h<<13)|(h>>>19);} return h>>>0; }
+function mulberry32(a){ return function(){ a|=0; a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+
+const ZONES = {
+  Z1:{ name:"Uttoron Zone",     area:"Uttoron Area-1",     branch:"Sonar Bangla Branch" },
+  Z2:{ name:"Sharoteertho Zone",area:"Sharoteertho Area-1",branch:"Digonto Branch" },
+  Z3:{ name:"Nobojatra Zone",   area:"Nobojatra Area-2",   branch:"Rongdhonu Branch" },
+  Z4:{ name:"Alokdhara Zone",   area:"Alokdhara Area-1",   branch:"Projapoti Branch" }
+};
+
+// ---- emails (Stage 1) ----
+const EMAILS = [
+  { id:"e1", sender:"uttoron.admin@example-mfi.test",      displayName:"Uttoron Zone Admin",      subject:"Special Rebate SMS — Uttoron Zone — Sept 2026",       received:"2026-09-04", attachment:"Special Rebate SMS_Uttoron.xlsx",       zone:"Z1" },
+  { id:"e2", sender:"sharoteertho.admin@example-mfi.test", displayName:"Sharoteertho Zone Admin", subject:"রিবেট — Sharoteertho — September",                    received:"2026-09-06", attachment:"Sharoteertho_Rebate_Sept.xlsx",          zone:"Z2" },
+  { id:"e3", sender:"nobojatra.admin@example-mfi.test",    displayName:"Nobojatra Zone Admin",    subject:"Special Rebate — Nobojatra",                          received:"2026-09-09", attachment:"Nobojatra Special Rebate SMS.xlsx",      zone:"Z3" },
+  { id:"e4", sender:"alokdhara.admin@example-mfi.test",    displayName:"Alokdhara Zone Admin",    subject:"Special rebate list — Alokdhara zone",                received:"2026-09-11", attachment:"Alokdhara_rebate_list.xlsx",             zone:"Z4" },
+  { id:"e5", sender:"uttoron.admin@example-mfi.test",      displayName:"Uttoron Zone Admin",      subject:"Special Rebate SMS — Uttoron Zone — Correction",      received:"2026-09-15", attachment:"Special Rebate SMS_Uttoron_corrected.xlsx", zone:"Z1" }
+];
+
+// ---- raw rows extracted per email, before dedup/microzen (Stage 2/3) ----
+// forced.status: null (verify normally) | "skipped_non_numeric_id" | "microzen_error"
+const RAW_ROWS = [
+  // --- Email 1: Uttoron ---
+  { emailId:"e1", zone:"Z1", name:"Rahima Begum",   mobile:"01712340001", memberId:"00512001", requested:1200, comment:"", forced:{ disbursed:"2019-08-12", postSthiti:0, serviceCharge:1400 } },
+  { emailId:"e1", zone:"Z1", name:"Abdul Karim",    mobile:"01712340002", memberId:"00512002", requested:900,  comment:"", forced:{ disbursed:"2022-02-20", postSthiti:0, serviceCharge:2000 } },
+  { emailId:"e1", zone:"Z1", name:"Salma Khatun",   mobile:"01712340003", memberId:"00512003", requested:700,  comment:"2024 loan", forced:{ disbursed:"2024-06-01", postSthiti:0, serviceCharge:0 } },
+  { emailId:"e1", zone:"Z1", name:"Jasim Uddin",    mobile:"01712340004", memberId:"00512004", requested:null, comment:"amount pending from branch", forced:null }, // BR-005 extraction skip: missing amount
+
+  // --- Email 2: Sharoteertho ---
+  { emailId:"e2", zone:"Z2", name:"Nasima Aktar",   mobile:"01812350011", memberId:"00518011", requested:1500, comment:"", forced:{ disbursed:"2020-01-10", postSthiti:0, serviceCharge:900 } },
+  { emailId:"e2", zone:"Z2", name:"Kamal Hossain",  mobile:"01812350012", memberId:"00518012", requested:600,  comment:"", forced:{ disbursed:"2021-09-05", postSthiti:3200, serviceCharge:1000 } },
+  { emailId:"e2", zone:"Z2", name:"Ruma Begum",     mobile:"01812350013", memberId:"00518013", requested:650,  comment:"", forced:{ disbursed:"2018-11-30", postSthiti:0, serviceCharge:650 } },
+  { emailId:"e2", zone:"Z2", name:"",               mobile:"01812350014", memberId:null,       requested:500,  comment:"name/ID missing from branch sheet", forced:null }, // BR-005 extraction skip: missing member ID
+
+  // --- Email 3: Nobojatra ---
+  { emailId:"e3", zone:"Z3", name:"Shafiq Islam",   mobile:"01912360021", memberId:"00524021", requested:1400, comment:"", forced:{ disbursed:"2023-12-30", postSthiti:0, serviceCharge:3000 } },
+  { emailId:"e3", zone:"Z3", name:"Momtaz Begum",   mobile:"01912360022", memberId:"00524022", requested:800,  comment:"", forced:{ disbursed:"2020-12-31", postSthiti:0, serviceCharge:800 } },
+  { emailId:"e3", zone:"Z3", name:"Delwar Hossain",mobile:"01912360023", memberId:"20524023M6", requested:1000, comment:"alphanumeric ID", forced:{ status:"skipped_non_numeric_id" } },
+  { emailId:"e3", zone:"Z3", name:"Ayesha Siddika", mobile:"01912360024", memberId:"00524024", requested:1100, comment:"", forced:{ status:"microzen_error", errorMsg:"Profile page timed out after 3 retries" } },
+
+  // --- Email 4: Alokdhara ---
+  { emailId:"e4", zone:"Z4", name:"Faruk Ahmed",    mobile:"01612370031", memberId:"00531031", requested:1300, comment:"", forced:{ disbursed:"2021-01-01", postSthiti:0, serviceCharge:2600 } },
+  { emailId:"e4", zone:"Z4", name:"Shirin Aktar",   mobile:"01612370032", memberId:"00531032", requested:500,  comment:"", forced:{ disbursed:"2017-04-04", postSthiti:0, serviceCharge:500 } },
+  { emailId:"e4", zone:"Z4", name:"Hasan Mahmud",   mobile:"01612370033", memberId:"00531033", requested:"", comment:"recheck: rebate_amount lookup returned none (BR-021 recheck join, main.py ~400-403)", forced:{ disbursed:"2022-05-01", postSthiti:0, serviceCharge:700 } },
+
+  // --- Email 5: Uttoron correction/resend — duplicate of the very first row ---
+  { emailId:"e5", zone:"Z1", name:"Rahima Begum",   mobile:"01712340001", memberId:"00512001", requested:1200, comment:"resent by branch, same case", forced:{ disbursed:"2019-08-12", postSthiti:0, serviceCharge:1400 } }
+];
+
+const SMS_TEMPLATE = "সম্মানিত গ্রাহক,\nসংস্থার বিশেষ সুবিধার আওতায় আপনার ঋণ পরিশোধের কারণে {amount} টাকা সার্ভিস চার্জ মওকুফ করা হয়েছে।"; // KPI-009 / config/sms_template.txt
+
+const TIER1_CUTOFF = new Date("2020-12-31");
+const TIER2_START  = new Date("2021-01-01");
+const TIER2_END     = new Date("2023-12-31");
+
+// ---- state, populated stage by stage ----
+const state = { extracted:[], skipped:[], unique:[], duplicates:[], mzResults:[], eligResults:[], eligible:[], removed:[] };
+
+// ============================================================================
+// STAGE LOGIC — mirrors the real modules function-for-function
+// ============================================================================
+
+// BR-005: valid only if BOTH member_id AND rebate_amount present
+function runExtraction(){
+  state.extracted = []; state.skipped = [];
+  RAW_ROWS.forEach(r=>{
+    const z = ZONES[r.zone];
+    const row = { ...r, zoneName:z.name, area:z.area, branch:z.branch };
+    if(!row.memberId || row.requested===null || row.requested===undefined){
+      state.skipped.push({ ...row, reason: !row.memberId ? "Missing Member ID (col G) — BR-005" : "Missing Rebate Amount (col H) — BR-005" });
+    } else {
+      state.extracted.push(row);
+    }
+  });
+}
+
+// BR-011 / KPI-011: key = member_id|rebate_amount ; dup if seen earlier in batch
+function runDuplicateCheck(){
+  state.unique = []; state.duplicates = [];
+  const seen = new Set();
+  state.extracted.forEach(row=>{
+    const key = `${row.memberId}|${row.requested}`;
+    if(seen.has(key)){
+      state.duplicates.push({ ...row, key, outcome:"Duplicate — already seen this batch" });
+    } else {
+      seen.add(key);
+      state.unique.push({ ...row, key });
+    }
+  });
+}
+
+// BR-017/018/019: only 8-digit numeric IDs auto-verify; else skipped_non_numeric_id
+function runMicrozen(){
+  state.mzResults = state.unique.map(row=>{
+    const isNumeric8 = /^\d{8}$/.test(row.memberId);
+    if(!isNumeric8 && (!row.forced || row.forced.status!=="skipped_non_numeric_id")){
+      // any other non-8-digit ID we didn't specifically forge -> same rule applies
+      return { ...row, mzStatus:"skipped_non_numeric_id" };
+    }
+    if(row.forced && row.forced.status==="skipped_non_numeric_id"){
+      return { ...row, mzStatus:"skipped_non_numeric_id" };
+    }
+    if(row.forced && row.forced.status==="microzen_error"){
+      return { ...row, mzStatus:"error", errorMsg:row.forced.errorMsg };
+    }
+    if(row.forced){
+      return { ...row, mzStatus:"verified", disbursed:row.forced.disbursed, postSthiti:row.forced.postSthiti, serviceCharge:row.forced.serviceCharge };
+    }
+    // Fallback: seeded simulation for any uploaded/custom row without forced data
+    const rng = mulberry32(hashStr(row.memberId));
+    const year = 2016 + Math.floor(rng()*10);
+    const month = 1 + Math.floor(rng()*12);
+    const day = 1 + Math.floor(rng()*27);
+    const disbursed = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const repaid = rng() > 0.15;
+    const sc = Math.round((row.requested||500) * (0.6+rng()*1.2));
+    return { ...row, mzStatus:"verified", disbursed, postSthiti: repaid?0:Math.round(rng()*5000), serviceCharge:sc };
+  });
+}
+
+function getTier(dateStr){
+  const d = new Date(dateStr);
+  if(d <= TIER1_CUTOFF) return "tier1";
+  if(d >= TIER2_START && d <= TIER2_END) return "tier2";
+  return "tier3";
+}
+
+// BR-001..BR-004, KPI-001..003, KPI-006 — ported from src/rebate_calculator.py calculate()
+function calcEligibility(row){
+  if(row.mzStatus==="skipped_non_numeric_id"){
+    return { eligibility:"ERROR", reason:"Microzen skipped — member ID is not 8-digit numeric; manual verification required (BR-017)", tier:"—", calculated:"", approved:"" };
+  }
+  if(row.mzStatus==="error"){
+    return { eligibility:"ERROR", reason:`Microzen verification failed: ${row.errorMsg}`, tier:"—", calculated:"", approved:"" };
+  }
+  const tier = getTier(row.disbursed);
+  if(tier==="tier3"){
+    return { eligibility:"NOT_ELIGIBLE", reason:`Loan disbursed ${row.disbursed} — no rebate for loans after Dec 2023 (BR-001)`, tier:"Tier 3", calculated:0, approved:"" };
+  }
+  const pct = tier==="tier1" ? 1.0 : 0.5;
+  const calculated = Math.round(row.serviceCharge * pct * 100)/100;
+  const tierLabel = tier==="tier1" ? "Tier 1 (100%)" : "Tier 2 (50%)";
+
+  if(row.postSthiti !== 0){
+    return { eligibility:"NOT_ELIGIBLE", reason:`Loan not fully repaid — পরের স্থিতি=${row.postSthiti}. Calculated rebate if closed: ${calculated} (BR-002)`, tier:tierLabel, calculated, approved:"" };
+  }
+  const amountMissing = row.requested===null || row.requested===undefined || row.requested==="" || Number.isNaN(Number(row.requested));
+  if(amountMissing){
+    return { eligibility:"ERROR", reason:"Requested rebate amount (col H) is missing or invalid (BR-004)", tier:tierLabel, calculated, approved:"" };
+  }
+  if(row.requested > calculated){
+    const excess = Math.round((row.requested - calculated)*100)/100;
+    return { eligibility:"NOT_ELIGIBLE", reason:`Requested ${row.requested} > calculated ${calculated} (excess: ${excess}) (BR-003, KPI-006)`, tier:tierLabel, calculated, approved:"" };
+  }
+  return { eligibility:"ELIGIBLE", reason:`Loan repaid. ${tierLabel}. Requested ${row.requested} <= calculated ${calculated}`, tier:tierLabel, calculated, approved:row.requested };
+}
+
+function runEligibility(){
+  state.eligResults = state.mzResults.map(row=>({ ...row, ...calcEligibility(row) }));
+}
+
+// BR-033: only ELIGIBLE rows are kept for the master file; rest are "removed"
+function runMasterFilter(){
+  state.eligible = state.eligResults.filter(r=>r.eligibility==="ELIGIBLE");
+  state.removed  = state.eligResults.filter(r=>r.eligibility!=="ELIGIBLE");
+}
+
+function smsText(amount){
+  const amt = Math.trunc(Number(amount));
+  return SMS_TEMPLATE.replace("{amount}", amt);
+}
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+function esc(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function statusPill(status){
+  const map = {
+    ELIGIBLE:      ["status-eligible","✔ ELIGIBLE"],
+    NOT_ELIGIBLE:  ["status-not-eligible","✘ NOT ELIGIBLE"],
+    ERROR:         ["status-error","⚠ ERROR"],
+    verified:      ["status-eligible","✔ verified"],
+    error:         ["status-error","⚠ error"],
+    skipped_non_numeric_id: ["status-skipped","⊘ skipped (non-numeric ID)"],
+    duplicate:     ["status-duplicate","⊘ duplicate"],
+    skipped:       ["status-duplicate","⊘ skipped"]
+  };
+  const [cls,label] = map[status] || ["status-duplicate", status];
+  return `<span class="status-pill ${cls}">${label}</span>`;
+}
+
+function renderInbox(){
+  const tbody = document.querySelector("#inboxTable tbody");
+  tbody.innerHTML = EMAILS.map(e=>{
+    const inRange = e.received >= document.getElementById("dateFrom").value && e.received <= document.getElementById("dateTo").value;
+    return `<tr><td>${esc(e.sender)}<br><span class="small">${esc(e.displayName)}</span></td><td>${esc(e.subject)}</td><td>${esc(e.received)}</td><td class="mono">${esc(e.attachment)}</td><td>${inRange?statusPill("verified").replace("verified","matched"):`<span class="status-pill status-duplicate">out of range</span>`}</td></tr>`;
+  }).join("");
+  document.getElementById("inboxSummary").textContent = "";
+}
+
+function renderExtraction(){
+  const tbody = document.querySelector("#extractTable tbody");
+  const rows = [...state.extracted.map(r=>({...r, ok:true})), ...state.skipped.map(r=>({...r, ok:false}))];
+  tbody.innerHTML = rows.map(r=>`<tr>
+      <td>${esc(r.zoneName||"—")}</td><td>${esc(r.area||"—")}</td><td>${esc(r.branch||"—")}</td>
+      <td>${esc(r.name)||"<em>blank</em>"}</td><td class="mono">${esc(r.mobile)}</td>
+      <td class="mono">${esc(r.memberId)||"<em>blank</em>"}</td><td>${(r.requested===null||r.requested===undefined||r.requested==="")?"<em>blank</em>":r.requested}</td>
+      <td>${esc(r.comment)}</td>
+      <td>${r.ok ? statusPill("verified").replace("verified","extracted") : `<span class="reason">${esc(r.reason)}</span>`}</td>
+    </tr>`).join("");
+  document.getElementById("extractSummary").innerHTML =
+    `<span class="count-chip">Extracted: <strong>${state.extracted.length}</strong></span>` +
+    `<span class="count-chip">Skipped (BR-005): <strong>${state.skipped.length}</strong></span>`;
+}
+
+function renderDup(){
+  const tbody = document.querySelector("#dupTable tbody");
+  const rows = [...state.unique.map(r=>({...r, dup:false})), ...state.duplicates.map(r=>({...r, dup:true}))];
+  tbody.innerHTML = rows.map(r=>`<tr>
+      <td class="mono">${esc(r.memberId)}</td><td>${esc(r.name)}</td><td>${r.requested}</td>
+      <td class="mono">${esc(r.key)}</td>
+      <td>${r.dup ? statusPill("duplicate") : `<span class="status-pill status-eligible">unique → proceeds</span>`}</td>
+    </tr>`).join("");
+  document.getElementById("dupSummary").innerHTML =
+    `<span class="count-chip">Unique: <strong>${state.unique.length}</strong></span>` +
+    `<span class="count-chip">Duplicates skipped: <strong>${state.duplicates.length}</strong></span>`;
+}
+
+function renderMicrozen(){
+  const tbody = document.querySelector("#mzTable tbody");
+  tbody.innerHTML = state.mzResults.map(r=>`<tr>
+      <td class="mono">${esc(r.memberId)}</td><td>${esc(r.name)}</td>
+      <td>${esc(r.disbursed||"—")}</td><td>${r.postSthiti!==undefined?r.postSthiti:"—"}</td>
+      <td>${r.serviceCharge!==undefined?r.serviceCharge:"—"}</td>
+      <td>${statusPill(r.mzStatus)}${r.errorMsg?`<div class="reason">${esc(r.errorMsg)}</div>`:""}</td>
+    </tr>`).join("");
+  const counts = state.mzResults.reduce((a,r)=>{ a[r.mzStatus]=(a[r.mzStatus]||0)+1; return a;},{});
+  document.getElementById("mzSummary").innerHTML = Object.entries(counts).map(([k,v])=>`<span class="count-chip">${esc(k)}: <strong>${v}</strong></span>`).join("");
+}
+
+function renderEligibility(){
+  const tbody = document.querySelector("#eligTable tbody");
+  tbody.innerHTML = state.eligResults.map(r=>`<tr>
+      <td class="mono">${esc(r.memberId)}</td><td>${esc(r.name)}</td><td>${esc(r.tier)}</td>
+      <td>${r.requested??"—"}</td><td>${r.calculated===""?"—":r.calculated}</td>
+      <td>${statusPill(r.eligibility)}</td><td class="reason">${esc(r.reason)}</td>
+    </tr>`).join("");
+}
+
+function renderRemoved(){
+  const tbody = document.querySelector("#removedTable tbody");
+  tbody.innerHTML = state.removed.map(r=>`<tr>
+      <td class="mono">${esc(r.memberId)}</td><td>${esc(r.name)}</td>
+      <td>${statusPill(r.eligibility)}</td><td class="reason">${esc(r.reason)}</td>
+    </tr>`).join("") || `<tr><td colspan="4" class="small">Nothing removed yet — run eligibility first.</td></tr>`;
+}
+
+function renderSms(){
+  document.getElementById("smsTemplateBox").textContent = SMS_TEMPLATE.replace("{amount}", "2124");
+  const tbody = document.querySelector("#smsTable tbody");
+  tbody.innerHTML = state.eligible.map(r=>`<tr>
+      <td class="mono">${esc(r.memberId)}</td><td>${esc(r.name)}</td><td class="mono">${esc(r.mobile)}</td>
+      <td>${r.approved}</td><td style="white-space:pre-wrap; max-width:420px;">${esc(smsText(r.approved))}</td>
+    </tr>`).join("");
+}
+
+const REPORT_TABS = ["Eligible for SMS","Not Eligible","Processing Errors","Extraction Log","All Members"];
+let activeReportTab = 0;
+function renderReportTabs(){
+  const box = document.getElementById("reportTabs");
+  box.innerHTML = REPORT_TABS.map((t,i)=>`<button data-i="${i}" class="${i===activeReportTab?"active":""}">${esc(t)}</button>`).join("");
+  box.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ activeReportTab=Number(b.dataset.i); renderReportTable(); renderReportTabs(); }));
+}
+function renderReportTable(){
+  const thead = document.querySelector("#reportTable thead");
+  const tbody = document.querySelector("#reportTable tbody");
+  const headerRow = ["ক্রমিক","জোন","এরিয়া","ব্রাঞ্চ","সদস্যর নাম","মোবাইল","আইডি","পরিমাণ (৳)","মন্তব্য"];
+  let rows = [];
+  let extraCols = [];
+  if(activeReportTab===0){ // Eligible for SMS (A-J only, matches master file cols)
+    rows = state.eligible.map((r,i)=>[i+1,r.zoneName,r.area,r.branch,r.name,r.mobile,r.memberId,r.approved,r.comment||"",smsText(r.approved)]);
+    extraCols = ["SMS"];
+  } else if(activeReportTab===1){
+    rows = state.removed.filter(r=>r.eligibility==="NOT_ELIGIBLE").map((r,i)=>[i+1,r.zoneName,r.area,r.branch,r.name,r.mobile,r.memberId,r.requested,r.reason]);
+    extraCols = ["Eligibility Reason"];
+  } else if(activeReportTab===2){
+    rows = state.removed.filter(r=>r.eligibility==="ERROR").map((r,i)=>[i+1,r.zoneName,r.area,r.branch,r.name,r.mobile,r.memberId,r.requested??"—",r.reason]);
+    extraCols = ["Error"];
+  } else if(activeReportTab===3){
+    thead.innerHTML = `<tr>${["Sender","Subject","Received","Attachment","Rows Extracted"].map(h=>`<th>${h}</th>`).join("")}</tr>`;
+    tbody.innerHTML = EMAILS.map(e=>{
+      const c = RAW_ROWS.filter(r=>r.emailId===e.id).length;
+      return `<tr><td>${esc(e.sender)}</td><td>${esc(e.subject)}</td><td>${esc(e.received)}</td><td class="mono">${esc(e.attachment)}</td><td>${c}</td></tr>`;
+    }).join("");
+    return;
+  } else if(activeReportTab===4){
+    rows = state.eligResults.map((r,i)=>[i+1,r.zoneName,r.area,r.branch,r.name,r.mobile,r.memberId,r.requested??"—",r.eligibility]);
+    extraCols = ["Eligibility"];
+  }
+  thead.innerHTML = `<tr>${headerRow.concat(extraCols).map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+  tbody.innerHTML = rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headerRow.length+extraCols.length}" class="small">No rows in this sheet.</td></tr>`;
+}
+
+function renderDraft(){
+  const today = new Date();
+  const dateLabel = today.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+  document.getElementById("draftTo").textContent = "ict.desk@example-mfi.net (invented recipient in this demo)";
+  document.getElementById("draftSubject").textContent = `Special Rebate SMS List — ${dateLabel}`;
+  document.getElementById("draftAttachment").textContent = `Eligible_Members_SMS_${today.toISOString().slice(0,10).replace(/-/g,"")}_${String(today.getHours()).padStart(2,"0")}${String(today.getMinutes()).padStart(2,"0")}${String(today.getSeconds()).padStart(2,"0")}.xlsx  (${state.eligible.length} rows)`;
+  document.getElementById("draftBody").textContent = "Dear Team,\n\nPlease find attached the Special Rebate SMS list for your processing.\n\nRegards,";
+}
+
+// ============================================================================
+// WIRING
+// ============================================================================
+const STAGES = [
+  {n:1, label:"Inbox"}, {n:2, label:"Extraction"}, {n:3, label:"Duplicates"},
+  {n:4, label:"Microzen"}, {n:5, label:"Eligibility"}, {n:6, label:"Removed"},
+  {n:7, label:"SMS List"}, {n:8, label:"ICT & Draft"}
+];
+let currentStage = 1;
+const completed = new Set();
+
+function buildStepper(){
+  const nav = document.getElementById("stepper");
+  nav.innerHTML = STAGES.map(s=>`<button data-n="${s.n}" class="${s.n===currentStage?"active":""}${completed.has(s.n)?" done":""}">
+      <span class="num">${completed.has(s.n)?"✓":s.n}</span><span class="label">${esc(s.label)}</span></button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>showStage(Number(b.dataset.n))));
+}
+function showStage(n){
+  currentStage = n;
+  document.querySelectorAll(".stage").forEach(s=>s.classList.toggle("visible", Number(s.dataset.stage)===n));
+  buildStepper();
+}
+
+document.getElementById("scanBtn").addEventListener("click", ()=>{
+  renderInbox();
+  document.getElementById("inboxSummary").textContent = `${EMAILS.filter(e=>e.received>=document.getElementById("dateFrom").value && e.received<=document.getElementById("dateTo").value).length} email(s) matched filters and date range.`;
+  completed.add(1); buildStepper();
+});
+document.getElementById("extractBtn").addEventListener("click", ()=>{ runExtraction(); renderExtraction(); completed.add(2); buildStepper(); });
+document.getElementById("dupBtn").addEventListener("click", ()=>{
+  if(!state.extracted.length){ runExtraction(); }
+  runDuplicateCheck(); renderDup(); completed.add(3); buildStepper();
+});
+document.getElementById("mzBtn").addEventListener("click", ()=>{
+  if(!state.unique.length){ runDuplicateCheck(); }
+  const btn = document.getElementById("mzBtn"); btn.disabled = true;
+  let i=0; const total = state.unique.length;
+  const progressEl = document.getElementById("mzProgress");
+  const timer = setInterval(()=>{
+    i++; progressEl.textContent = `Verifying ${i}/${total}…`;
+    if(i>=total){ clearInterval(timer); runMicrozen(); renderMicrozen(); btn.disabled=false; progressEl.textContent = "Done."; completed.add(4); buildStepper(); }
+  }, 90);
+});
+document.getElementById("eligBtn").addEventListener("click", ()=>{
+  if(!state.mzResults.length){ runMicrozen(); }
+  runEligibility(); renderEligibility(); completed.add(5); buildStepper();
+});
+document.getElementById("removeBtn").addEventListener("click", ()=>{
+  if(!state.eligResults.length){ runEligibility(); }
+  runMasterFilter(); renderRemoved(); completed.add(6); buildStepper();
+});
+document.getElementById("smsBtn").addEventListener("click", ()=>{
+  if(!state.eligible.length && !state.removed.length){ runMasterFilter(); }
+  renderSms(); document.getElementById("csvBtn").disabled = state.eligible.length===0; completed.add(7); buildStepper();
+});
+document.getElementById("csvBtn").addEventListener("click", ()=>{
+  const header = ["MemberID","Name","Mobile","Amount","SMS"];
+  const lines = [header.join(",")].concat(state.eligible.map(r=>[r.memberId,`"${r.name}"`,r.mobile,r.approved,`"${smsText(r.approved).replace(/"/g,'""')}"`].join(",")));
+  const blob = new Blob([lines.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "eligible_members_sms.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+});
+document.getElementById("draftBtn").addEventListener("click", ()=>{
+  const pill = document.getElementById("draftStatus");
+  pill.style.display = "inline-flex"; pill.className = "status-pill status-eligible"; pill.textContent = "✔ Draft ready for ICT";
+  document.getElementById("draftBtn").disabled = true;
+  completed.add(8); buildStepper();
+});
+
+// Render Stage 8 tabs/report/draft whenever it becomes visible with data ready
+const stage8Observer = new MutationObserver(()=>{
+  if(document.getElementById("stage-8").classList.contains("visible")){
+    if(!state.eligResults.length){ runExtraction(); runDuplicateCheck(); runMicrozen(); runEligibility(); runMasterFilter(); }
+    renderReportTabs(); renderReportTable(); renderDraft();
+  }
+});
+stage8Observer.observe(document.getElementById("stage-8"), {attributes:true, attributeFilter:["class"]});
+
+// ============================================================================
+// DRAG & DROP — parse a visitor-supplied CSV (cols B-I from row 6, per
+// config/column_mapping.yaml). XLSX binary parsing needs an external library;
+// this demo stays dependency-free and offline, so it accepts CSV only — a
+// documented limitation, see the build report.
+// ============================================================================
+function buildDropZone(){
+  const dz = document.createElement("div");
+  dz.className = "drop-zone"; dz.id = "dropZone";
+  dz.innerHTML = "Drop a CSV file here to extract your own rows (columns: Zone,Area,Branch,Name,Mobile,MemberID,Amount,Comment — data from row 6) — or use the built-in sample above.<br><span class='small'>.xlsx is not parsed in this offline demo; export your sheet as CSV first.</span>";
+  document.querySelector("#stage-2 .card").after(dz);
+  ["dragover","dragleave","drop"].forEach(evt=>dz.addEventListener(evt, e=>e.preventDefault()));
+  dz.addEventListener("dragover", ()=>dz.classList.add("drag"));
+  dz.addEventListener("dragleave", ()=>dz.classList.remove("drag"));
+  dz.addEventListener("drop", e=>{
+    dz.classList.remove("drag");
+    const file = e.dataTransfer.files[0];
+    if(!file) return;
+    if(!/\.csv$/i.test(file.name)){ dz.innerHTML = "⚠ Only .csv is supported in this offline demo. Export your Excel sheet as CSV and drop it again."; return; }
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const lines = String(reader.result).split(/\r?\n/).filter(l=>l.trim().length);
+      const custom = [];
+      lines.slice(5).forEach(line=>{ // BR-010: data starts at row 6
+        const cols = line.split(",").map(c=>c.trim());
+        const [zone,area,branch,name,mobile,memberId,amount,comment] = cols;
+        if(memberId && amount){
+          custom.push({ emailId:"custom", zoneName:zone||"—", area:area||"—", branch:branch||"—", name:name||"", mobile:mobile||"", memberId, requested:Number(amount), comment:comment||"", forced:null });
+        }
+      });
+      RAW_ROWS_RUNTIME_APPEND(custom);
+      dz.innerHTML = `✔ Loaded ${custom.length} row(s) from ${esc(file.name)}. Re-run extraction below to include them.`;
+    };
+    reader.readAsText(file);
+  });
+}
+let CUSTOM_ROWS = [];
+function RAW_ROWS_RUNTIME_APPEND(rows){ CUSTOM_ROWS = CUSTOM_ROWS.concat(rows); }
+// Merge custom rows into extraction pass
+const _origRunExtraction = runExtraction;
+runExtraction = function(){
+  _origRunExtraction();
+  CUSTOM_ROWS.forEach(row=>{ state.extracted.push(row); });
+};
+
+// ============================================================================
+// GUIDED TOUR
+// ============================================================================
+const TOUR = [
+  { stage:1, target:"#inboxCard", title:"1 · The inbox", body:"Zonal admins email Excel attachments. The real system filters by sender, subject and attachment keywords from config/settings.yaml, within a date range." },
+  { stage:2, target:"#extractTable", title:"2 · Extraction", body:"Only rows with BOTH a Member ID and a Rebate Amount are extracted (BR-005). Everything else is silently skipped — see the skipped rows below the extracted ones." },
+  { stage:3, target:"#dupTable", title:"3 · Duplicate check", body:"The key is member_id + rebate_amount. Notice the resent Uttoron row: same member, same amount — flagged as a duplicate and stopped here." },
+  { stage:4, target:"#mzTable", title:"4 · Microzen verification", body:"Each member's loan is looked up. One alphanumeric ID is skipped outright (BR-017); one hits a simulated Microzen error." },
+  { stage:5, target:"#eligTable", title:"5 · Eligibility", body:"The three-tier rule runs here: 100% pre-2021, 50% for 2021–2023, nothing from 2024 onward — plus the repaid check and the requested-vs-calculated cap." },
+  { stage:6, target:"#removedTable", title:"6 · What never reaches the master file", body:"BR-033: only ELIGIBLE rows get written to the real master Excel file. Everything NOT_ELIGIBLE or ERROR is removed here, with its reason kept for the record." },
+  { stage:7, target:"#smsTable", title:"7 · SMS list", body:"Every eligible member's SMS is generated from the same template used four places in the real code, so it can't drift." },
+  { stage:8, target:"#draftCard", title:"8 · ICT report & Outlook draft", body:"The 5-sheet Excel report and the Outlook draft are built last. The draft is saved, never sent — the operator sends it manually from Outlook." }
+];
+let tourStep = 0;
+const tourPanel = document.getElementById("tourPanel");
+const tourToggleBtn = document.getElementById("tourToggleBtn");
+
+function clearHighlights(){ document.querySelectorAll(".tour-highlight").forEach(el=>el.classList.remove("tour-highlight")); }
+function showTourStep(){
+  const t = TOUR[tourStep];
+  showStage(t.stage);
+  clearHighlights();
+  const el = document.querySelector(t.target);
+  if(el){ el.classList.add("tour-highlight"); el.scrollIntoView({behavior:"smooth", block:"center"}); }
+  document.getElementById("tourTitle").textContent = t.title;
+  document.getElementById("tourBody").textContent = t.body;
+  document.getElementById("tourCount").textContent = `Step ${tourStep+1} of ${TOUR.length}`;
+  document.getElementById("tourPrevBtn").disabled = tourStep===0;
+  document.getElementById("tourNextBtn").textContent = tourStep===TOUR.length-1 ? "Done ✓" : "Next ▶";
+}
+tourToggleBtn.addEventListener("click", ()=>{
+  const open = tourPanel.classList.toggle("open");
+  tourToggleBtn.setAttribute("aria-expanded", String(open));
+  tourToggleBtn.textContent = open ? "▼ Guided tour" : "▶ Guided tour";
+  if(open){ tourStep = 0; showTourStep(); }
+  else clearHighlights();
+});
+document.getElementById("tourCloseBtn").addEventListener("click", ()=>{
+  tourPanel.classList.remove("open"); tourToggleBtn.setAttribute("aria-expanded","false"); tourToggleBtn.textContent="▶ Guided tour"; clearHighlights();
+});
+document.getElementById("tourNextBtn").addEventListener("click", ()=>{
+  if(tourStep < TOUR.length-1){ tourStep++; showTourStep(); }
+  else { tourPanel.classList.remove("open"); tourToggleBtn.setAttribute("aria-expanded","false"); tourToggleBtn.textContent="▶ Guided tour"; clearHighlights(); }
+});
+document.getElementById("tourPrevBtn").addEventListener("click", ()=>{ if(tourStep>0){ tourStep--; showTourStep(); } });
+
+// ============================================================================
+// INIT
+// ============================================================================
+buildStepper();
+showStage(1);
+renderInbox();
+document.getElementById("dateFrom").addEventListener("change", renderInbox);
+document.getElementById("dateTo").addEventListener("change", renderInbox);
+buildDropZone();
+</script>
+</body>
+</html>

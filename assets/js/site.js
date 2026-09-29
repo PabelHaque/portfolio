@@ -267,6 +267,7 @@
       var nEl = panel.querySelector("#p-n"), target = num(p.stat && p.stat.n);
       if (panel.classList.contains("on")) countTo(nEl, target, 600); else nEl.textContent = fmt(target);
       var read = panel.querySelector("#p-read"); if (p.page) { read.href = p.page; read.hidden = false; } else { read.hidden = true; }
+      var demo = panel.querySelector("#p-demo"); if (demo) { if (p.demo) { demo.href = p.demo; demo.hidden = false; } else { demo.hidden = true; } }
       panel.querySelector("#p-gate").setAttribute("data-gate", "gate-" + (i + 1));
     }
     // open: true when the visitor clicked or used the keyboard; on phones only that opens the sheet
@@ -418,6 +419,7 @@
       if (i === 0 || partOf(p) !== partOf(P[i - 1])) mount.appendChild(renderDivider(partOf(p)));
       var sec = el("section", "gate-section"); sec.id = "gate-" + (i + 1); sec.setAttribute("data-part", partOf(p));
       var acts = (p.page ? '<a class="pill hot" href="' + esc(p.page) + '">Read the case study &rarr;</a>' : "") +
+                 (p.demo ? '<a class="pill' + (p.page ? '' : ' hot') + '" href="' + esc(p.demo) + '" target="_blank" rel="noopener">Try the simulation</a>' : "") +
                  (isPublic && p.repo ? '<a class="pill" href="' + esc(p.repo) + '" target="_blank" rel="noopener">View the code</a>' : "");
       var state = isPublic
         ? '<span class="repo-state is-public"><span class="pip"></span>Public repository</span>'

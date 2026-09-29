@@ -1,0 +1,1462 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document Extraction Engine</title>
+<meta name="description" content="Single-file replica of the Document Extraction Engine desktop app: NID card reading, member resolution and KYC mismatch review, with invented data.">
+<!--
+  Document Extraction Engine — single-file replica.
+
+  Everything on this page runs in the browser from file://. No network
+  call is made anywhere, which is also the production system's rule
+  (CLAUDE.md: "No document, name or address leaves the machine").
+
+  Layout, step names, colours, field names, labels and rules are copied
+  from the desktop app's source; each copied item cites its file in a
+  comment beside it. The people, cards and ERP rows are invented and
+  come from one seeded random source, so the page reads the same every
+  time it is opened.
+-->
+<style>
+/* ---- tokens: app/theme.py THEMES["light"] / THEMES["dark"], verbatim ---- */
+:root{
+  --paper:#f7f8fa; --panel:#ffffff; --panel2:#f1f3f7; --panel3:#e8ebf2;
+  --ink:#16181d; --ink2:#3c414f; --muted:#656b7a; --faint:#8c93a3; --disabled:#838a97;
+  --rule:#dce0e8; --rule2:#c6ccda;
+  --accent:#2f4a7a; --accent-l:#e7ecf6; --accent-d:#1e3358;
+  --proven:#14713c; --proven-l:#e4f2e9;
+  --attention:#8a5a00; --attention-l:#fdf3de;
+  --contested:#a3232f; --contested-l:#fbe9ea;
+  --sel-text:#ffffff;
+  --escalate:#6b3fa0; --escalate-l:#efe9f8;
+  /* app/theme.py FACES and SIZES */
+  --ui:"Segoe UI",system-ui,sans-serif;
+  --num:"Cascadia Mono",Consolas,"Courier New",monospace;
+  --bn:"Noto Sans Bengali","Nirmala UI","Shonar Bangla",sans-serif;
+  --base:13px; --bn-size:15px; --num-size:13px; --small:12px; --tiny:11px;
+}
+:root[data-theme="dark"]{
+  --paper:#111318; --panel:#191c23; --panel2:#20242d; --panel3:#2a2f3a;
+  --ink:#e8eaf0; --ink2:#c2c7d3; --muted:#9299a8; --faint:#6b7382; --disabled:#737a89;
+  --rule:#2d323d; --rule2:#3c424f;
+  --accent:#8aa9e0; --accent-l:#1d2735; --accent-d:#b6c9ec;
+  --proven:#5fc389; --proven-l:#14251b;
+  --attention:#e0b055; --attention-l:#2a2113;
+  --contested:#e98a92; --contested-l:#2c1719;
+  --sel-text:#111318;
+  --escalate:#b79ce6; --escalate-l:#241b33;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:var(--base);line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+#app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ---- the step rail: app/rail.py + theme.py QPushButton[rail="step"] ---- */
+.top{display:flex;align-items:flex-start;gap:0;padding:0 10px 0 0}
+.rail{display:flex;flex:1;gap:2px;padding:4px 8px;background:var(--panel2);flex-wrap:wrap;align-items:stretch}
+.rail .vrule{width:1px;background:var(--rule);margin:6px 4px}
+.step{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:5px 11px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;flex:1 1 150px;min-width:0}
+.step:hover{background:var(--panel3);border-color:var(--rule)}
+.step[aria-current="page"]{background:var(--panel);border-color:var(--rule2)}
+.step:focus-visible{outline:none;border-color:var(--accent)}
+.step .mark{font-weight:700;color:var(--faint);min-width:10px}
+.step .mark[data-state="done"]{color:var(--proven)}
+.step .mark[data-state="attention"]{color:var(--attention)}
+.step .mark[data-state="running"]{color:var(--accent)}
+.step .text{min-width:0;flex:1}
+.step .name{display:block;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step[aria-current="page"] .name{color:var(--accent-d);font-weight:600}
+.step .detail{display:block;color:var(--muted);font-size:var(--small);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:17px}
+.rail-header{padding:6px 10px;font-size:var(--small);color:var(--muted);white-space:nowrap;align-self:center}
+.rail-header.testbatch{color:var(--attention);font-weight:600}
+.divider{height:1px;background:var(--rule)}
+
+/* ---- notice strip: app/widgets.py Notice + theme.py QFrame#notice ---- */
+.notice{margin:6px 8px 0 0;padding:9px 12px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--panel2);display:flex;gap:9px;align-items:flex-start}
+.notice[hidden]{display:none}
+.notice .dot{line-height:1.2}
+.notice[data-tone="info"]{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+.notice[data-tone="ok"]{background:var(--proven-l);border-color:var(--proven);color:var(--proven)}
+.notice[data-tone="warn"]{background:var(--attention-l);border-color:var(--attention);color:var(--attention)}
+.notice[data-tone="bad"]{background:var(--contested-l);border-color:var(--contested);color:var(--contested)}
+.notice .rows{display:grid;grid-template-columns:86px 1fr;gap:4px 14px;flex:1}
+.notice .rows .k{font-size:var(--tiny);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.notice .body{flex:1}
+
+main{flex:1;padding:8px 8px 8px 0}
+.screen{display:none;padding:8px 10px}
+.screen.active{display:block}
+
+/* ---- widgets: theme.py _TEMPLATE ---- */
+.group{border:1px solid var(--rule);border-radius:9px;padding:15px 13px 12px;background:var(--panel);position:relative;margin-top:13px}
+.group>legend,.group .legend{position:absolute;top:-8px;left:12px;padding:0 6px;background:var(--panel);color:var(--muted);font-size:var(--tiny);letter-spacing:1px;font-weight:600;text-transform:uppercase}
+.form{display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;align-items:center;max-width:880px}
+.form label{color:var(--ink2)}
+.h2{font-size:15px;font-weight:600;margin:0 0 6px}
+.hint{color:var(--muted);font-size:var(--small)}
+.eyebrow{font-size:var(--tiny);font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.bn{font-family:var(--bn);font-size:var(--bn-size)}
+.num{font-family:var(--num);font-size:var(--num-size);font-variant-numeric:tabular-nums}
+.tone-ok{color:var(--proven)} .tone-warn{color:var(--attention)} .tone-bad{color:var(--contested)} .tone-info{color:var(--accent-d)} .tone-muted{color:var(--muted)} .tone-escalate{color:var(--escalate)}
+.stat{background:var(--panel2);border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+.stat .v{font-size:20px;font-weight:600;font-family:var(--num)}
+.stat .l{color:var(--muted);font-size:var(--tiny)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.btn{padding:7px 14px;border:1px solid var(--rule2);border-radius:7px;background:var(--panel);color:var(--ink);font-weight:500;cursor:pointer}
+.btn:hover{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+.btn:disabled{color:var(--disabled);background:var(--panel2);border-color:var(--rule);cursor:not-allowed}
+.btn:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-l)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--sel-text);font-weight:600;padding:8px 17px}
+.btn.primary:hover{background:var(--accent-d);border-color:var(--accent-d);color:var(--sel-text)}
+.btn.primary:disabled{background:var(--rule);border-color:var(--rule);color:var(--disabled)}
+.btn.danger{background:var(--panel);border-color:var(--contested);color:var(--contested)}
+.btn.danger:hover{background:var(--contested-l)}
+.btn.danger:disabled{color:var(--disabled);border-color:var(--rule);background:var(--panel2)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--accent-d)}
+.btn.ghost:hover{background:var(--accent-l);border-color:transparent}
+.btn.ghost[aria-pressed="true"]{background:var(--panel3);border-color:var(--rule2)}
+.btn.link{background:transparent;border:0;padding:4px 2px;color:var(--accent-d);text-decoration:underline}
+.btn.link:hover{color:var(--accent)}
+input[type=text],input[type=number],select{padding:6px 9px;border:1px solid var(--rule2);border-radius:7px;background:var(--panel);color:var(--ink);min-width:0;max-width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+input[readonly]{background:var(--panel2);color:var(--muted);font-family:var(--num)}
+input[type=number]{font-family:var(--num);width:110px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.tablewrap{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:100%}
+th{background:var(--panel2);padding:8px 9px;text-align:left;border-bottom:1px solid var(--rule);font-weight:600;color:var(--muted);font-size:var(--tiny);letter-spacing:.5px;white-space:nowrap;position:sticky;top:0}
+td{padding:5px 9px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:nth-child(even) td{background:var(--panel2)}
+tr.selectable{cursor:pointer}
+tr.selectable:hover td{background:var(--panel3)}
+tr[aria-selected="true"] td{background:var(--accent-l)!important;color:var(--accent-d)}
+tr.needs td{background:var(--band-bg)!important}
+tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.faint{color:var(--faint)}
+.progress{height:9px;border-radius:5px;background:var(--panel3);overflow:hidden}
+.progress>div{height:100%;background:var(--accent);border-radius:5px;transition:width .15s}
+.log{font-family:var(--num);font-size:var(--small);border:1px solid var(--rule);border-radius:8px;background:var(--panel2);color:var(--ink2);padding:8px 10px;height:280px;overflow:auto;white-space:pre-wrap}
+.log .lv-warn{color:var(--attention)} .log .lv-error{color:var(--contested)} .log .lv-info{color:var(--ink2)}
+.split{display:grid;grid-template-columns:330px minmax(0,1fr);gap:10px;align-items:start}
+.split.review{grid-template-columns:260px minmax(0,1fr)}
+.beside{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,5fr);gap:10px;align-items:start}
+.beside.review-beside{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.list{border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:420px;overflow:auto}
+.list .item{padding:7px 10px;border-bottom:1px solid var(--rule);cursor:pointer;display:block;width:100%;text-align:left;background:transparent;border-left:0;border-right:0;border-top:0}
+.list .item:hover{background:var(--panel3)}
+.list .item[aria-selected="true"]{background:var(--accent-l);color:var(--accent-d)}
+.list .item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* ---- badge and meter: app/cells.py ---- */
+.badge{display:inline-block;height:18px;line-height:18px;padding:0 8px;border-radius:9px;font-size:11px;font-weight:600;background:var(--panel3);color:var(--muted);white-space:nowrap}
+.badge.proven{background:var(--proven-l);color:var(--proven)}
+.badge.corrected{background:var(--accent-l);color:var(--accent-d)}
+.meter{display:flex;align-items:center;gap:7px;min-width:100px}
+.meter .track{flex:1;height:5px;border-radius:3px;background:var(--panel3);overflow:hidden}
+.meter .fill{height:100%;border-radius:3px}
+.meter .fig{font-family:var(--num);font-size:11px;font-weight:600;width:34px;text-align:right}
+.band-high{--band-ink:var(--proven);--band-bg:var(--proven-l)}
+.band-medium{--band-ink:var(--attention);--band-bg:var(--attention-l)}
+.band-low{--band-ink:var(--contested);--band-bg:var(--contested-l)}
+.band-none{--band-ink:var(--faint);--band-bg:var(--panel2)}
+
+/* ---- segment bar: app/widgets.py SegmentBar ---- */
+.segbar{margin:8px 0}
+.segbar .bar{height:10px;border-radius:5px;background:var(--panel3);display:flex;overflow:hidden}
+.segbar .bar>span{height:100%;min-width:3px}
+.segbar .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;margin-top:5px}
+.segbar .legend span::before{content:"";display:inline-block;width:6px;height:6px;border-radius:3px;background:currentColor;margin-right:5px}
+
+/* ---- card images: app/image_view.py ---- */
+.cardstack{display:flex;flex-direction:column;gap:8px}
+.cardview{position:relative;background:var(--panel2);border:1px dashed var(--rule);border-radius:8px;overflow:hidden}
+.cardview img{display:block;width:100%;height:auto}
+.cardview .caption{position:absolute;left:0;top:0;padding:2px 8px;font-size:var(--tiny);background:var(--panel);color:var(--muted);border-radius:0 0 6px 0;border:1px solid var(--rule);border-left:0;border-top:0}
+.cardview .box{position:absolute;border:2px solid var(--accent);border-radius:2px;pointer-events:none}
+.cardview .box.active{border-color:var(--contested);box-shadow:0 0 0 2px var(--contested-l)}
+.cardview .box .tag{position:absolute;left:-2px;top:-16px;background:var(--accent);color:var(--sel-text);font-size:10px;padding:0 4px;border-radius:2px;white-space:nowrap}
+.cardview .box.active .tag{background:var(--contested)}
+.placeholder{padding:40px 12px;text-align:center;color:var(--muted);background:var(--panel2);border:1px dashed var(--rule);border-radius:8px}
+
+/* ---- drop zone: app/widgets.py DropZone + theme.py QFrame#drop ---- */
+.drop{background:var(--panel2);border:2px dashed var(--rule2);border-radius:10px;min-height:74px;padding:10px 12px;text-align:center;cursor:pointer}
+.drop:hover,.drop.armed{border-color:var(--accent);background:var(--accent-l)}
+.drop.chosen{border:2px solid var(--proven);background:var(--proven-l)}
+.drop:focus-visible{outline:none;border-color:var(--accent)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}
+.gallery button{padding:4px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);cursor:grab;text-align:left}
+.gallery button:hover{border-color:var(--accent)}
+.gallery img{width:100%;display:block;border-radius:4px}
+.gallery .fn{font-size:var(--tiny);color:var(--muted);font-family:var(--num);display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.pipe{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.pipe .chip{border:1px solid var(--rule2);border-radius:8px;padding:6px 10px;background:var(--panel);min-width:150px}
+.pipe .chip .t{font-weight:600}
+.pipe .chip .s{font-size:var(--tiny);color:var(--muted)}
+.pipe .chip[data-state="ok"]{border-color:var(--proven);background:var(--proven-l)}
+.pipe .chip[data-state="skip"]{border-color:var(--rule);color:var(--muted)}
+.pipe .chip[data-state="fail"]{border-color:var(--contested);background:var(--contested-l)}
+.pipe .chip[data-state="wait"]{border-style:dashed}
+.pipe .arrow{color:var(--faint)}
+.chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chain .hop{border:1px solid var(--rule2);border-radius:14px;padding:3px 10px;background:var(--panel);font-size:var(--small)}
+.chain .hop[data-hit="1"]{border-color:var(--proven);background:var(--proven-l);color:var(--proven);font-weight:600}
+.chain .hop[data-hit="many"]{border-color:var(--attention);background:var(--attention-l);color:var(--attention)}
+.chain .hop[data-hit="0"]{color:var(--muted)}
+.chain .hop[data-hit="skip"]{color:var(--faint);border-style:dashed}
+
+.statusbar{display:flex;gap:10px;align-items:center;background:var(--panel2);border-top:1px solid var(--rule);color:var(--muted);padding:4px 10px;font-size:var(--tiny)}
+.statusbar .btn{padding:3px 9px;font-size:var(--small)}
+.simfooter{text-align:center;padding:8px;font-size:var(--small);color:var(--muted);background:var(--paper)}
+
+/* ---- the guided tour panel ---- */
+.tour{position:fixed;right:12px;bottom:56px;width:340px;max-width:calc(100vw - 24px);background:var(--panel);border:1px solid var(--rule2);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px 14px;z-index:50}
+.tour[hidden]{display:none}
+.tour ol{margin:8px 0;padding-left:20px;max-height:220px;overflow:auto}
+.tour li{padding:3px 0;cursor:pointer;color:var(--ink2)}
+.tour li[aria-current="step"]{color:var(--accent-d);font-weight:600}
+.tour li:hover{text-decoration:underline}
+.tour .body{background:var(--panel2);border-radius:8px;padding:8px 10px;margin:8px 0;min-height:54px}
+.tour-highlight{outline:3px solid var(--escalate)!important;outline-offset:3px;border-radius:6px;transition:outline-color .2s}
+
+/* ---- modal, standing in for QMessageBox ---- */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--rule2);border-radius:10px;padding:16px 18px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal h3{margin:0 0 8px;font-size:15px}
+.modal p{white-space:pre-wrap;margin:0 0 14px;color:var(--ink2)}
+.modal .row{justify-content:flex-end}
+
+.cell-edit{width:100%;padding:3px 6px;border:1px solid var(--accent);border-radius:4px;background:var(--panel)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px}
+.kv .k{color:var(--muted);font-family:var(--num);font-size:var(--small)}
+.kv .v{font-family:var(--num);font-size:var(--small)}
+code,.mono{font-family:var(--num);font-size:var(--small)}
+.sr-only{position:absolute;left:-9999px}
+
+@media (max-width:820px){
+  .split,.split.review,.beside{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .form{grid-template-columns:1fr}
+  .rail-header{display:none}
+  .top{padding:0}
+  main{padding-right:0}
+  .notice{margin-right:0}
+  .tour{right:8px;left:8px;width:auto;bottom:52px}
+}
+@media (max-width:420px){
+  .step{flex-basis:100px;padding:5px 8px}
+  .step .detail{display:none}
+  .btn{padding:7px 10px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <nav id="rail" class="rail" aria-label="Steps"></nav>
+    <div id="railHeader" class="rail-header">No batch selected</div>
+  </header>
+  <div class="divider"></div>
+  <div id="notice" class="notice" hidden role="status"></div>
+  <main id="stack">
+    <section id="screen-setup" class="screen" aria-labelledby="t-setup"></section>
+    <section id="screen-extract" class="screen"></section>
+    <section id="screen-check" class="screen"></section>
+    <section id="screen-compare" class="screen"></section>
+    <section id="screen-export" class="screen"></section>
+    <section id="screen-single" class="screen"></section>
+    <section id="screen-history" class="screen"></section>
+    <section id="screen-settings" class="screen"></section>
+  </main>
+  <footer class="statusbar">
+    <span id="statusLabel" aria-live="polite">Ready</span>
+    <span class="spacer"></span>
+    <button id="tourToggle" class="btn ghost" aria-expanded="false" aria-controls="tour">Guided tour</button>
+    <button id="themeToggle" class="btn ghost" title="Switch to the dark theme. Remembered for next time.">☾  Dark</button>
+    <span class="hint">v0.6.9</span>
+  </footer>
+  <div class="simfooter">Simulation with invented data. The production system is private.</div>
+</div>
+<aside id="tour" class="tour" hidden aria-label="Guided tour"></aside>
+<div id="modalHost"></div>
+<script>
+
+/* =====================================================================
+   1. Utilities
+   ===================================================================== */
+// One seeded random source, so the invented data is identical on every load.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rand = mulberry32(20260930);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad2 = n => String(n).padStart(2,'0');
+const pct = s => Math.round(s*100)+'%';                 // f"{score:.0%}"
+const $ = (sel,root)=> (root||document).querySelector(sel);
+const $$ = (sel,root)=> Array.from((root||document).querySelectorAll(sel));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function plural(n, one, many){ return n===1 ? one : (many||one+'s'); }
+
+function lev(a,b){ if(a===b)return 0; const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
+  let prev=Array.from({length:n+1},(_,i)=>i), cur=new Array(n+1);
+  for(let i=1;i<=m;i++){cur[0]=i;for(let j=1;j<=n;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));}[prev,cur]=[cur,prev];}
+  return prev[n]; }
+function ratio(a,b){ if(!a.length&&!b.length) return 100; return 100*(1-lev(a,b)/Math.max(a.length,b.length)); }
+// A close stand-in for rapidfuzz.fuzz.token_set_ratio, which src/compare.py uses.
+function tokenSetRatio(a,b){
+  const A=new Set(a.split(' ').filter(Boolean)), B=new Set(b.split(' ').filter(Boolean));
+  const inter=[...A].filter(x=>B.has(x)).sort(), da=[...A].filter(x=>!B.has(x)).sort(), db=[...B].filter(x=>!A.has(x)).sort();
+  const t0=inter.join(' '), t1=(t0+' '+da.join(' ')).trim(), t2=(t0+' '+db.join(' ')).trim();
+  if(t0 && (!da.length || !db.length)) return 100;
+  return Math.max(ratio(t0,t1), ratio(t0,t2), ratio(t1,t2));
+}
+
+/* =====================================================================
+   2. Normalisation — ported from src/normalize.py
+   ===================================================================== */
+const BN_DIGITS = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
+const toBnDigits = s => String(s).replace(/[0-9]/g, d => '০১২৩৪৫৬৭৮৯'[+d]);
+function clean(v){ if(v==null) return ''; let t=String(v).normalize('NFC'); t=t.replace(/[০-৯]/g,d=>BN_DIGITS[d]); t=t.replace(/[​‌‍]/g,''); return t.replace(/\s+/g,' ').trim(); }
+// src/normalize.py LEADING_HONORIFICS_EN / _BN / TRAILING_OPTIONAL
+const LEADING_EN = ["md","md.","mohammad","mohammed","muhammad","mohd","mohd.","mst","mst.","most","most.","mosammat","mosa","mosa.","musammat","mr","mr.","mrs","mrs.","miss","sri","srimati","shri"];
+const LEADING_BN = ["মোঃ","মো.","মো:","মোহাম্মদ","মুহাম্মদ","মুহম্মদ","মোসাঃ","মোসা.","মোসা:","মোসাম্মৎ","মুসাম্মৎ","শ্রী","শ্রীমতি","শ্রীমতী"];
+const TRAILING_OPTIONAL = ["begum","khatun","বেগম","খাতুন"];
+const PUNCT = /[.,;:'"`‘’“”\-_/\\()\[\]]+/g;
+const rstripSep = s => s.replace(/[.:]+$/,'');
+function canonName(v, bangla){ let t=clean(v); if(!t) return ''; t=t.replace(PUNCT,' ').replace(/\s+/g,' ').trim(); if(!bangla) t=t.toLowerCase();
+  const hon=new Set((bangla?LEADING_BN:LEADING_EN).map(rstripSep)); const toks=t.split(' ');
+  while(toks.length && hon.has(rstripSep(toks[0]))) toks.shift(); return toks.join(' '); }
+function nameVariants(v, bangla){ const base=canonName(v,bangla); if(!base) return new Set(); const out=new Set([base]); const toks=base.split(' ');
+  if(toks.length>1 && TRAILING_OPTIONAL.includes(toks[toks.length-1])) out.add(toks.slice(0,-1).join(' '));
+  out.add([...toks].sort().join(' ')); return out; }
+const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const MONTH_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function mkDate(y,m,d){ const dt=new Date(Date.UTC(y,m-1,d)); if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d) return null; return {y,m,d,iso:`${y}-${pad2(m)}-${pad2(d)}`}; }
+// _DATE_FORMATS in src/normalize.py: day-first tried before month-first.
+function parseDate(v){ const t=clean(v); if(!t) return null; let m;
+  if((m=t.match(/^(\d{1,2})[ \-\/]([A-Za-z]+)[ \-\/](\d{4})$/))){ const mo=MONTHS[m[2].slice(0,3).toLowerCase()]; if(mo) return mkDate(+m[3],mo,+m[1]); return null; }
+  if((m=t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/))) return mkDate(+m[1],+m[2],+m[3]);
+  if((m=t.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/))){ return mkDate(+m[3],+m[2],+m[1]) || (m[0].includes('/') ? mkDate(+m[3],+m[1],+m[2]) : null); }
+  return null; }
+const isoDate = v => { const d=parseDate(v); return d?d.iso:''; };
+function dateIsAmbiguous(v){ const m=clean(v).match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})$/); return !!m && +m[1]<=12 && +m[2]<=12; }
+function fmtDate(iso){ const d=parseDate(iso); return d ? `${pad2(d.d)} ${MONTH_ABBR[d.m-1]} ${d.y}` : ''; }   // the NID barcode form
+function canonNid(v){ const d=clean(v).replace(/\D/g,''); return [10,13,17].includes(d.length)?d:''; }
+function nidEquivalent(a,b){ const x=canonNid(a),y=canonNid(b); if(!x||!y) return false; if(x===y) return true;
+  if(x.length===17&&y.length===13) return x.slice(4)===y; if(y.length===17&&x.length===13) return y.slice(4)===x; return false; }
+function nidBirthYear(v){ const d=canonNid(v); if(d.length!==17) return null; const y=+d.slice(0,4); return (y>=1900&&y<=new Date().getFullYear())?y:null; }
+function nidYearMatchesDob(nid,dob){ const y=nidBirthYear(nid), p=parseDate(dob); if(y==null||!p) return null; return y===p.y; }
+function normaliseField(f,v){ switch(f){ case 'nid_old': case 'nid_smart': return canonNid(v); case 'dob': return isoDate(v);
+  case 'name_en': return canonName(v,false); case 'name_bn': case 'father_bn': case 'mother_bn': return canonName(v,true); default: return clean(v);} }
+const STORE_CANONICAL = new Set(['nid_old','nid_smart','dob']);
+function normaliseForStorage(f,v){ return STORE_CANONICAL.has(f) ? normaliseField(f,v) : clean(v); }
+function nameSimilarity(doc, erp, bangla){ const dv=nameVariants(doc,bangla), ev=nameVariants(erp,bangla); if(!dv.size||!ev.size) return 0;
+  let best=0; for(const d of dv) for(const e of ev) best=Math.max(best,tokenSetRatio(d,e)); return best/100; }
+
+/* =====================================================================
+   3. Field vocabulary — src/db.py, src/fields.py, config.yaml
+   ===================================================================== */
+// src/db.py KYC_FIELDS / BACK_FIELDS / ADDRESS_PARTS / ALL_FIELDS
+const KYC_FIELDS=['nid_old','nid_smart','name_en','name_bn','father_bn','mother_bn','dob','address_bn'];
+const BACK_FIELDS=['place_of_birth','blood_group','issue_date'];
+const ADDRESS_PARTS=['postcode','post_office','upazila','district'];
+const ALL_FIELDS=[...KYC_FIELDS,...BACK_FIELDS,...ADDRESS_PARTS];
+// src/fields.py LABELS
+const LABELS={nid_old:'NID number (old)',nid_smart:'NID number',name_en:'Name (English)',name_bn:'Name (Bangla)',father_bn:"Father's name",mother_bn:"Mother's name",dob:'Date of birth',address_bn:'Address',place_of_birth:'Place of birth',blood_group:'Blood group',issue_date:'Issue date'};
+const label = f => LABELS[f] || (f.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()));
+// src/fields.py DISPLAY_ORDER, BANGLA_FIELDS, MONO_FIELDS, HIGH, MEDIUM
+const DISPLAY_ORDER=['name_bn','name_en','nid_smart','nid_old','dob','blood_group','issue_date','place_of_birth','father_bn','mother_bn','address_bn','postcode','post_office','upazila','district'];
+const BANGLA_FIELDS=new Set(['name_bn','father_bn','mother_bn','address_bn','post_office','upazila','district']);
+const MONO_FIELDS=new Set(['nid_old','nid_smart','dob','postcode','issue_date']);
+const HIGH=0.90, MEDIUM=0.60, NEEDS_A_PERSON=HIGH;
+function inDisplayOrder(names){ const w=[...names]; return [...DISPLAY_ORDER.filter(f=>w.includes(f)), ...w.filter(f=>!DISPLAY_ORDER.includes(f))]; }
+const face = f => BANGLA_FIELDS.has(f)?'bn':(MONO_FIELDS.has(f)?'num':'');
+function band(c){ if(c==null) return 'none'; if(c>=HIGH) return 'high'; if(c>=MEDIUM) return 'medium'; return 'low'; }
+const proven = src => /mrz|barcode/.test(src||'');           // src/fields.py proven()
+// src/fields.py describe_band
+function describeBand(c){ return {high:`At or above the ${pct(HIGH)} auto-apply threshold.`,medium:'Readable but below the threshold, so a human confirms it.',low:'Weak read. Check it against the image before trusting it.',none:'Not read from this document.'}[band(c)]; }
+
+// config.yaml → compare:
+const COMPARE_CFG={fields:{
+  nid_old:{comparator:'nid',threshold:1.00,auto_fix:false,weight:3},
+  nid_smart:{comparator:'nid',threshold:1.00,auto_fix:false,weight:3},
+  dob:{comparator:'date',threshold:1.00,auto_fix:true,weight:2},
+  name_en:{comparator:'name_en',threshold:0.92,auto_fix:true,weight:2},
+  name_bn:{comparator:'name_bn',threshold:0.90,auto_fix:true,weight:2},
+  father_bn:{comparator:'name_bn',threshold:0.88,auto_fix:true,weight:1},
+  mother_bn:{comparator:'name_bn',threshold:0.88,auto_fix:true,weight:1},
+  address_bn:{comparator:'name_bn',threshold:0.85,auto_fix:false,weight:1}},
+  escalate:{name_similarity_below:0.60,and_dob_differs:true}, min_confidence_for_auto:0.90};
+// config.yaml → batch / extract / erp / apply (shown read-only on the Settings screen)
+const CONFIG={
+  run:{database:'data/engine.db',raw_dir:'data/raw/{scope_code}',export_dir:'data/exports/{scope_code}'},
+  scope:{levels:['division','region','area','branch'],level:'branch',source:['folder_path','manifest'],folder_pattern:'{region}/{area}/{branch}'},
+  batch:{size:400,minimum:25,maximum:2500,presets:{pilot:50,standard:400,overnight:2000},stop_on_consecutive_errors:5},
+  extract:{member_id_strategy:['filename_regex','parent_folder','manifest'],filename_regex:'(?P<member_id>\\d{6,12})',engines:['barcode','mrz','vision'],
+    barcode:{formats:['PDF417','QRCode','DataMatrix'],variants:['original','gray','upscale2x','clahe','sharpen']},document_timeout_seconds:900,workers:1,
+    vision:{backend:'surya',languages:['bn','en'],gpu:false,dual_pass:false,skip_title:true,rescue_small_text:true,endpoint:'http://127.0.0.1:8000/v1',model:'Qwen/Qwen2.5-VL-7B-Instruct-AWQ',max_retries:2}},
+  erp:{base_url:'',login_path:'/login',headless:true,slow_mo_ms:0,nav_timeout_ms:30000,delay_between_members_ms:800,max_retries_per_member:2,relogin_on_session_loss:true,screenshot_on_error:true,
+    selectors:['username','password','submit','member_search_input','member_search_submit','search_results_row','search_result_member_id','search_result_name','search_result_branch',
+      'kyc_read.name_en','kyc_read.name_bn','kyc_read.father_bn','kyc_read.mother_bn','kyc_read.dob','kyc_read.nid_old','kyc_read.nid_smart','kyc_read.address_bn',
+      'kyc_write.name_en','kyc_write.name_bn','kyc_write.father_bn','kyc_write.mother_bn','kyc_write.dob','kyc_write.nid_old','kyc_write.nid_smart','edit_button','save_button','save_confirmation']},
+  apply:{enabled:false,dry_run:true,require_approval:true,max_updates_per_run:250,abort_after_consecutive_failures:5,screenshot_before_after:true,writable_fields:['name_en','name_bn','father_bn','mother_bn','dob']}
+};
+
+// src/compare.py VERDICT_SEVERITY / NO_ACTION_VERDICTS / VERDICT_TOKENS
+const VERDICT_SEVERITY={match:0,format_only:1,missing_doc:2,missing_erp:3,low_confidence:4,mismatch:5,escalate:6};
+const NO_ACTION_VERDICTS=new Set(['match','missing_doc']);
+const VERDICT_TOKENS={match:'proven',format_only:'muted',missing_doc:'muted',missing_erp:'attention',low_confidence:'attention',mismatch:'contested',escalate:'escalate'};
+// app/results_screen.py SOURCE_LABEL, CROSS_CHECK_NOTE, MISSING_SIDE_COSTS
+const SOURCE_LABEL={barcode:'barcode',ocr:'OCR',mrz:'MRZ verified','barcode+ocr':'barcode + OCR','mrz+ocr':'MRZ + OCR',corrected:'you corrected this'};
+const CROSS_CHECK_NOTE={
+  agree:['ok','The machine-readable source and the printed text agree on every shared field, so the OCR-only values are more trustworthy too.'],
+  disagree:['bad','The machine-readable source and the printed text DISAGREE. Treat every field on this card as unverified.'],
+  barcode_only:['ok',"Read from the barcode, which is exact. The parents' names are on the front and need OCR."],
+  mrz_only:['ok',"Read from the machine-readable zone, with every check digit passing. The parents' names are on the front and need OCR."],
+  ocr_only:['warn','Read from the printed text only — nothing corroborates it, so confirm against the image.'],
+  mixed:['info','Read from more than one source; see the per-field column.'],
+  none:['warn','Nothing could be read from this document.']};
+const MISSING_SIDE_COSTS={
+  front_only:'The back is missing, which is where the address, postcode and the machine-readable zone are — so those rows are empty, and nothing corroborates the NID.',
+  back_only:"The front is missing, which is where the name, the parents' names and the photograph are — so those rows are empty."};
+// app/inspect_screen.py SOURCE_LABEL
+const INSPECT_SOURCE_LABEL={barcode:'barcode (exact)',mrz:'MRZ (check digits pass)','mrz+ocr':'MRZ, agreed by OCR','barcode+ocr':'barcode, agreed by OCR',ocr:'OCR only'};
+// src/pipeline/stages.py constants
+const CONFLICT_VOTE_FLOOR=0.35, CORROBORATION_BONUS=0.15, CORROBORATION_CEILING=0.95, DISPUTED_CEILING=0.55;
+const PROVABLE_BY_MRZ=['nid_old','nid_smart','dob','name_en'], UNCORROBORATED_CEILING=0.85;
+// src/grouping.py
+const VERIFIED_SOURCES=new Set(['mrz','barcode','mrz+ocr','barcode+ocr']), MAX_NID_EDITS=2;
+// src/db.py HUMAN_SOURCE / HUMAN_CONFIDENCE
+const HUMAN_SOURCE='corrected', HUMAN_CONFIDENCE=1.0;
+// src/pipeline/runner.py STAGES
+const STAGES=['fetch','extract','group','resolve','erp_read','compare'];
+
+/* =====================================================================
+   4. Compare — ported from src/compare.py
+   ===================================================================== */
+function simDate(doc,erp){ const a=parseDate(doc),b=parseDate(erp); if(!a||!b) return 0; if(a.iso===b.iso) return 1; if(a.d===b.m&&a.m===b.d&&a.y===b.y) return 0.5; return 0; }
+const COMPARATORS={exact:(d,e)=>d===e?1:0, nid:(d,e)=>nidEquivalent(d,e)?1:0, date:simDate, name_en:(d,e)=>nameSimilarity(d,e,false), name_bn:(d,e)=>nameSimilarity(d,e,true)};
+function compareField(field, docRaw, erpRaw, rule, confidence, minConf){
+  const doc=normaliseField(field,docRaw), erp=normaliseField(field,erpRaw);
+  const R=(verdict,decision,sim,proposed,note)=>({field,doc_value:docRaw,erp_value:erpRaw,similarity:sim,verdict,decision,proposed:proposed==null?null:proposed,note:note||''});
+  if(!doc&&!erp) return R('match','auto_ok',1,null,'both blank');
+  if(!doc) return R('missing_doc','auto_ok',0,null,'not present on the document');
+  if(!erp) return R('missing_erp','pending',0,docRaw,'ERP field is blank');
+  const sim=COMPARATORS[rule.comparator||'exact'](doc,erp), threshold=rule.threshold==null?1:rule.threshold;
+  if(confidence!=null && confidence<minConf) return R('low_confidence','pending',sim,docRaw,`extraction confidence ${confidence.toFixed(2)}`);
+  if(sim>=threshold){
+    if(doc===erp && String(docRaw||'').trim()===String(erpRaw||'').trim()) return R('match','auto_ok',sim);
+    if(rule.auto_fix) return R('format_only','auto_fix',sim,docRaw,'formatting only');
+    return R('format_only','auto_ok',sim,null,'formatting only');
+  }
+  let note='';
+  if(field==='dob'){ if(sim===0.5) note='day/month appear transposed'; else if(dateIsAmbiguous(docRaw)||dateIsAmbiguous(erpRaw)) note='ambiguous date format -- do not auto-apply'; }
+  return R('mismatch','pending',sim,docRaw,note);
+}
+function compareMember(memberId, docRecord, erpRecord, cfg, confidence){
+  confidence=confidence||{}; const minConf=cfg.min_confidence_for_auto==null?0.9:cfg.min_confidence_for_auto;
+  const result={member_id:memberId,fields:[],flags:[]};
+  for(const [name,rule] of Object.entries(cfg.fields)) result.fields.push(compareField(name,docRecord[name],erpRecord[name],rule,confidence[name],minConf));
+  // _apply_cross_field_checks
+  const by={}; result.fields.forEach(f=>by[f.field]=f);
+  for(const [side,rec] of [['document',docRecord],['erp',erpRecord]]){
+    if(nidYearMatchesDob(rec.nid_old,rec.dob)===false){
+      result.flags.push(`${side}: NID year prefix disagrees with date of birth`);
+      for(const n of ['nid_old','dob']) if(by[n]&&by[n].decision!=='pending'){ by[n].decision='pending'; by[n].note=(by[n].note?by[n].note+'; ':'')+'NID year/DOB conflict'; }
+    }
+  }
+  const esc_=cfg.escalate||{}; const floor=esc_.name_similarity_below==null?0.6:esc_.name_similarity_below;
+  const nidMatches=['nid_old','nid_smart'].some(n=>by[n]&&['match','format_only'].includes(by[n].verdict));
+  const nameSims=['name_en','name_bn'].filter(n=>by[n]&&!['missing_doc','missing_erp'].includes(by[n].verdict)).map(n=>by[n].similarity);
+  const dobDiffers=by.dob&&['mismatch','low_confidence'].includes(by.dob.verdict);
+  if(nidMatches&&nameSims.length&&Math.max(...nameSims)<floor && (dobDiffers || esc_.and_dob_differs===false)){
+    result.flags.push('NID matches but name and date of birth diverge -- possible wrong person or shared NID');
+    for(const f of result.fields) if(!NO_ACTION_VERDICTS.has(f.verdict)){ f.verdict='escalate'; f.decision='pending'; f.proposed=null; }
+  }
+  result.headline=result.fields.reduce((h,f)=>VERDICT_SEVERITY[f.verdict]>VERDICT_SEVERITY[h]?f.verdict:h,'match');
+  result.needs_review=result.fields.some(f=>f.decision==='pending');
+  return result;
+}
+
+/* =====================================================================
+   5. MRZ arithmetic — src/extractors/mrz.py (ICAO 9303 TD1)
+   ===================================================================== */
+function checkDigit(s){ const W=[7,3,1]; let t=0; for(let i=0;i<s.length;i++){const c=s[i]; let d; if(c>='0'&&c<='9') d=+c; else if(c>='A'&&c<='Z') d=c.charCodeAt(0)-55; else if(c==='<') d=0; else return '?'; t+=d*W[i%3];} return String(t%10); }
+const yymmdd = iso => { const d=parseDate(iso); return String(d.y).slice(2)+pad2(d.m)+pad2(d.d); };
+function mrzLines(m, opts){ // opts.breakExpiry: one misread digit in the expiry check, so 2 of 3 checks pass
+  const main=m.nid_smart.slice(0,9), extra=m.nid_smart.slice(9);
+  const optional=(extra+checkDigit(main+extra)).padEnd(15,'<');
+  const l1=('I<BGD'+main+'<'+optional).padEnd(30,'<').slice(0,30);
+  const b=yymmdd(m.dob), e=yymmdd(m.expiry); let ec=checkDigit(e); if(opts&&opts.breakExpiry) ec=String((+ec+1)%10);
+  let l2=(b+checkDigit(b)+m.sex+e+ec+'BGD').padEnd(29,'<'); l2+=checkDigit(l1.slice(5)+l2.slice(0,7)+l2.slice(8,15)+l2.slice(18,29));
+  const parts=m.name_en.toUpperCase().split(' '); const surname=parts[parts.length-1], given=parts.slice(0,-1).join('<');
+  const l3=(surname+'<<'+given).padEnd(30,'<').slice(0,30);
+  return [l1,l2,l3];
+}
+// mrz.parse, reduced to what the replica needs: document number, dob, name, and the three checks.
+function mrzParse(lines){
+  const [l1,l2,l3]=lines; const docMain=l1.slice(5,14), optional=l1.slice(15,30); let document, checkOk;
+  if(l1[14]==='<'){ const tail=optional.replace(/<+$/,''); const extra=tail.slice(0,-1), digit=tail.slice(-1); document=docMain.replace(/<+$/,'')+extra; checkOk=checkDigit(docMain+extra)===digit; }
+  else { document=docMain.replace(/<+$/,''); checkOk=checkDigit(docMain)===l1[14]; }
+  const birth=l2.slice(0,6), expiry=l2.slice(8,14);
+  const yy=+birth.slice(0,2); const year=yy<=30?2000+yy:1900+yy; const dob=mkDate(year,+birth.slice(2,4),+birth.slice(4));
+  const [sur,,giv]=l3.split(/(<<)/); const surname=sur.replace(/</g,' ').trim(), given=(giv||'').replace(/</g,' ').trim();
+  const checks={document:checkOk,dob:checkDigit(birth)===l2[6],expiry:checkDigit(expiry)===l2[14]};
+  const passed=Object.values(checks).filter(Boolean).length;
+  return {ok:!!document&&!!dob,fields:{document_number:document,dob:dob?dob.iso:'',name_en:[given,surname].filter(Boolean).join(' ')},checks,lines,confidence:passed/3};
+}
+
+
+/* =====================================================================
+   6. Invented people, cards and ERP rows.
+   Every name, number, date and address below is invented. NID numbers
+   are deliberately patterned (repeated zeros) so none can be mistaken
+   for a real one. Nothing here is a real person or a real card.
+   ===================================================================== */
+const ADDR={
+  savar:{house:'২৩',village:'নামাবাজার',post_office:'সাভার',postcode:'1340',upazila:'সাভার',district:'ঢাকা'},
+  gazipur:{house:'৭',village:'পূর্বপাড়া',post_office:'গাজীপুর',postcode:'1700',upazila:'গাজীপুর সদর',district:'গাজীপুর'},
+  cumilla:{house:'১১২',village:'পশ্চিম বাজার',post_office:'কুমিল্লা',postcode:'3500',upazila:'কুমিল্লা আদর্শ সদর',district:'কুমিল্লা'},
+  tangail:{house:'৪',village:'কলেজ পাড়া',post_office:'টাঙ্গাইল',postcode:'1900',upazila:'টাঙ্গাইল সদর',district:'টাঙ্গাইল'},
+};
+const addressText = a => `ঠিকানা: বাসা/হোল্ডিং: ${a.house}, গ্রাম/রাস্তা: ${a.village}, ডাকঘর: ${a.post_office} - ${toBnDigits(a.postcode)}, ${a.upazila}, ${a.district}`;
+
+// The nine invented members. `scenario` drives what the simulated engines
+// do with each card, so every outcome the real pipeline can produce is on
+// screen at least once.
+const MEMBERS=[
+ {key:'A',card:'smart',name_bn:'রফিকুল ইসলাম',name_en:'RAFIQUL ISLAM',father_bn:'আবুল কালাম',mother_bn:'হাসিনা বানু',dob:'1985-07-12',nid_smart:'6100000101',nid_old:'',addr:ADDR.savar,blood:'B+',pob:'ঢাকা',issue:'2019-02-10',expiry:'2029-02-10',sex:'M',
+  sides:['front','back'],scenario:{barcodeVariant:'gray',backOcrReadsNid:true,front:{name_bn:.94,name_en:.97,father_bn:.91,mother_bn:.93,dob:.96,nid:.98}}},
+ {key:'B',card:'laminated13',name_bn:'সালমা খাতুন',name_en:'SALMA KHATUN',father_bn:'জয়নাল আবেদীন',mother_bn:'রাবেয়া বেগম',dob:'1988-03-05',nid_smart:'',nid_old:'2610000000102',addr:ADDR.gazipur,blood:'O+',pob:'গাজীপুর',issue:'2011-08-22',sex:'F',
+  sides:['front','back'],scenario:{barcodeVariant:'original',front:{name_bn:.90,name_en:.95,father_bn:.88,mother_bn:.86,dob:.62,nid:.93,dobMisread:'05 Mar 1983'}}},
+ {key:'C',card:'smart',name_bn:'আব্দুল করিম',name_en:'ABDUL KARIM',father_bn:'মোঃ ইউনুস আলী',mother_bn:'জাহানারা বেগম',dob:'1979-11-20',nid_smart:'6100000103',nid_old:'',addr:ADDR.cumilla,blood:'A+',pob:'কুমিল্লা',issue:'2020-05-14',expiry:'2030-05-14',sex:'M',
+  sides:['front','back'],scenario:{barcodeVariant:null,mrz:'pass',districtMisread:'কামল',front:{name_bn:.93,name_en:.95,father_bn:.72,mother_bn:.90,dob:.94,nid:.97}}},
+ {key:'D',card:'laminated17',name_bn:'নাসরিন আক্তার',name_en:'NASRIN AKTER',father_bn:'শফিকুল ইসলাম',mother_bn:'মমতাজ বেগম',dob:'1986-01-30',nid_smart:'',nid_old:'19852610000000104',addr:ADDR.savar,blood:'AB+',pob:'ঢাকা',issue:'2012-03-03',sex:'F',
+  sides:['front'],scenario:{front:{name_bn:.92,name_en:.95,father_bn:.71,mother_bn:.89,dob:.93,nid:.97}}},
+ {key:'E',card:'laminated13',name_bn:'জাহিদ হাসান',name_en:'ZAHID HASAN',father_bn:'আব্দুর রশিদ',mother_bn:'ফিরোজা বেগম',dob:'1992-09-15',nid_smart:'',nid_old:'2610000000105',addr:ADDR.tangail,blood:'B-',pob:'টাঙ্গাইল',issue:'2013-11-19',sex:'M',
+  sides:['front','back'],scenario:{barcodeVariant:'upscale2x',front:{name_bn:.91,name_en:.96,father_bn:.90,mother_bn:.92,dob:.95,nid:.31,nidMisread:'2610000000185'}}},
+ {key:'F',card:'smart',name_bn:'শাহানা পারভীন',name_en:'SHAHANA PARVIN',father_bn:'আলতাফ হোসেন',mother_bn:'কুলসুম বিবি',dob:'1975-04-02',nid_smart:'6100000106',nid_old:'',addr:ADDR.gazipur,blood:'O-',pob:'গাজীপুর',issue:'2018-09-01',expiry:'2028-09-01',sex:'F',
+  sides:['back'],scenario:{barcodeVariant:'original',mrz:'pass'}},
+ {key:'G',card:'smart',name_bn:'মিজানুর রহমান',name_en:'MIZANUR RAHMAN',father_bn:'আব্দুল মান্নান',mother_bn:'সুফিয়া খাতুন',dob:'1981-06-08',nid_smart:'6100000107',nid_old:'',addr:ADDR.savar,blood:'A-',pob:'ঢাকা',issue:'2017-12-12',expiry:'2027-12-12',sex:'M',
+  sides:['front','back'],scenario:{barcodeVariant:'clahe',mrz:'pass',front:{name_bn:.95,name_en:.97,father_bn:.92,mother_bn:.91,dob:.96,nid:.98}}},
+ {key:'H',card:'laminated13',name_bn:'রোকেয়া বেগম',name_en:'ROKEYA BEGUM',father_bn:'হাবিবুর রহমান',mother_bn:'আনোয়ারা বেগম',dob:'1970-02-25',nid_smart:'',nid_old:'2610000000108',addr:ADDR.tangail,blood:'B+',pob:'টাঙ্গাইল',issue:'2010-06-30',sex:'F',
+  sides:['front'],scenario:{smudgedNid:true,front:{name_bn:.87,name_en:.94,father_bn:.82,mother_bn:.79,dob:.92}}},
+ {key:'I',card:'smart',name_bn:'তানভীর আহমেদ',name_en:'TANVIR AHMED',father_bn:'সিরাজুল হক',mother_bn:'রোজিনা আক্তার',dob:'1995-10-03',nid_smart:'6100000109',nid_old:'',addr:ADDR.cumilla,blood:'O+',pob:'কুমিল্লা',issue:'2021-01-20',expiry:'2031-01-20',sex:'M',
+  sides:['front','back'],scenario:{barcodeVariant:null,mrz:'expiryFails',front:{name_bn:.93,name_en:.96,father_bn:.90,mother_bn:.88,dob:.95,nid:.96}}},
+];
+const M = Object.fromEntries(MEMBERS.map(m=>[m.key,m]));
+
+// The ERP export (invented). Columns follow src/db.py erp_kyc.
+function erpRow(id,m,over){ return Object.assign({member_id:id,member_name:m.name_en,branch_code:'DHK-07',nid_old:m.nid_old,nid_smart:m.nid_smart,name_en:m.name_en,name_bn:m.name_bn,father_bn:m.father_bn,mother_bn:m.mother_bn,dob:m.dob,address_bn:addressText(m.addr)},over||{}); }
+const ERP=[
+  erpRow('MB-2201',M.A),
+  erpRow('MB-2202',M.B,{name_en:'MOST. SALMA KHATUN',name_bn:'মোসাঃ সালমা খাতুন',mother_bn:'',dob:'05/03/1988'}),
+  erpRow('MB-2203',M.C,{nid_smart:'6100000130'}),                 // the ERP holds the wrong NID
+  erpRow('MB-2204',M.D),
+  erpRow('MB-2205',M.E,{address_bn:addressText(ADDR.savar)}),      // the member has moved
+  erpRow('MB-2206',M.F),
+  erpRow('MB-2207',M.F,{member_name:'SHAHANA PERVIN',name_en:'SHAHANA PERVIN',branch_code:'DHK-03',dob:'1976-04-02'}),  // a second row carrying the same NID
+  erpRow('MB-2208',M.G,{member_name:'KAMRUL HASAN',name_en:'KAMRUL HASAN',name_bn:'কামরুল হাসান',father_bn:'নূর মোহাম্মদ',mother_bn:'জোবেদা খাতুন',dob:'1990-12-01'}),  // same NID, different person
+  erpRow('MB-2209',M.H),
+];
+
+// The batch folder, in the order a real folder arrives: sides interleaved.
+const DOC_PLAN=[['A','front'],['C','back'],['B','front'],['A','back'],['E','front'],['G','back'],['D','front'],['B','back'],['F','back'],['C','front'],[null,'blur'],['E','back'],['H','front'],['G','front'],['I','front'],['I','back']];
+
+/* =====================================================================
+   7. Drawing the invented cards with the Canvas API.
+   The layout is NID-like (title, photo, labelled fields, PDF417 strip,
+   MRZ) so the parser's labels from src/extractors/nid_layout.py have
+   something to find. Every card carries a SPECIMEN watermark.
+   ===================================================================== */
+const CW=900, CH=570;
+const BN_FONT='"Noto Sans Bengali","Nirmala UI","Shonar Bangla",sans-serif';
+const EN_FONT='"Segoe UI",Arial,sans-serif';
+const MONO='"OCR B","Cascadia Mono",Consolas,"Courier New",monospace';
+function textBox(ctx,text,x,y,font,color,boxes,key){
+  ctx.font=font; ctx.fillStyle=color; ctx.textBaseline='alphabetic'; ctx.fillText(text,x,y);
+  const w=ctx.measureText(text).width; const size=parseInt(font.match(/(\d+)px/)[1],10);
+  const b=[Math.round(x-3),Math.round(y-size*0.95),Math.round(x+w+3),Math.round(y+size*0.35)];
+  if(boxes&&key) boxes[key]=boxes[key]?[Math.min(boxes[key][0],b[0]),Math.min(boxes[key][1],b[1]),Math.max(boxes[key][2],b[2]),Math.max(boxes[key][3],b[3])]:b;
+  return b;
+}
+function watermark(ctx){ ctx.save(); ctx.translate(CW/2,CH/2); ctx.rotate(-0.35); ctx.font='700 64px '+EN_FONT; ctx.fillStyle='rgba(120,60,60,0.10)'; ctx.textAlign='center'; ctx.fillText('SPECIMEN',0,20); ctx.restore(); }
+function emblem(ctx,x,y,r,c1,c2){ ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=c1; ctx.fill(); ctx.strokeStyle=c2; ctx.lineWidth=3; ctx.stroke();
+  for(let i=0;i<8;i++){ ctx.beginPath(); ctx.ellipse(x,y-r*0.45,r*0.18,r*0.42,i*Math.PI/4,0,Math.PI*2); ctx.fillStyle=c2; ctx.globalAlpha=0.55; ctx.fill(); } ctx.restore(); }
+function photo(ctx,x,y,w,h){ ctx.fillStyle='#d9dde3'; ctx.fillRect(x,y,w,h); ctx.strokeStyle='#9aa3b1'; ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle='#aeb6c2'; ctx.beginPath(); ctx.arc(x+w/2,y+h*0.38,w*0.22,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(x+w/2,y+h*0.95,w*0.40,h*0.36,0,Math.PI,0); ctx.fill(); }
+function pdf417(ctx,x,y,w,h,seed){ const r=mulberry32(seed); ctx.fillStyle='#fff'; ctx.fillRect(x,y,w,h); ctx.fillStyle='#111';
+  const rows=Math.floor(h/6); for(let i=0;i<rows;i++){ let cx=x; ctx.fillRect(x,y+i*6,8,5); cx+=10; while(cx<x+w-14){ const bw=1+Math.floor(r()*4); if(r()<0.5) ctx.fillRect(cx,y+i*6,bw,5); cx+=bw+ (r()<0.3?1:0); } ctx.fillRect(x+w-10,y+i*6,8,5);} }
+function nidGroups(n){ return n.length===10 ? n.replace(/(\d{3})(\d{3})(\d{4})/,'$1 $2 $3') : n; }
+
+function drawFront(m){
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH; const ctx=c.getContext('2d'); const boxes={}, lines=[];
+  const smart=m.card==='smart';
+  const g=ctx.createLinearGradient(0,0,CW,CH);
+  if(smart){ g.addColorStop(0,'#eef5ee'); g.addColorStop(1,'#cfe3d2'); } else { g.addColorStop(0,'#fbf6ea'); g.addColorStop(1,'#efe4c8'); }
+  ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle=smart?'#2e7d4f':'#b23a2a'; ctx.fillRect(0,0,CW,smart?92:80);
+  emblem(ctx,58,smart?46:40,30,'#f4f7f2',smart?'#2e7d4f':'#b23a2a');
+  ctx.textAlign='center';
+  lines.push({text:textAndBox(ctx,'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার',CW/2+30,34,'600 24px '+BN_FONT,'#fff'),conf:0.97});
+  lines.push({text:textAndBox(ctx,"Government of the People's Republic of Bangladesh",CW/2+30,58,'500 16px '+EN_FONT,'#fff'),conf:0.98});
+  lines.push({text:textAndBox(ctx,smart?'National ID Card / জাতীয় পরিচয়পত্র':'জাতীয় পরিচয় পত্র  National ID Card',CW/2+30,smart?84:75,'700 17px '+EN_FONT,'#fff'),conf:0.96});
+  ctx.textAlign='left';
+  photo(ctx,36,120,190,240);
+  if(smart){ ctx.fillStyle='#c9a227'; ctx.fillRect(56,390,150,100); ctx.strokeStyle='#8a6d10'; ctx.lineWidth=2; for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(56,390+i*33);ctx.lineTo(206,390+i*33);ctx.stroke();} ctx.beginPath();ctx.moveTo(131,390);ctx.lineTo(131,490);ctx.stroke(); }
+  const x=260; let y=150; const f=m.scenario.front||{};
+  const rows=[['name_bn','নাম: '+m.name_bn,'600 30px '+BN_FONT,'#1a2a20'],
+              ['name_en','Name: '+m.name_en,'600 24px '+EN_FONT,'#1a2a20'],
+              ['father_bn','পিতা: '+m.father_bn,'500 26px '+BN_FONT,'#2a3a30'],
+              ['mother_bn','মাতা: '+m.mother_bn,'500 26px '+BN_FONT,'#2a3a30'],
+              ['dob','Date of Birth: '+(fmtDate(m.dob)),'500 22px '+EN_FONT,'#2a3a30']];
+  for(const [key,text,font,color] of rows){ textBox(ctx,text,x,y,font,color,boxes,key); lines.push({text:key==='dob'&&f.dobMisread?text.replace(fmtDate(m.dob),f.dobMisread):text,conf:f[key]||0.9,box:boxes[key]}); y+=key==='name_bn'?52:46; }
+  const nid=m.nid_smart||m.nid_old; const nidText='ID NO: '+nidGroups(nid);
+  const nb=textBox(ctx,nidText,x,y+26,'700 30px '+MONO,'#a3232f',boxes,'nid');
+  if(m.scenario.smudgedNid){ ctx.fillStyle='rgba(60,50,40,0.85)'; for(let i=0;i<40;i++){ ctx.beginPath(); ctx.arc(nb[0]+120+rand()*(nb[2]-nb[0]-120),nb[1]+rand()*(nb[3]-nb[1]),6+rand()*10,0,Math.PI*2); ctx.fill(); } lines.push({text:'ID NO: '+nid.slice(0,2)+'▒▒▒ ▒▒▒▒ ▒▒',conf:0.22,box:nb}); }
+  else lines.push({text:f.nidMisread?'ID NO: '+nidGroups(f.nidMisread):nidText,conf:f.nid||0.95,box:nb});
+  ctx.font='12px '+EN_FONT; ctx.fillStyle='#55605a'; ctx.fillText(smart?'Smart card · chip · invented specimen':'Laminated · invented specimen',260,CH-24);
+  watermark(ctx);
+  return {url:c.toDataURL('image/png'),boxes,lines};
+}
+function textAndBox(ctx,text,x,y,font,color){ ctx.font=font; ctx.fillStyle=color; ctx.fillText(text,x,y); return text; }
+
+function drawBack(m){
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH; const ctx=c.getContext('2d'); const boxes={}, lines=[];
+  const smart=m.card==='smart';
+  ctx.fillStyle=smart?'#f2f5f1':'#f8f3e6'; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle=smart?'#2e7d4f':'#b23a2a'; ctx.fillRect(0,0,CW,14);
+  const a=m.addr; let y=54;
+  const addrLines=['ঠিকানা: বাসা/হোল্ডিং: '+a.house+', গ্রাম/রাস্তা: '+a.village, 'ডাকঘর: '+a.post_office+' - '+toBnDigits(a.postcode)+', '+a.upazila+', '+(m.scenario.districtMisread?a.district:a.district)];
+  for(const t of addrLines){ textBox(ctx,t,36,y,'500 24px '+BN_FONT,'#1f2a24',boxes,'address_bn'); lines.push({text:m.scenario.districtMisread?t.replace(a.district,m.scenario.districtMisread):t,conf:0.91,box:boxes.address_bn}); y+=40; }
+  y+=12;
+  textBox(ctx,'রক্তের গ্রুপ / Blood Group: '+m.blood,36,y,'500 21px '+BN_FONT,'#1f2a24',boxes,'blood_group'); lines.push({text:'রক্তের গ্রুপ / Blood Group: '+m.blood,conf:0.90,box:boxes.blood_group});
+  textBox(ctx,'জন্মস্থান / Place of Birth: '+m.pob,470,y,'500 21px '+BN_FONT,'#1f2a24',boxes,'place_of_birth'); lines.push({text:'জন্মস্থান / Place of Birth: '+m.pob,conf:0.92,box:boxes.place_of_birth});
+  y+=40;
+  textBox(ctx,'Issue Date: '+fmtDate(m.issue),36,y,'500 20px '+EN_FONT,'#1f2a24',boxes,'issue_date'); lines.push({text:'Issue Date: '+fmtDate(m.issue),conf:0.95,box:boxes.issue_date});
+  if(m.scenario.backOcrReadsNid){ textBox(ctx,'NID No. '+nidGroups(m.nid_smart),470,y,'600 20px '+MONO,'#1f2a24',boxes,'nid_printed'); lines.push({text:'NID No. '+nidGroups(m.nid_smart),conf:0.93,box:boxes.nid_printed}); }
+  // PDF417 strip: the primary engine's target (src/extractors/barcode.py)
+  const by=smart?290:330; pdf417(ctx,36,by,CW-72,smart?96:150,m.key.charCodeAt(0)*7+3); boxes.barcode=[36,by,CW-36,by+(smart?96:150)];
+  if(smart){ // TD1 MRZ: three lines of thirty, OCR-B (src/extractors/mrz.py)
+    const mrz=mrzLines(m,{breakExpiry:m.scenario.mrz==='expiryFails'}); let my=430;
+    mrz.forEach((l,i)=>{ const b=textBox(ctx,l,36,my,'500 34px '+MONO,'#111',boxes,'mrz'+i); lines.push({text:l,conf:0.91,box:b}); my+=44; });
+    m._mrz=mrz;
+  } else { ctx.font='13px '+EN_FONT; ctx.fillStyle='#55605a'; ctx.fillText('This card type carries no machine-readable zone.',36,CH-60); }
+  ctx.font='12px '+EN_FONT; ctx.fillStyle='#55605a'; ctx.fillText('invented specimen — back',36,CH-24);
+  watermark(ctx);
+  return {url:c.toDataURL('image/png'),boxes,lines};
+}
+function drawBlur(){
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH; const ctx=c.getContext('2d');
+  ctx.fillStyle='#d8d4c6'; ctx.fillRect(0,0,CW,CH);
+  ctx.save(); try{ ctx.filter='blur(18px)'; }catch(e){}
+  ctx.fillStyle='#8a9a86'; ctx.fillRect(0,0,CW,90); ctx.fillStyle='#b8bcc4'; ctx.fillRect(40,120,190,240);
+  ctx.fillStyle='#4a5048'; for(let i=0;i<5;i++) ctx.fillRect(260,150+i*46,300+rand()*200,16);
+  ctx.restore();
+  const img=ctx.getImageData(0,0,CW,CH); for(let i=0;i<img.data.length;i+=4){ const n=(rand()-0.5)*70; img.data[i]+=n; img.data[i+1]+=n; img.data[i+2]+=n; } ctx.putImageData(img,0,0);
+  ctx.font='700 40px '+EN_FONT; ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fillText('out of focus, moved during capture',120,300);
+  watermark(ctx);
+  return {url:c.toDataURL('image/png'),boxes:{},lines:[]};
+}
+
+// Register the batch folder: 16 image files.
+function buildDocuments(){
+  const docs=[]; let n=0;
+  for(const [key,side] of DOC_PLAN){ n++;
+    const file=`DHK-07_${String(n).padStart(4,'0')}.jpg`;
+    if(side==='blur'){ const d=drawBlur(); docs.push({doc_id:n,file:'IMG_2231.jpg',side:'blur',truth:null,...d,status:'pending',registered:false}); continue; }
+    const m=M[key]; const d=side==='front'?drawFront(m):drawBack(m);
+    docs.push({doc_id:n,file,side,truth:m,...d,status:'pending',registered:false});
+  }
+  return docs;
+}
+
+
+/* =====================================================================
+   8. Stage 2 — read_document, simulated. Shape and decision order follow
+   src/pipeline/stages.py read_document(): barcode first, then OCR
+   (vision), then the MRZ, then the cross-check, then the
+   "uncorroborated" hold on identity fields read by OCR alone.
+   ===================================================================== */
+const VARIANTS=CONFIG.extract.barcode.variants;
+function simulateBarcode(doc){
+  const m=doc.truth, sc=m.scenario, attempts=[];
+  if(doc.side!=='back' || !sc.barcodeVariant){
+    for(const v of VARIANTS) attempts.push({variant:v,symbols_found:0});
+    return {ok:false,attempts,error:`no barcode found (tried: ${VARIANTS.join(', ')})`};
+  }
+  for(const v of VARIANTS){ const hit=v===sc.barcodeVariant; attempts.push({variant:v,symbols_found:hit?1:0}); if(hit) break; }
+  const smart=m.card==='smart';
+  // src/extractors/barcode.py parse_payload / to_kyc_fields
+  const card_fields = smart ? {NM:m.name_en,HW:m.nid_smart,BR:fmtDate(m.dob)} : {pin:m.nid_old,name:m.name_en,DOB:fmtDate(m.dob)};
+  const fields = smart ? {nid_smart:m.nid_smart,name_en:m.name_en,dob:fmtDate(m.dob)} : {nid_old:m.nid_old,name_en:m.name_en,dob:fmtDate(m.dob)};
+  return {ok:true,card_type:smart?'smart':'laminated',fields,attempts,variant:sc.barcodeVariant,symbology:'PDF417',card_fields,payload_bytes:smart?1912:214};
+}
+// nid_layout.parse, simulated from the lines drawn on the card.
+function simulateOcr(doc){
+  const m=doc.truth, sc=m.scenario, found={};
+  const lines=doc.lines.map(l=>({text:l.text,confidence:l.conf,bbox:l.box||null}));
+  if(doc.side==='front'){
+    const f=sc.front;
+    found.name_bn={value:m.name_bn,confidence:f.name_bn,bbox:doc.boxes.name_bn,via:'label'};
+    found.name_en={value:m.name_en,confidence:f.name_en,bbox:doc.boxes.name_en,via:'label'};
+    found.father_bn={value:m.father_bn,confidence:f.father_bn,bbox:doc.boxes.father_bn,via:'label'};
+    found.mother_bn={value:m.mother_bn,confidence:f.mother_bn,bbox:doc.boxes.mother_bn,via:'label'};
+    found.dob={value:f.dobMisread||fmtDate(m.dob),confidence:f.dob,bbox:doc.boxes.dob,via:'label'};
+    if(!sc.smudgedNid){ const n=f.nidMisread||m.nid_smart||m.nid_old; found[n.length===10?'nid_smart':'nid_old']={value:n,confidence:f.nid,bbox:doc.boxes.nid,via:'regex'}; }
+    return {ok:true,lines,found,title_skipped:3,side:'front',repairs:[]};
+  }
+  // back: the address block, the strip beside it, and (on a smart card) the MRZ lines
+  const a=m.addr; let addr=addressText(a), conf=0.91; const repairs=[];
+  if(sc.districtMisread){ // src/pipeline/stages.py _repair_address: the postcode settles what no word list can
+    repairs.push({was:sc.districtMisread,now:a.district,from:'postcode'}); conf=Math.min(conf,DISPUTED_CEILING); }
+  found.address_bn={value:addr,confidence:conf,bbox:doc.boxes.address_bn,via:'label'};
+  found.blood_group={value:m.blood,confidence:0.90,bbox:doc.boxes.blood_group,via:'label'};
+  found.place_of_birth={value:m.pob,confidence:0.92,bbox:doc.boxes.place_of_birth,via:'label'};
+  found.issue_date={value:fmtDate(m.issue),confidence:0.95,bbox:doc.boxes.issue_date,via:'label'};
+  found.postcode={value:a.postcode,confidence:conf,bbox:doc.boxes.address_bn,via:'postcode'};
+  found.post_office={value:a.post_office,confidence:conf,bbox:doc.boxes.address_bn,via:'postcode'};
+  found.upazila={value:a.upazila,confidence:conf,bbox:doc.boxes.address_bn,via:'postcode'};
+  found.district={value:a.district,confidence:conf,bbox:doc.boxes.address_bn,via:sc.districtMisread?'postcode':'address'};
+  if(sc.backOcrReadsNid) found.nid_smart={value:m.nid_smart,confidence:0.93,bbox:doc.boxes.nid_printed,via:'regex'};
+  return {ok:true,lines,found,title_skipped:0,side:'back',repairs};
+}
+function readDocument(doc){
+  if(doc.side==='blur') return {ok:false,engine:'none',card_side:'unknown',card_type:'unknown',fields:{},confidence:{},sources:{},boxes:{},ocr_text:[],cross_check:'none',
+    raw:{barcode:{attempts:VARIANTS.map(v=>({variant:v,symbols_found:0}))},ocr:{backend:'surya',lines:0,error:'no text read'},mrz:{lines:[],checks:{},error:'need 3 MRZ lines, got 0'}},
+    error:`barcode: no barcode found (tried: ${VARIANTS.join(', ')}); ocr: no text read`};
+  const fields={},confidence={},sources={},boxes={},raw={},errors=[]; let card_side='unknown',card_type='unknown';
+  // 1. barcode — exact when it decodes
+  const bc=simulateBarcode(doc); raw.barcode={attempts:bc.attempts};
+  if(bc.ok){ card_side='back'; card_type=bc.card_type; Object.assign(raw.barcode,{variant:bc.variant,symbology:bc.symbology,card_fields:bc.card_fields,payload_bytes:bc.payload_bytes});
+    for(const [k,v] of Object.entries(bc.fields)){ fields[k]=v; confidence[k]=1.0; sources[k]='barcode'; boxes[k]=doc.boxes.barcode; } }
+  else errors.push('barcode: '+bc.error);
+  // 2. OCR (vision backend: surya)
+  const ocr=simulateOcr(doc); raw.ocr={backend:'surya',lines:ocr.lines.length,error:'',title_skipped:ocr.title_skipped,skip_title_asked:true};
+  if(ocr.repairs.length) raw.address_repairs=ocr.repairs;
+  const ocrFields=ocr.found;
+  if(Object.keys(ocrFields).length && card_side==='unknown') card_side='front';
+  for(const [k,f] of Object.entries(ocrFields)){ if(k in fields) continue; fields[k]=f.value; confidence[k]=f.confidence; sources[k]='ocr'; if(f.bbox) boxes[k]=f.bbox; }
+  // 3. the machine-readable zone, after the OCR
+  const m=doc.truth;
+  if(doc.side==='back' && m.card==='smart'){
+    const zone=mrzParse(m._mrz||mrzLines(m,{breakExpiry:m.scenario.mrz==='expiryFails'}));
+    raw.mrz={lines:zone.lines,checks:zone.checks,error:'',text_from:'targeted'};
+    if(zone.ok && zone.confidence>=0.66){ card_side='back';
+      const mapped={[zone.fields.document_number.length===10?'nid_smart':'nid_old']:zone.fields.document_number,dob:zone.fields.dob,name_en:zone.fields.name_en};
+      const lineOf={nid_smart:0,nid_old:0,dob:1,name_en:2};   // stages.py MRZ_FIELD_LINE
+      for(const [k,v] of Object.entries(mapped)){ if(!v || (k in fields && sources[k]==='barcode')) continue; fields[k]=v; confidence[k]=zone.confidence; sources[k]='mrz'; boxes[k]=doc.boxes['mrz'+lineOf[k]]; } }
+  } else raw.mrz={lines:[],checks:{},error:'need 3 MRZ lines, got 0',text_from:'targeted'};
+  // 4. cross-check — stages.py _cross_check
+  const exact=new Set(['barcode','mrz']); const shared=Object.keys(sources).filter(k=>exact.has(sources[k]) && k in ocrFields);
+  let cross;
+  if(!shared.length){ const contributors=new Set(Object.values(sources));
+    cross = !contributors.size?'none' : [...contributors].every(s=>s==='barcode')?'barcode_only' : [...contributors].every(s=>s==='mrz')?'mrz_only' : [...contributors].every(s=>s==='ocr')?'ocr_only' : 'mixed'; }
+  else { let agreed=0; for(const k of shared){ const l=normaliseField(k,fields[k]), r=normaliseField(k,ocrFields[k].value);
+      const same=(k==='nid_old'||k==='nid_smart')?nidEquivalent(l,r):(k==='dob'?isoDate(l)===isoDate(r):l===r); if(same){ sources[k]=sources[k]+'+ocr'; agreed++; } }
+    if(agreed===shared.length){ for(const k of Object.keys(sources)) if(sources[k]==='ocr') confidence[k]=Math.min(1,(confidence[k]||0.5)+0.15); cross='agree'; } else cross='disagree'; }
+  // 5. identity fields read by OCR alone are held below the auto-apply threshold
+  if(!Object.values(sources).some(s=>/mrz|barcode/.test(s))){
+    const held=PROVABLE_BY_MRZ.filter(k=>fields[k] && (confidence[k]||0)>UNCORROBORATED_CEILING);
+    for(const k of held) confidence[k]=UNCORROBORATED_CEILING;
+    if(held.length) raw.uncorroborated=`no machine-readable zone or barcode on this card, so ${held.join(', ')} rest on OCR alone and are held below the auto-apply threshold`;
+  }
+  const engine=[...new Set(Object.values(sources).map(s=>s.split('+')[0]))].sort().join('+')||'none';
+  return {ok:!!Object.keys(fields).length,engine,card_side,card_type,fields,confidence,sources,boxes,ocr_text:ocr.lines,cross_check:cross,raw,error:errors.join('; ')};
+}
+
+/* =====================================================================
+   9. Stage 2b — grouping (src/grouping.py) and merging (stages.py
+   merge_extractions)
+   ===================================================================== */
+function bestNid(row){ const cands=[];
+  for(const col of ['nid_smart','nid_old']){ const raw=row.fields[col]; if(!raw) continue; const digits=canonNid(raw); if(!digits) continue;
+    cands.push({doc_id:row.doc_id,nid:digits,verified:VERIFIED_SOURCES.has(row.sources[col]||''),confidence:row.confidence[col]||0,card_side:row.card_side||'unknown',dob:normaliseField('dob',row.fields.dob),name_en:normaliseField('name_en',row.fields.name_en)}); }
+  if(!cands.length) return null; cands.sort((a,b)=>(b.verified-a.verified)||(b.confidence-a.confidence)); return cands[0]; }
+function memberStatus(g){ if(g.sides.has('front')&&g.sides.has('back')) return 'complete'; if(g.sides.has('front')) return 'front_only'; if(g.sides.has('back')) return 'back_only'; return 'unknown_side'; }
+function corroborates(c,a){ if(c.dob&&a.dob) return c.dob===a.dob; if(c.name_en&&a.name_en) return nameSimilarity(c.name_en,a.name_en,false)>=0.85; return false; }
+function groupDocuments(rows){
+  const readings=[], noNid=[];
+  for(const r of rows){ const f=bestNid(r); if(!f) noNid.push(r.doc_id); else readings.push(f); }
+  const groups=[];
+  for(const r of [...readings].sort((a,b)=>(b.verified-a.verified)||(b.confidence-a.confidence))){
+    let g=groups.find(g=>g.member_key===r.nid||nidEquivalent(g.member_key,r.nid));
+    if(!g){ g={member_key:r.nid,doc_ids:[],sides:new Set(),verified:false,joined_by:{},dob:'',name_en:''}; groups.push(g); }
+    g.doc_ids.push(r.doc_id); g.sides.add(r.card_side); g.verified=g.verified||r.verified; g.joined_by[r.doc_id]='nid';
+    if(r.dob&&(!g.dob||r.verified)) g.dob=r.dob; if(r.name_en&&(!g.name_en||r.verified)) g.name_en=r.name_en;
+  }
+  const anchors=groups.filter(g=>g.verified);
+  for(const cand of groups.filter(g=>!g.verified)){ if(cand.doc_ids.length!==1) continue;
+    const scored=[]; for(const a of anchors){ if(a.member_key.length!==cand.member_key.length) continue; const d=lev(cand.member_key,a.member_key); if(d<=MAX_NID_EDITS&&corroborates(cand,a)) scored.push([d,a]); }
+    if(!scored.length) continue; scored.sort((x,y)=>x[0]-y[0]); if(scored.length>1&&scored[0][0]===scored[1][0]) continue;
+    const match=scored[0][1], id=cand.doc_ids[0]; match.doc_ids.push(id); cand.sides.forEach(s=>match.sides.add(s)); match.joined_by[id]='nid_fuzzy'; groups.splice(groups.indexOf(cand),1); }
+  groups.sort((a,b)=>a.member_key<b.member_key?-1:1);
+  return {groups,noNid};
+}
+function allEquivalent(field, values){ const items=[...values].sort(); if(items.length<2) return true;
+  for(const other of items.slice(1)){ let same; if(field==='nid_old'||field==='nid_smart') same=nidEquivalent(items[0],other); else if(field==='dob') same=isoDate(items[0])===isoDate(other); else same=nameSimilarity(items[0],other,field.endsWith('_bn'))>=0.90; if(!same) return false; } return true; }
+function mergeExtractions(rows){
+  const merged={},best={},seen={},agreeing={},winner={};
+  for(const row of rows){ for(const f of ALL_FIELDS){ const v=row.fields[f]; if(!v) continue; const score=row.confidence[f]==null?0.5:row.confidence[f];
+      if(score>=CONFLICT_VOTE_FLOOR){ (seen[f]=seen[f]||new Set()).add(normaliseField(f,v)); agreeing[f]=(agreeing[f]||0)+1; }
+      const cur=best[f]; if(cur==null||score>cur||(score===cur&&v.length>(merged[f]||'').length)){ merged[f]=v; best[f]=score; winner[f]=row; } } }
+  const conflicts={}; for(const [f,vals] of Object.entries(seen)) if(!allEquivalent(f,vals)) conflicts[f]=[...vals].sort();
+  for(const [f,votes] of Object.entries(agreeing)) if(votes>=2&&!(f in conflicts)){ const cur=best[f]||0; best[f]=Math.max(cur,Math.min(CORROBORATION_CEILING,cur+CORROBORATION_BONUS)); }
+  for(const f of Object.keys(conflicts)) best[f]=Math.min(best[f]||0,0.5);
+  // The source shown is the winning document's. (stages.regroup keeps the
+  // first document's source per field; the winner's is what a reviewer
+  // needs beside the value, so this replica uses that instead.)
+  const sources={}; for(const f of Object.keys(merged)) sources[f]=winner[f].sources[f]||'';
+  return {values:merged,confidence:best,conflicts,sources};
+}
+
+/* =====================================================================
+   10. Stage 3 — resolve (stages.py stage_resolve). The lookup runs
+   against the invented ERP export above. Chain: nid_old → nid_smart →
+   name + DOB. A hit on name+DOB means the ERP's NID is wrong.
+   ===================================================================== */
+function erpSearchByNid(nid){ return ERP.filter(r=>nidEquivalent(r.nid_old,nid)||nidEquivalent(r.nid_smart,nid)); }
+function erpSearchByNameDob(name,dob){ if(!name||!dob) return []; return ERP.filter(r=>nameSimilarity(name,r.name_en,false)>=0.92 && isoDate(r.dob)===isoDate(dob)); }
+function resolveMember(member){
+  const rec=member.values, searched=[]; let resolved_by=null, candidates=[];
+  for(const method of ['nid_old','nid_smart']){ const value=rec[method]; if(!value){ searched.push({method,query:'',hits:null}); continue; }
+    const hits=erpSearchByNid(value); searched.push({method,query:value,hits:hits.length});
+    if(hits.length===1){ candidates=hits; resolved_by=method; break; } if(hits.length>1){ candidates=hits; break; } }
+  if(!resolved_by && !candidates.length){ const hits=erpSearchByNameDob(rec.name_en||'',rec.dob||''); searched.push({method:'name_dob',query:`${rec.name_en||''} + ${rec.dob||''}`,hits:hits.length});
+    if(hits.length===1){ candidates=hits; resolved_by='name_dob'; } else if(hits.length>1) candidates=hits; }
+  let status, member_id=null;
+  if(resolved_by){ status='resolved'; member_id=candidates[0].member_id; } else if(candidates.length) status='ambiguous'; else status='not_in_erp';
+  return {member_key:member.member_key,member_id,resolved_by,status,candidate_count:candidates.length,candidates,searched};
+}
+
+
+/* =====================================================================
+   11. State, the job runner, the rail, the notice strip, the modal
+   ===================================================================== */
+const SCOPE={division:'Dhaka',region:'DHK',area:'Savar',branch:'Savar',code:'DHK-07',level:'branch'};   // config.yaml folder_pattern example: DHK/Savar/DHK-07/
+const now=new Date();
+const RUN_ID=`${SCOPE.code}-${now.getFullYear()}-${pad2(now.getMonth()+1)}`;   // src/db.py run_id_for: "{scope_code}-{YYYY-MM}"
+const S={
+  runId:RUN_ID, batchSize:CONFIG.batch.size, busy:false, stopRequested:false,
+  sources:[ // app/sources_panel.py table: On / Name / Type / Location / Images; kinds from KIND_LABELS
+    {on:true,name:'Savar batch',kind:'onedrive',location:'C:\\Users\\operator\\OneDrive - Padakhep\\NID\\DHK\\Savar\\DHK-07',recursive:true,images:15},
+    {on:true,name:'spare card',kind:'file',location:'D:\\scans\\IMG_2231.jpg',recursive:false,images:1}],
+  docs:[], extracted:{}, members:[], resolutions:{}, erpKyc:{}, comparisons:[], corrections:{}, audit:[], deferred:{},
+  job:null, log:[], stagesDone:new Set(), timings:{}, runCreated:null,
+  check:{mode:'member',onlyAttention:true,selectedMember:null,selectedDoc:null,rawOpen:false,highlight:null},
+  review:{selected:null}, inspect:{doc:null,result:null,cameFrom:null}, screen:'setup', tourStep:0,
+};
+S.docs=buildDocuments();
+
+// ---- notice (app/widgets.py Notice) ----
+function notice(rows,tone){ const el=$('#notice'); if(!rows||(Array.isArray(rows)&&!rows.length)){ el.hidden=true; return; }
+  el.dataset.tone=tone||'info'; el.hidden=false;
+  el.innerHTML='<span class="dot">●</span>'+(typeof rows==='string'?`<div class="body">${esc(rows)}</div>`:`<div class="rows">${rows.map(([k,v])=>`<div class="k">${esc(k)}</div><div>${esc(v)}</div>`).join('')}</div>`); }
+
+// ---- modal (stands in for QMessageBox) ----
+function dialog(title,text,buttons){ return new Promise(res=>{ const host=$('#modalHost'); const b=buttons||['OK'];
+  host.innerHTML=`<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle">${esc(title)}</h3><p>${esc(text)}</p><div class="row">${b.map((x,i)=>`<button class="btn ${i===b.length-1?'primary':''}" data-i="${i}">${esc(x)}</button>`).join('')}</div></div></div>`;
+  const close=i=>{ host.innerHTML=''; res(b[i]); }; $$('.modal button',host).forEach(btn=>btn.onclick=()=>close(+btn.dataset.i));
+  $('.modal button:last-child',host).focus(); host.onkeydown=e=>{ if(e.key==='Escape') close(0); }; }); }
+
+// ---- derived counts (src/db.py run_summary + app/main.py _refresh_rail) ----
+function docCounts(){ const c={pending:0,extracted:0,no_nid:0,unreadable:0}; for(const d of S.docs) if(d.registered) c[d.status]=(c[d.status]||0)+1; return c; }
+const registeredDocs=()=>S.docs.filter(d=>d.registered);
+function memberNeeds(row){ const weak=ALL_FIELDS.filter(f=>row.values[f]&&(row.confidence[f]==null?0:row.confidence[f])<HIGH); return [...new Set([...weak,...Object.keys(row.conflicts)])].sort(); }
+function pendingByMember(){ const m={}; for(const c of S.comparisons) if(c.decision==='pending'){ m[c.member_id]=m[c.member_id]||{n:0,escalated:false}; m[c.member_id].n++; if(c.verdict==='escalate') m[c.member_id].escalated=true; } return m; }
+function runSummary(){ const c=docCounts(); const res=Object.values(S.resolutions);
+  return {on_disk:S.sources.filter(s=>s.on).reduce((a,s)=>a+s.images,0),documents:registeredDocs().length,extracted:c.extracted,no_nid:c.no_nid,
+    resolved:res.filter(r=>r.status==='resolved').length,not_in_erp:res.filter(r=>r.status==='not_in_erp').length,awaiting_review:Object.keys(pendingByMember()).length}; }
+
+// ---- the rail (app/rail.py, app/main.py MainWindow) ----
+const RAIL_STEPS=[['setup','Set up'],['extract','Extract'],['check','Check and fix'],['compare','Compare'],['export','Export']];
+const RAIL_UTILS=[['single','Test a card','without a batch'],['history','Past batches','everything run before'],['settings','Settings','config.yaml, read-only']];  // Settings is not in the desktop app; added for this replica
+const MARKS={done:'✓',attention:'!',running:'●',idle:'–'};
+const railState={};
+function setRail(key,state,detail){ railState[key]={state,detail}; }
+function refreshRail(){
+  const c=docCounts(), documents=registeredDocs().length, members=S.members.length, sources=S.sources.filter(s=>s.on).length;
+  $('#railHeader').textContent=`Batch ${S.runId} · ${documents} ${plural(documents,'document')}`;
+  setRail('setup', sources?'done':'attention', `${SCOPE.code} · ${sources} ${plural(sources,'source')}`);
+  if(S.busy) setRail('extract','running','running now');
+  else if(documents){ const unread=c.pending; setRail('extract',unread?'attention':'done',`${documents-unread} of ${documents} read`); }
+  else setRail('extract','idle','not started');
+  const needs=c.unreadable+c.no_nid, attention=needs+S.members.filter(r=>r.status!=='complete'||Object.keys(r.conflicts).length).length, unread=c.pending;
+  if(!documents) setRail('check','idle','nothing read yet');
+  else if(unread) setRail('check','idle',unread===documents?'waiting on the read':`${unread} still to read`);
+  else if(attention||!members) setRail('check','attention',attention?`${attention} need${attention===1?'s':''} you`:'read, but no member grouped yet');
+  else setRail('check','done',`${members} ${plural(members,'member')} clear`);
+  const pending=S.comparisons.filter(x=>x.decision==='pending').length;
+  setRail('compare',pending?'attention':'idle',pending?`${pending} to decide`:'not set up');
+  setRail('export',members?'done':'idle',members?`${members} ${plural(members,'row')}`:'nothing yet');
+  renderRail();
+}
+function renderRail(){ const rail=$('#rail'); rail.innerHTML='';
+  RAIL_STEPS.forEach(([key,name],i)=>{ const st=railState[key]||{state:'idle',detail:''};
+    const b=document.createElement('button'); b.className='step'; b.type='button'; b.dataset.key=key; if(S.screen===key) b.setAttribute('aria-current','page');
+    b.title=`${name}${st.detail?' — '+st.detail:''} · Alt+${i+1}`;
+    b.innerHTML=`<span class="mark" data-state="${st.state}">${MARKS[st.state]}</span><span class="text"><span class="name">${i+1}  ${esc(name)}</span><span class="detail">${esc(st.detail)}</span></span>`;
+    b.onclick=()=>show(key); rail.appendChild(b); });
+  const vr=document.createElement('span'); vr.className='vrule'; rail.appendChild(vr);
+  RAIL_UTILS.forEach(([key,name,detail])=>{ const b=document.createElement('button'); b.className='step'; b.type='button'; b.dataset.key=key; if(S.screen===key) b.setAttribute('aria-current','page'); b.title=`${name} — ${detail}`;
+    b.innerHTML=`<span class="mark" data-state="idle">–</span><span class="text"><span class="name">${esc(name)}</span><span class="detail">${esc(detail)}</span></span>`; b.onclick=()=>show(key); rail.appendChild(b); });
+}
+function show(key){ S.screen=key; $$('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+key)); refreshRail();
+  ({setup:renderSetup,extract:renderProgress,check:renderCheck,compare:renderCompare,export:renderExport,single:renderInspect,history:renderHistory,settings:renderSettings})[key]();
+  window.scrollTo({top:0}); }
+
+// ---- the job runner (app/bridge.py + src/pipeline/runner.py, in-page) ----
+function log(level,message){ S.log.push({level,message}); const el=$('#progressLog'); if(el){ el.insertAdjacentHTML('beforeend',`<div><span class="lv-${level}">[${level}]</span> ${esc(message)}</div>`); el.scrollTop=el.scrollHeight; } }
+function duration(sec){ sec=Math.floor(sec); if(sec<60) return `${sec}s`; if(sec<3600) return `${Math.floor(sec/60)}m ${pad2(sec%60)}s`; return `${Math.floor(sec/3600)}h ${pad2(Math.floor((sec%3600)/60))}m`; }
+const ITEM_MS=220;
+async function tick(){ renderProgress(); refreshRail(); await sleep(ITEM_MS); }
+function jobStart(stage,total){ S.job={stage,state:'running',total,processed:0,failed:0,message:'',started_at:Date.now()}; }
+function jobStep(failed){ S.job.processed++; if(failed) S.job.failed++; }
+async function runStages(stages){
+  if(S.busy){ notice([['Cannot start','A batch is already running.']],'warn'); return; }
+  if(!S.runCreated) S.runCreated=new Date();
+  S.busy=true; S.stopRequested=false; notice(null); $('#statusLabel').textContent=`${S.runId}: running ${stages.join(' → ')}`; show('extract');
+  for(const stage of stages){ if(S.stopRequested) break; const t0=Date.now(); await STAGE_FN[stage](); S.timings[stage]=(S.timings[stage]||0)+(Date.now()-t0);
+    S.job.state=S.stopRequested?'stopped':'done'; S.job.finished=Date.now(); renderProgress(); log('info',`${stage} finished: ${S.job.state}`); S.stagesDone.add(stage); await sleep(120); }
+  S.busy=false; refreshRail(); $('#statusLabel').textContent=`${S.runId}: idle`; if(!S.stopRequested) show('check'); else renderProgress();
+}
+const STAGE_FN={
+  async fetch(){ // stages.py stage_fetch: register images, de-duplicated by content hash
+    const files=S.docs.filter(d=>!d.registered); jobStart('fetch',S.docs.length); let added=0, skipped=0;
+    for(const d of S.docs){ if(S.stopRequested) break; S.job.message=d.file; if(!d.registered){ d.registered=true; d.seen_at=new Date().toISOString(); added++; } else skipped++; jobStep(); await tick(); }
+    log('info',`${added} new document(s) from ${S.sources.filter(s=>s.on).length} source(s); ${skipped} already seen (duplicate scan)`);
+  },
+  async extract(){ // stages.py stage_extract / _extract_one_at_a_time
+    const pending=registeredDocs().filter(d=>d.status==='pending').slice(0,S.batchSize); jobStart('extract',pending.length);
+    const tally={by_barcode:0,by_mrz:0,by_ocr:0,no_nid:0,disagreed:0};
+    for(const d of pending){ if(S.stopRequested) break; S.job.message=d.file; renderProgress(); await sleep(ITEM_MS);
+      const r=readDocument(d);
+      if(!r.ok){ d.status='unreadable'; d.error=r.error||'no engine produced a result'; d.card_side='unknown'; S.extracted[d.doc_id]=null; jobStep(true); log('error',`${d.file}: ${d.error}`); await tick(); continue; }
+      const used=new Set(Object.values(r.sources)); if([...used].some(e=>e.includes('barcode'))) tally.by_barcode++; if(used.has('mrz')) tally.by_mrz++; if([...used].some(e=>e.includes('ocr'))) tally.by_ocr++;
+      if(r.cross_check==='disagree'){ tally.disagreed++; log('warn',`${d.file}: the barcode and the printed text disagree -- every field on this card needs review`); }
+      const fields={}; for(const [k,v] of Object.entries(r.fields)) fields[k]=normaliseForStorage(k,v);
+      const hasNid=!!(fields.nid_old||fields.nid_smart); if(!hasNid) tally.no_nid++;
+      S.extracted[d.doc_id]={doc_id:d.doc_id,engine:r.engine,fields,confidence:r.confidence,sources:r.sources,boxes:r.boxes,ocr_text:r.ocr_text,cross_check:r.cross_check,raw:r.raw,card_side:r.card_side,extracted_at:new Date().toISOString()};
+      d.status=hasNid?'extracted':'no_nid'; d.card_side=r.card_side; d.error='';
+      const bc=r.raw.barcode.variant?`barcode ✓ (${r.raw.barcode.variant})`:'barcode ✗ (5 variants)'; const mz=r.raw.mrz.lines.length?`MRZ ${Object.values(r.raw.mrz.checks).filter(Boolean).length}/3 checks`:'MRZ –';
+      log('info',`${d.file}: ${bc} · ${mz} · OCR ${r.ocr_text.length} lines → ${Object.keys(r.fields).length} field(s), side ${r.card_side}`);
+      jobStep(); await tick(); }
+    const parts=[`${pending.length-S.job.failed}/${pending.length} read`,`barcode ${tally.by_barcode}`,`MRZ ${tally.by_mrz}`,`OCR ${tally.by_ocr}`];
+    if(tally.no_nid) parts.push(`${tally.no_nid} without an NID`); if(tally.disagreed) parts.push(`${tally.disagreed} engine disagreement(s)`);
+    log('info','read: '+parts.join(', '));
+  },
+  async group(){ // stages.py stage_group / regroup
+    const rows=Object.values(S.extracted).filter(Boolean); jobStart('group',rows.length);
+    if(!rows.length){ log('warn','nothing extracted yet, so there is nothing to pair'); return; }
+    const {groups,noNid}=groupDocuments(rows); const byDoc=Object.fromEntries(rows.map(r=>[r.doc_id,r]));
+    S.members=[]; let complete=0,fuzzy=0;
+    for(const g of groups){ const docs=g.doc_ids.map(id=>byDoc[id]); const merged=mergeExtractions(docs); const status=memberStatus(g); if(status==='complete') complete++; if(Object.values(g.joined_by).includes('nid_fuzzy')) fuzzy++;
+      S.members.push({member_key:g.member_key,values:merged.values,confidence:merged.confidence,sources:merged.sources,conflicts:merged.conflicts,sides:[...g.sides].filter(s=>s!=='unknown').sort().join('+'),doc_ids:g.doc_ids,joined_by:g.joined_by,verified:g.verified,status,grouped_at:new Date().toISOString()});
+      for(const id of g.doc_ids){ const d=S.docs.find(x=>x.doc_id===id); d.member_key=g.member_key; } S.job.processed+=g.doc_ids.length; S.job.message=`member ${g.member_key}`; await tick(); }
+    for(const id of noNid){ const d=S.docs.find(x=>x.doc_id===id); d.member_key=null; S.job.processed++; }
+    const restored=applyCorrections(); if(restored) log('info',`${restored} hand-corrected value(s) re-applied`);
+    const parts=[`${groups.length} member(s) from ${rows.length} document(s)`,`${complete} with both sides`];
+    if(fuzzy) parts.push(`${fuzzy} paired through a misread NID`); if(noNid.length) parts.push(`${noNid.length} with no NID -- these need a person to read the number off the image`);
+    log('info',parts.join('; '));
+  },
+  async resolve(){ // stages.py stage_resolve — here per member row rather than per document
+    const pending=S.members.filter(m=>!S.resolutions[m.member_key]||S.resolutions[m.member_key].status==='error'); jobStart('resolve',pending.length);
+    const counts={nid_old:0,nid_smart:0,name_dob:0,ambiguous:0,not_in_erp:0};
+    for(const m of pending){ if(S.stopRequested) break; S.job.message=`member ${m.member_key}`; const r=resolveMember(m); S.resolutions[m.member_key]=r;
+      if(r.resolved_by){ counts[r.resolved_by]++; if(r.resolved_by==='name_dob') log('warn',`member ${m.member_key}: matched by name+DOB, not by NID -- the NID held in the ERP is probably wrong`); }
+      else counts[r.status]++; m.member_id=r.member_id; jobStep(r.status!=='resolved'); await tick(); }
+    for(const d of registeredDocs()) if(d.status==='no_nid') S.resolutions['doc:'+d.doc_id]={doc_id:d.doc_id,status:'no_nid',member_id:null,resolved_by:null,candidates:[],searched:[]};
+    log('info',`resolved by NID ${counts.nid_old}+${counts.nid_smart}, by name+DOB ${counts.name_dob}; ${counts.ambiguous} ambiguous, ${counts.not_in_erp} not in ERP`);
+  },
+  async erp_read(){ // stages.py stage_erp_read
+    const members=[...new Set(Object.values(S.resolutions).filter(r=>r.status==='resolved').map(r=>r.member_id))].filter(id=>!S.erpKyc[id]); jobStart('erp_read',members.length);
+    for(const id of members){ if(S.stopRequested) break; S.job.message=id; const rec=ERP.find(r=>r.member_id===id); const values={}; for(const f of KYC_FIELDS) values[f]=normaliseForStorage(f,rec[f]);
+      S.erpKyc[id]={...values,member_id:id,member_name:rec.member_name,branch_code:rec.branch_code,status:'ok',fetched_at:new Date().toISOString()}; jobStep(); await tick(); }
+  },
+  async compare(){ // stages.py stage_compare
+    const ids=Object.keys(S.erpKyc).sort(); jobStart('compare',ids.length); let needing=0, without=0;
+    for(const id of ids){ if(S.stopRequested) break; S.job.message=id; const member=S.members.find(m=>m.member_id===id);
+      if(!member){ without++; jobStep(); await tick(); continue; }
+      if(Object.keys(member.conflicts).length) log('warn',`member ${id}: documents disagree on ${Object.keys(member.conflicts).join(', ')} -- sent to review`);
+      const erp={}; for(const f of KYC_FIELDS) erp[f]=S.erpKyc[id][f];
+      const result=compareMember(id,member.values,erp,COMPARE_CFG,member.confidence); if(result.needs_review) needing++;
+      S.comparisons=S.comparisons.filter(c=>c.member_id!==id);
+      for(const f of result.fields) S.comparisons.push({...f,member_id:id,member_key:member.member_key,note:[f.note,...result.flags].filter(Boolean).join('; '),compared_at:new Date().toISOString(),reviewed_at:null,reviewed_by:null});
+      jobStep(); await tick(); }
+    const compared=ids.length-without; if(without) log('warn',`${without} member(s) had an ERP record but no extracted document; excluded from the rate below`);
+    if(compared) log('info',`${compared} member(s) compared; ${needing} need review (straight-through ${Math.round((compared-needing)/compared*100)}%)`);
+    else log('warn','nothing to compare -- no member has both a document and an ERP record');
+  },
+};
+// src/db.py apply_corrections: laid back over the members after every rebuild
+function applyCorrections(){ let n=0; for(const [key,fields] of Object.entries(S.corrections)){ const m=S.members.find(x=>x.member_key===key); if(!m) continue;
+  for(const [f,c] of Object.entries(fields)){ m.values[f]=c.value; m.confidence[f]=HUMAN_CONFIDENCE; m.sources[f]=HUMAN_SOURCE; delete m.conflicts[f]; n++; } } return n; }
+
+/* =====================================================================
+   12. Screen 1 — Set up (app/screens.py BatchSetupScreen)
+   ===================================================================== */
+const KIND_LABELS={onedrive:'OneDrive',folder:'Local folder',network:'Network share',file:'Single file'};
+function renderSetup(){
+  const s=runSummary(); const el=$('#screen-setup');
+  const whyExtract=S.busy?'A batch is already running.':(!SCOPE.code?'Choose a scope first.':(!s.on_disk?'No images to read. Add a folder or a file under Sources above.':''));
+  const whyErp=S.busy?'A batch is already running.':(!s.extracted?'Nothing has been read yet, so there is nothing to look up. Run extraction first.':'');
+  el.innerHTML=`
+  <fieldset class="group"><legend>Scope</legend>
+    <div class="form">
+      <label for="scDiv">Division</label><select id="scDiv"><option>${SCOPE.division}</option></select>
+      <label for="scReg">Region</label><select id="scReg"><option>${SCOPE.region}</option></select>
+      <label for="scArea">Area</label><select id="scArea"><option>${SCOPE.area}</option></select>
+      <label for="scBr">Branch</label><select id="scBr"><option>${SCOPE.branch}  (${SCOPE.code})</option></select>
+      <span></span><span class="hint">This run covers one branch — ${SCOPE.branch}</span>
+      <label for="scCode">Code</label><input id="scCode" type="text" readonly value="${SCOPE.code}" title="Set by the hierarchy above, so a branch always carries the code the ERP knows.">
+      <label for="scRun">Run ID</label><input id="scRun" type="text" readonly value="${S.runId}" title="Derived from the code and the current month. A second batch for the same scope in the same month gets a numbered suffix.">
+    </div></fieldset>
+  <fieldset class="group sources-box" id="sourcesBox"><legend>Document sources</legend>
+    <div class="tablewrap"><table><thead><tr><th>On</th><th>Name</th><th>Type</th><th>Location</th><th>Images</th></tr></thead><tbody>
+    ${S.sources.map((src,i)=>`<tr><td><input type="checkbox" ${src.on?'checked':''} data-i="${i}" class="srcOn" aria-label="Use ${esc(src.name)}"></td><td>${esc(src.name)}</td><td>${KIND_LABELS[src.kind]}</td><td class="mono">${esc(src.location)}</td><td class="num">${src.images}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="addFolder">Add folder…</button><button class="btn" id="addOneDrive">Add from OneDrive…</button><button class="btn" id="addFile">Add single file…</button><span class="spacer"></span><button class="btn ghost">Rescan</button><button class="btn ghost">Remove</button></div>
+    <div id="setupDrop" class="drop" tabindex="0" role="button" style="margin-top:10px">Click to open a card image, or drop one here<div class="hint">Drop one of the specimen cards from the gallery below. Files from your own disk are not read by this page.</div></div>
+    <div class="gallery" id="setupGallery">${S.docs.map(d=>`<button type="button" draggable="true" data-doc="${d.doc_id}" title="${esc(d.file)}"><img src="${d.url}" alt="${esc(d.file)}"><span class="fn">${esc(d.file)}</span></button>`).join('')}</div>
+  </fieldset>
+  <fieldset class="group"><legend>Batch size</legend>
+    <div class="row"><input id="batchSize" type="number" min="${CONFIG.batch.minimum}" max="${CONFIG.batch.maximum}" step="25" value="${S.batchSize}" aria-label="Batch size">
+      ${Object.entries(CONFIG.batch.presets).map(([n,v])=>`<button class="btn ghost preset" data-v="${v}">${n[0].toUpperCase()+n.slice(1)} (${v})</button>`).join('')}</div>
+    <div class="hint" style="margin-top:6px">Minimum ${CONFIG.batch.minimum} — below this the per-run overhead dominates. A run can be stopped at any point and resumed without losing work.</div>
+  </fieldset>
+  <fieldset class="group"><legend>Waiting in this scope</legend><div class="stats">
+    ${[['on_disk','Images on disk'],['documents','Registered'],['extracted','Extracted'],['no_nid','No NID read'],['resolved','Matched to member'],['not_in_erp','Not in ERP'],['awaiting_review','Awaiting review']].map(([k,l])=>`<div class="stat"><div class="v">${s[k]}</div><div class="l">${l}</div></div>`).join('')}
+  </div></fieldset>
+  <div class="row" style="margin-top:14px">
+    <button class="btn primary" id="runExtract" ${whyExtract?'disabled':''} title="${esc(whyExtract||'Read every image in this scope, then group the two sides of each card into one member.')}">Run extraction  (stages 1–2)</button>
+    <button class="btn" id="runErp" ${whyErp?'disabled':''} title="${esc(whyErp||'Look each member up in the ERP and compare the two records.')}">Run ERP + compare  (stages 3–4)</button>
+    <button class="btn" id="runAll" ${whyExtract?'disabled':''} title="${esc(whyExtract||'Read, group, look up and compare, in one pass.')}">Run all</button>
+    <span class="spacer"></span>
+    <button class="btn danger" id="resetBatch" title="Throw away everything this batch produced and read the same images again from scratch. The folders you added are kept.">Start this batch over</button>
+    <button class="btn ghost" id="refreshSetup">Refresh</button>
+  </div>`;
+  $$('.srcOn',el).forEach(cb=>cb.onchange=()=>{ S.sources[+cb.dataset.i].on=cb.checked; renderSetup(); refreshRail(); });
+  $$('.preset',el).forEach(b=>b.onclick=()=>{ S.batchSize=+b.dataset.v; $('#batchSize').value=S.batchSize; });
+  $('#batchSize').onchange=e=>{ S.batchSize=Math.max(CONFIG.batch.minimum,Math.min(CONFIG.batch.maximum,+e.target.value||CONFIG.batch.size)); e.target.value=S.batchSize; };
+  $('#runExtract').onclick=()=>runStages(['fetch','extract','group']);
+  $('#runErp').onclick=()=>runStages(['resolve','erp_read','compare']);
+  $('#runAll').onclick=()=>runStages(['fetch','extract','group','resolve','erp_read','compare']);
+  $('#refreshSetup').onclick=()=>{ renderSetup(); refreshRail(); };
+  $('#resetBatch').onclick=resetBatch;
+  for(const id of ['addFolder','addOneDrive','addFile']) $('#'+id).onclick=()=>notice([['Sources','The folder picker is a desktop dialog. On this page the batch folder is the gallery of specimen cards below; tick a source on or off to change what the run sees.']],'info');
+  wireDrop($('#setupDrop'),doc=>{ S.inspect.doc=doc; S.inspect.result=null; S.inspect.cameFrom=null; show('single'); });
+  $$('#setupGallery button',el).forEach(b=>{ b.onclick=()=>{ S.inspect.doc=S.docs.find(d=>d.doc_id===+b.dataset.doc); S.inspect.result=null; S.inspect.cameFrom=null; show('single'); }; b.ondragstart=e=>e.dataTransfer.setData('text/plain',b.dataset.doc); });
+}
+function wireDrop(zone,onDoc){ zone.ondragover=e=>{ e.preventDefault(); zone.classList.add('armed'); }; zone.ondragleave=()=>zone.classList.remove('armed');
+  zone.ondrop=e=>{ e.preventDefault(); zone.classList.remove('armed'); const id=e.dataTransfer.getData('text/plain'); const doc=S.docs.find(d=>String(d.doc_id)===id);
+    if(doc) onDoc(doc); else notice([['Not read','Only the specimen cards in the gallery can be opened here. Nothing dropped from your disk is read or uploaded.']],'warn'); };
+  zone.onclick=()=>{ const g=$('#setupGallery')||$('#inspectGallery'); if(g) g.scrollIntoView({behavior:'smooth',block:'center'}); };
+  zone.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); zone.click(); } }; }
+async function resetBatch(){ // app/main.py _reset_batch
+  if(S.busy){ notice([['Cannot reset','A run is going. Stop it first.']],'warn'); return; }
+  const counts={documents:registeredDocs().length,members:S.members.length,corrections:Object.values(S.corrections).reduce((a,x)=>a+Object.keys(x).length,0)};
+  if(!Object.values(counts).some(Boolean)){ notice([['Nothing to clear',`${S.runId} has no results yet.`]],'info'); return; }
+  const detail=Object.entries(counts).filter(([,n])=>n).map(([k,n])=>`${n} ${k}`).join(', ');
+  const warn=counts.corrections?'\n\nThis includes values you corrected by hand. They cannot be recovered.':'';
+  const a=await dialog('Start this batch over',`Delete everything ${S.runId} produced — ${detail} — and read the same images again from scratch?${warn}\n\nThe folders you added are kept.`,['No','Yes']);
+  if(a!=='Yes') return;
+  for(const d of S.docs){ d.registered=false; d.status='pending'; d.error=''; d.member_key=null; d.card_side=undefined; }
+  S.extracted={}; S.members=[]; S.resolutions={}; S.erpKyc={}; S.comparisons=[]; S.corrections={}; S.audit=[]; S.deferred={}; S.log=[]; S.job=null; S.stagesDone=new Set(); S.timings={};
+  renderSetup(); refreshRail(); notice([[`${S.runId} cleared`,`${detail}. The same images will be read as new.`]],'ok');
+}
+
+/* =====================================================================
+   13. Screen 2 — Extract (app/screens.py ProgressScreen)
+   ===================================================================== */
+function renderProgress(){
+  const el=$('#screen-extract'); const j=S.job;
+  if(!el.dataset.built){ el.dataset.built='1';
+    el.innerHTML=`<div class="row"><div class="h2" id="progressStage">Idle</div></div>
+      <div class="row"><div class="progress" style="flex:1"><div id="progressFill" style="width:0"></div></div><span class="num" id="progressFmt">waiting</span><button class="btn danger" id="stopBtn" disabled title="Nothing is running.">Stop</button></div>
+      <div class="hint" id="progressCounts"></div><div style="margin-top:8px">Log</div><div class="log" id="progressLog" aria-live="polite"></div>
+      <div class="hint" style="margin-top:6px">Engine order per card (config.yaml extract.engines): barcode → MRZ → vision. The barcode is tried on five preprocessing variants before OCR is treated as the source.</div>`;
+    $('#stopBtn').onclick=()=>{ S.stopRequested=true; if(S.job) S.job.state='stopping'; };
+    $('#progressLog').innerHTML=S.log.map(l=>`<div><span class="lv-${l.level}">[${l.level}]</span> ${esc(l.message)}</div>`).join('');
+  }
+  if(!j){ $('#progressStage').textContent='Idle'; return; }
+  const total=j.total||0, done=j.processed||0;
+  $('#progressStage').textContent=`${j.stage}  —  ${j.state}`;
+  $('#progressFill').style.width=(total?Math.round(done/Math.max(total,1)*100):0)+'%';
+  $('#progressFmt').textContent=total?`${done} / ${total}`:'waiting';
+  const bits=[`${done} processed`]; if(j.failed) bits.push(`${j.failed} failed`);
+  const elapsed=((j.finished||Date.now())-j.started_at)/1000;
+  if(j.state==='running'){ bits.push(`${duration(elapsed)} elapsed`); if(done){ const per=elapsed/done; bits.push(`~${duration(per*Math.max(0,total-done))} left (${duration(per)}/item)`); } else bits.push('first item still being read'); }
+  if(j.message) bits.push(j.message);
+  $('#progressCounts').textContent=bits.join('  ·  ');
+  const stop=$('#stopBtn'); stop.disabled=j.state!=='running'; stop.title=stop.disabled?'Nothing is running.':'Stop after the card being read now. Everything already read is kept, and the batch can be resumed.';
+}
+
+
+/* =====================================================================
+   14. Shared cells — app/cells.py BadgeDelegate / MeterDelegate
+   ===================================================================== */
+function badgeHtml(source,text){ if(!text||text==='—') return '<span class="faint">—</span>'; if(source===HUMAN_SOURCE) return `<span class="badge corrected">${esc(text)}</span>`; const p=proven(source); return `<span class="badge ${p?'proven':''}">${p?'✓ ':''}${esc(text)}</span>`; }
+function meterHtml(score){ if(typeof score!=='number') return '<span class="faint">—</span>'; const b=band(score); return `<span class="meter band-${b}" title="${esc(describeBand(score))}"><span class="track"><span class="fill" style="width:${Math.round(Math.max(0,Math.min(1,score))*100)}%;background:var(--band-ink)"></span></span><span class="fig" style="color:var(--band-ink)">${pct(score)}</span></span>`; }
+function valueClass(f){ const r=face(f); return r==='bn'?'bn':(r==='num'?'num':''); }
+// app/image_view.py: the image with the regions each value was read from
+function cardHtml(doc,boxes,highlight,caption){ if(!doc) return '<div class="placeholder">No image</div>';
+  const bx=Object.entries(boxes||{}).filter(([,b])=>b&&b.length===4).map(([k,b])=>`<span class="box ${k===highlight?'active':''}" style="left:${b[0]/CW*100}%;top:${b[1]/CH*100}%;width:${(b[2]-b[0])/CW*100}%;height:${(b[3]-b[1])/CH*100}%"><span class="tag">${esc(label(k))}</span></span>`).join('');
+  return `<div class="cardview"><img src="${doc.url}" alt="${esc(caption||doc.file)}">${caption?`<span class="caption">${esc(caption)}</span>`:''}${bx}</div>`; }
+const sideCaption = doc => `${(doc.card_side||doc.side||'unknown').replace(/^./,c=>c.toUpperCase())} — ${doc.file}`;   // results_screen._side_caption
+function segbarHtml(segments){ const shown=segments.filter(s=>s[1]>0); const total=shown.reduce((a,s)=>a+s[1],0); if(!total) return '';
+  return `<div class="segbar"><div class="bar">${shown.map(([l,n,c])=>`<span style="width:${n/total*100}%;background:var(--${c})" title="${l} ${n}"></span>`).join('')}</div><div class="legend">${shown.map(([l,n,c])=>`<span style="color:var(--${c})">${l} ${n}</span>`).join('')}</div></div>`; }
+
+/* =====================================================================
+   15. Screen 3 — Check and fix (app/results_screen.py ResultsScreen)
+   ===================================================================== */
+function docNeedsPerson(d){ if(['unreadable','no_nid','pending'].includes(d.status)) return true; const e=S.extracted[d.doc_id]; if(!e) return true; return Object.values(e.confidence).some(s=>s<HIGH); }
+function renderCheck(){
+  const el=$('#screen-check'); const rows=registeredDocs(); const c=docCounts(); const ck=S.check;
+  const failed=rows.filter(d=>d.status==='unreadable'||d.status==='no_nid').length;
+  let noticeHtml='';
+  if(!rows.length) noticeHtml=`<div class="notice" data-tone="info"><span class="dot">●</span><div class="body">Nothing extracted yet for this scope. Add a source on the Batch tab and run extraction.</div></div>`;
+  else if(c.unreadable) noticeHtml=`<div class="notice" data-tone="warn" style="margin:0"><span class="dot">●</span><div class="rows"><div class="k">Unreadable</div><div>${c.unreadable} document(s) could not be read. Select one to see why.</div></div></div>`;
+  else noticeHtml=`<div class="notice" data-tone="ok" style="margin:0"><span class="dot">●</span><div class="body">${c.extracted} of ${rows.length} document(s) read.</div></div>`;
+  const members=S.members; const needing=members.filter(r=>memberNeeds(r).length||r.status!=='complete'); const shownM=ck.onlyAttention?needing:members;
+  const needingD=rows.filter(docNeedsPerson); const shownD=ck.onlyAttention?needingD:rows;
+  if(ck.mode==='member'){ if(!shownM.find(m=>m.member_key===ck.selectedMember)) ck.selectedMember=shownM[0]?shownM[0].member_key:null; }
+  else { if(!shownD.find(d=>d.doc_id===ck.selectedDoc)) ck.selectedDoc=shownD[0]?shownD[0].doc_id:null; }
+  const count = ck.mode==='member' ? (shownM.length!==members.length?`${shownM.length} of ${members.length}`:`${members.length} ${plural(members.length,'member')}`) : (shownD.length!==rows.length?`${shownD.length} of ${rows.length}`:`${rows.length} ${plural(rows.length,'document')}`);
+  el.innerHTML=`
+  <div class="row"><label for="runPicker">Batch</label><select id="runPicker"><option>${S.runId}   (${rows.length} ${plural(rows.length,'document')})</option></select><span class="hint"></span></div>
+  ${segbarHtml([['extracted',c.extracted,'proven'],['no NID',c.no_nid,'attention'],['unreadable',c.unreadable,'contested'],['not yet read',c.pending,'muted']])}
+  ${noticeHtml}
+  <div class="split" style="margin-top:10px">
+    <div>
+      <div class="row" style="margin-bottom:6px"><button class="btn ghost" id="modeMember" aria-pressed="${ck.mode==='member'}">Members</button><button class="btn ghost" id="modeDoc" aria-pressed="${ck.mode==='document'}">Documents</button></div>
+      <div class="row" style="margin-bottom:6px"><label><input type="checkbox" id="onlyAttention" ${ck.onlyAttention?'checked':''}> Only what needs me (${ck.mode==='member'?needing.length:needingD.length})</label><span class="spacer"></span><span class="hint">${count}</span></div>
+      <div class="tablewrap" style="max-height:440px">${ck.mode==='member'
+        ? `<table id="peopleTable"><thead><tr><th>Member</th><th>NID</th><th>Needs you</th></tr></thead><tbody>${shownM.map(r=>{ const needs=memberNeeds(r); const parts=[]; if(needs.length) parts.push(`${needs.length} ${plural(needs.length,'field')}`); if(r.status!=='complete') parts.push(r.status.replace(/_/g,' '));
+            return `<tr class="selectable" tabindex="0" data-key="${esc(r.member_key)}" aria-selected="${r.member_key===ck.selectedMember}"><td class="${r.values.name_bn?'bn':''}">${esc(r.values.name_bn||r.values.name_en||'(no name read)')}</td><td class="num">${esc(r.values.nid_smart||r.values.nid_old||'—')}</td><td class="${parts.length?'tone-warn':'tone-ok'}" title="${esc(needs.map(label).join(', '))}">${esc(parts.join(', ')||'—')}</td></tr>`; }).join('')||'<tr><td colspan="3" class="hint">No members grouped yet.</td></tr>'}</tbody></table>`
+        : `<table id="docsTable"><thead><tr><th>Document</th><th>Side</th><th>Status</th></tr></thead><tbody>${shownD.map(d=>`<tr class="selectable" tabindex="0" data-doc="${d.doc_id}" aria-selected="${d.doc_id===ck.selectedDoc}"><td class="mono">${esc(d.file)}</td><td>${esc(d.card_side||'-')}</td><td title="${esc(d.error||'')}">${esc(d.status)}</td></tr>`).join('')||'<tr><td colspan="3" class="hint">Nothing registered yet.</td></tr>'}</tbody></table>`}</div>
+    </div>
+    <div>
+      <div class="beside">
+        <div><div class="cardstack" id="cardStack"></div><div class="hint" id="checkSummary" style="margin-top:6px;white-space:pre-wrap"></div></div>
+        <div class="tablewrap"><table id="fieldsTable"><thead><tr><th>Field</th><th>Value</th><th>Side</th><th>Read from</th><th>Confidence</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <button class="btn link" id="rawToggle" aria-expanded="${ck.rawOpen}">${ck.rawOpen?'Hide the OCR lines':'Show every line the OCR read'}</button>
+      <div class="log" id="rawLines" style="height:120px" ${ck.rawOpen?'':'hidden'}></div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn ghost" id="checkRefresh">Refresh</button><span class="spacer"></span>
+    <button class="btn ghost" id="retryOne" title="Read this document again from the start. Anything already read successfully is left alone.">Read again</button>
+    <button class="btn ghost" id="retryAll" ${failed?'':'disabled'} title="${failed?'Read every failed document in this batch again. Documents that were read successfully are not touched.':'Nothing in this batch failed, so there is nothing to read again.'}">Retry all that failed${failed?` (${failed})`:''}</button>
+    <span class="vrule" style="width:1px;height:24px;background:var(--rule)"></span>
+    <button class="btn ghost" id="checkExport">Export to Excel</button>
+    <button class="btn primary" id="fixRead" title="Open this card in the workbench: crop it by hand and read it again.">Fix this read</button>
+  </div>`;
+  $('#modeMember').onclick=()=>{ ck.mode='member'; renderCheck(); }; $('#modeDoc').onclick=()=>{ ck.mode='document'; renderCheck(); };
+  $('#onlyAttention').onchange=e=>{ ck.onlyAttention=e.target.checked; renderCheck(); };
+  $$('#peopleTable tr.selectable').forEach(tr=>{ const pick=()=>{ ck.selectedMember=tr.dataset.key; ck.highlight=null; renderCheck(); }; tr.onclick=pick; tr.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(); } }; });
+  $$('#docsTable tr.selectable').forEach(tr=>{ const pick=()=>{ ck.selectedDoc=+tr.dataset.doc; ck.highlight=null; renderCheck(); }; tr.onclick=pick; tr.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(); } }; });
+  $('#rawToggle').onclick=()=>{ ck.rawOpen=!ck.rawOpen; renderCheck(); };
+  $('#checkRefresh').onclick=()=>renderCheck();
+  $('#checkExport').onclick=()=>writeBatch();
+  $('#retryAll').onclick=async()=>{ const a=await dialog('Retry all that failed',`Read all ${failed} failed document(s) in this batch again?\n\nDocuments that were read successfully are not touched.`,['No','Yes']); if(a==='Yes') retryDocs(rows.filter(d=>d.status==='unreadable'||d.status==='no_nid').map(d=>d.doc_id)); };
+  $('#retryOne').onclick=()=>{ const ids=ck.mode==='member'?(memberDocs(ck.selectedMember).map(d=>d.doc_id)):(ck.selectedDoc?[ck.selectedDoc]:[]); if(ids.length) retryDocs(ids); };
+  $('#fixRead').onclick=()=>{ const d=ck.mode==='member'?memberDocs(ck.selectedMember)[0]:rows.find(x=>x.doc_id===ck.selectedDoc); if(d){ S.inspect.doc=d; S.inspect.result=null; S.inspect.cameFrom='check'; show('single'); } };
+  renderCheckDetail();
+}
+function memberDocs(key){ return registeredDocs().filter(d=>d.member_key===key).sort((a,b)=>(b.card_side||'').localeCompare(a.card_side||'')); }  // ORDER BY card_side DESC → front first
+async function retryDocs(ids){ let n=0; for(const id of ids){ const d=S.docs.find(x=>x.doc_id===id); if(d && d.status!=='extracted'){ d.status='pending'; d.error=''; delete S.extracted[id]; n++; } }
+  if(!n){ await dialog('Read again','Nothing to read again. A document that was read successfully is left alone, because its values may already have been corrected by hand.'); return; }
+  await dialog('Read again',`${n} document(s) queued. Watch the Extract step; this screen will show the new read when it finishes.`); runStages(['extract','group']); }
+function renderCheckDetail(){
+  const ck=S.check, stack=$('#cardStack'), tbody=$('#fieldsTable tbody'), summary=$('#checkSummary'), raw=$('#rawLines'); const fix=$('#fixRead'), retry=$('#retryOne');
+  const clear=()=>{ stack.innerHTML='<div class="placeholder">No image</div>'; tbody.innerHTML=''; summary.textContent=''; raw.textContent=''; fix.disabled=true; retry.disabled=true; fix.title=S.members.length||registeredDocs().length?'Select a member or a document first.':'This batch has nothing read yet. Run the Extract step.'; retry.title='Select a member or a document first.'; };
+  if(ck.mode==='member'){ const row=S.members.find(m=>m.member_key===ck.selectedMember); if(!row){ clear(); return; }
+    const docs=memberDocs(row.member_key); const shownDocs=ck.highlight?docs.filter(d=>(S.extracted[d.doc_id]||{}).boxes&&S.extracted[d.doc_id].boxes[ck.highlight]).slice(0,1):docs; const list=shownDocs.length?shownDocs:docs;
+    stack.innerHTML=list.map(d=>cardHtml(d,(S.extracted[d.doc_id]||{}).boxes,ck.highlight,sideCaption(d))).join('')||'<div class="placeholder">No image</div>';
+    let note=`${docs.length} document(s) · sides: ${row.sides||'—'} · ${row.status.replace(/_/g,' ')}`;
+    if(Object.keys(row.conflicts).length) note+=`  ·  the two sides disagree on ${Object.keys(row.conflicts).map(label).join(', ')}`;
+    if(MISSING_SIDE_COSTS[row.status]) note+=`\n${MISSING_SIDE_COSTS[row.status]}`;
+    if(Object.values(row.joined_by).includes('nid_fuzzy')) note+=`\nOne side was paired through a misread NID: its number sits within ${MAX_NID_EDITS} edits of the verified one and the date of birth agrees.`;
+    summary.textContent=note;
+    const sides={}; for(const d of docs){ const e=S.extracted[d.doc_id]; if(!e) continue; const lab=(d.card_side||'?').replace(/^./,c=>c.toUpperCase()); for(const f of ALL_FIELDS){ if(f in sides) continue; if(e.fields[f]&&e.fields[f]===row.values[f]) sides[f]=lab; } }
+    fillFieldTable(tbody,row.values,row.confidence,row.sources,S.corrections[row.member_key]||{},sides,row.member_key);
+    raw.innerHTML=docs.map(d=>{ const e=S.extracted[d.doc_id]; const body=(e&&e.ocr_text.length)?e.ocr_text.map(l=>`${l.confidence.toFixed(2)}  ${esc(l.text)}`).join('\n'):'(nothing read)'; return `— ${esc(sideCaption(d))} —\n${body}`; }).join('\n\n')||'No OCR text for this member.';
+    fix.disabled=!docs.length; retry.disabled=!docs.length;
+  } else { const d=registeredDocs().find(x=>x.doc_id===ck.selectedDoc); if(!d){ clear(); return; } const e=S.extracted[d.doc_id];
+    stack.innerHTML=cardHtml(d,e?e.boxes:{},ck.highlight,sideCaption(d)); fix.disabled=false; retry.disabled=false;
+    if(!e){ tbody.innerHTML=''; raw.textContent=d.error||'Not read yet.'; summary.textContent=`Status: ${d.status}.`+(d.error?`  ${d.error}`:''); return; }
+    const [tone,noteText]=CROSS_CHECK_NOTE[e.cross_check]||['info','']; summary.innerHTML=`engine: ${esc(e.engine)}   ·   side: ${esc(d.card_side||'?')}   ·   <span class="tone-${tone}">${esc(noteText)}</span>`;
+    const corrections=d.member_key?(S.corrections[d.member_key]||{}):{};
+    fillFieldTable(tbody,e.fields,e.confidence,e.sources,corrections,null,d.member_key);
+    raw.textContent=e.ocr_text.length?e.ocr_text.map(l=>`${l.confidence.toFixed(2)}  ${l.text}`).join('\n'):'No OCR text for this document. Either the barcode alone was used, or no OCR backend was configured when it was read.';
+  }
+}
+// results_screen._fill_field_table: every field, always, in one order
+function fillFieldTable(tbody,record,confidence,sources,corrections,fieldSides,memberKey){
+  const ck=S.check; tbody.innerHTML='';
+  for(const f of inDisplayOrder(ALL_FIELDS)){ let value=record[f]||''; let score=value?confidence[f]:undefined; const fixed=corrections[f]; if(fixed){ value=fixed.value; score=HUMAN_CONFIDENCE; }
+    const src=fixed?HUMAN_SOURCE:(sources[f]||''); const needs=value&&typeof score==='number'&&score<NEEDS_A_PERSON&&!fixed;
+    const tr=document.createElement('tr'); tr.dataset.field=f; if(needs) tr.className=`needs band-${band(score)}`; if(ck.highlight===f) tr.setAttribute('aria-selected','true'); tr.tabIndex=0;
+    const sideText=fixed?'you':((fieldSides||{})[f]||'—');
+    tr.innerHTML=`<td>${esc(label(f))}</td><td class="${valueClass(f)} ${value?'':'faint'} ${fixed?'tone-info':''}" data-value title="${esc(fixed?`You changed this from “${fixed.was||'(blank)'}” on ${fixed.corrected_at.slice(0,10)}. Clear the box to go back to what was read.`:(memberKey?'Double-click to type what the card actually says. The reading it replaces is kept.':'This document has not been paired into a member yet, so there is no record to correct. Run the grouping step first.'))}">${esc(value||'—')}</td><td class="${fixed?'tone-info':''}">${esc(sideText)}</td><td>${badgeHtml(src,fixed?'you corrected this':(SOURCE_LABEL[src]||src||'—'))}</td><td>${meterHtml(typeof score==='number'?score:undefined)}</td>`;
+    tr.onclick=()=>{ ck.highlight=ck.highlight===f?null:f; renderCheckDetail(); };
+    tr.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); if(memberKey) startEdit(tr,f,memberKey,record[f]||'',sources[f]||''); else tr.click(); } };
+    if(memberKey) $('td[data-value]',tr).ondblclick=e=>{ e.stopPropagation(); startEdit(tr,f,memberKey,record[f]||'',sources[f]||''); };
+    tbody.appendChild(tr); }
+}
+// results_screen._value_edited + src/db.py record_correction: saved as a correction, never over the reading
+function startEdit(tr,f,memberKey,was,sourceWas){ const td=$('td[data-value]',tr); const cur=(S.corrections[memberKey]||{})[f]; const input=document.createElement('input'); input.className='cell-edit '+valueClass(f); input.value=cur?cur.value:was; td.innerHTML=''; td.appendChild(input); input.focus(); input.select();
+  let done=false; const finish=save=>{ if(done) return; done=true; if(!save){ renderCheckDetail(); return; } const typed=input.value.trim()==='—'?'':input.value.trim();
+    if(typed===(cur?cur.value:was)){ renderCheckDetail(); return; }
+    S.corrections[memberKey]=S.corrections[memberKey]||{};
+    if(typed){ S.corrections[memberKey][f]={value:typed,was,source_was:sourceWas,corrected_by:'reviewer',corrected_at:new Date().toISOString()}; notice(`“${typed}” saved for ${label(f)}. The reading it replaced (“${was||'blank'}”) is kept, and this survives a regroup.`,'ok'); }
+    else { delete S.corrections[memberKey][f]; const m=S.members.find(x=>x.member_key===memberKey); if(m){ m.values[f]=was; m.sources[f]=sourceWas; const e=memberDocs(memberKey).map(d=>S.extracted[d.doc_id]).find(x=>x&&x.fields[f]===was); m.confidence[f]=e?e.confidence[f]:0.5; } notice(`${label(f)} put back to what was read: “${was}”.`,'ok'); }
+    applyCorrections(); renderCheck(); };
+  input.onblur=()=>finish(true); input.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); finish(true); } if(e.key==='Escape'){ e.preventDefault(); finish(false); } }; }
+
+/* =====================================================================
+   16. Screen 4 — Compare: Stage 3 resolution + the Stage 4 review queue
+   (app/screens.py ReviewScreen; resolution detail from src/db.py
+   resolutions table and stages.py stage_resolve)
+   ===================================================================== */
+const METHOD_LABEL={nid_old:'nid_old',nid_smart:'nid_smart',name_dob:'name + DOB'};
+function candidateWhy(r,cand){ const bits=[]; const rec=(S.members.find(m=>m.member_key===r.member_key)||{}).values||{};
+  for(const col of ['nid_old','nid_smart']) if(rec[col]&&(nidEquivalent(cand.nid_old,rec[col])||nidEquivalent(cand.nid_smart,rec[col]))) bits.push(`${col} equal (13/17-digit forms count as one number)`);
+  if(!bits.length && rec.name_en && isoDate(cand.dob)===isoDate(rec.dob) && nameSimilarity(rec.name_en,cand.name_en,false)>=0.92) bits.push('name and date of birth agree; the NID the ERP holds does not');
+  if(r.status==='ambiguous') bits.push('one of several rows carrying this NID — pairing either way would be a coin flip, so it is refused');
+  return bits.join('; ')||'—'; }
+function resolutionHtml(r){ if(!r) return '<div class="hint">Stage 3 has not run for this member.</div>';
+  const chain=['nid_old','nid_smart','name_dob'].map(m=>{ const s=r.searched.find(x=>x.method===m); const hit=!s?'skip':(s.hits==null?'skip':(s.hits===1?'1':(s.hits>1?'many':'0')));
+    const text=!s||s.hits==null?`${METHOD_LABEL[m]}: no value to search`:(`${METHOD_LABEL[m]}: ${s.hits} hit${s.hits===1?'':'s'}`); return `<span class="hop" data-hit="${hit}" title="${esc(s&&s.query?'searched '+s.query:'')}">${esc(text)}</span>`; }).join('<span class="arrow">→</span>');
+  const outcome = r.status==='resolved' ? `<span class="tone-ok">resolved by <b>${METHOD_LABEL[r.resolved_by]}</b> → ${esc(r.member_id)}</span>${r.resolved_by==='name_dob'?' <span class="tone-warn">— a member found by name+DOB is a member whose ERP NID is wrong</span>':''}`
+    : r.status==='ambiguous' ? `<span class="tone-warn">ambiguous — ${r.candidate_count} ERP rows carry this NID. Unknown stays unknown: no member id is written.</span>`
+    : r.status==='no_nid' ? `<span class="tone-warn">no NID read — nothing automatic can say whose card it is, so it goes to a person, not to a guess.</span>`
+    : `<span class="tone-bad">not in ERP — no row carries this NID and none has this name and date of birth. Unknown stays unknown.</span>`;
+  const table=r.candidates.length?`<div class="tablewrap" style="margin-top:6px"><table><thead><tr><th>Member ID</th><th>Name</th><th>Date of birth</th><th>NID</th><th>Branch</th><th>Why</th></tr></thead><tbody>${r.candidates.map(c=>`<tr><td class="num">${esc(c.member_id)}</td><td>${esc(c.name_en)}</td><td class="num">${esc(isoDate(c.dob))}</td><td class="num">${esc(c.nid_smart||c.nid_old)}</td><td class="num">${esc(c.branch_code)}</td><td>${esc(candidateWhy(r,c))}</td></tr>`).join('')}</tbody></table></div>`:'';
+  return `<div class="chain">${chain}</div><div style="margin-top:6px">${outcome}</div>${table}`; }
+function renderCompare(){
+  const el=$('#screen-compare'); const rv=S.review; const pend=pendingByMember();
+  const order=Object.entries(pend).sort((a,b)=>(b[1].escalated-a[1].escalated)||((S.deferred[a[0]]||0)-(S.deferred[b[0]]||0))||a[0].localeCompare(b[0]));
+  if(!order.find(([id])=>id===rv.selected)) rv.selected=order[0]?order[0][0]:null;
+  const unresolved=Object.values(S.resolutions).filter(r=>r.status!=='resolved');
+  const stage3Ran=S.stagesDone.has('resolve');
+  el.innerHTML=`
+  <div class="split review">
+    <div><div class="h2">${order.length} member(s) awaiting review</div>
+      <div class="list" role="listbox" aria-label="Members awaiting review">${order.map(([id,p])=>`<button class="item" role="option" aria-selected="${id===rv.selected}" data-id="${esc(id)}">${p.escalated?'⚠ ':''}${esc(id)}  (${p.n})${S.deferred[id]?' <span class="hint">deferred</span>':''}</button>`).join('')||`<div class="item hint">${stage3Ran?'Nothing to review':'Run ERP + compare (stages 3–4) on the Set up step first.'}</div>`}</div>
+      <div class="eyebrow" style="margin-top:14px">Not matched to a member</div>
+      <div class="list">${unresolved.map(r=>`<button class="item" data-unres="${esc(r.member_key||('doc:'+r.doc_id))}" aria-selected="${rv.selected===(r.member_key||('doc:'+r.doc_id))}">${esc(r.member_key||S.docs.find(d=>d.doc_id===r.doc_id).file)} <span class="hint">· ${esc(r.status.replace(/_/g,' '))}</span></button>`).join('')||`<div class="item hint">${stage3Ran?'Every member was found in the ERP.':'—'}</div>`}</div>
+    </div>
+    <div id="reviewDetail"></div>
+  </div>
+  <div class="eyebrow" style="margin-top:16px">Decisions this session</div>
+  <div class="tablewrap" style="max-height:200px"><table id="auditTable"><thead><tr><th>When</th><th>Member</th><th>Fields</th><th>Decision</th><th>By</th></tr></thead><tbody>${S.audit.slice().reverse().map(a=>`<tr><td class="num">${esc(a.when)}</td><td class="num">${esc(a.member)}</td><td>${esc(a.fields)}</td><td class="${a.decision==='approved'?'tone-ok':(a.decision==='rejected'?'tone-bad':'tone-warn')}">${esc(a.decision)}</td><td>${esc(a.by)}</td></tr>`).join('')||'<tr><td colspan="5" class="hint">No decisions yet. Each approve, reject or defer writes a row here, with reviewed_by and reviewed_at on the comparison.</td></tr>'}</tbody></table></div>`;
+  $$('.item[data-id]',el).forEach(b=>b.onclick=()=>{ rv.selected=b.dataset.id; renderCompare(); });
+  $$('.item[data-unres]',el).forEach(b=>b.onclick=()=>{ rv.selected=b.dataset.unres; renderCompare(); });
+  renderReviewDetail(order);
+}
+function renderReviewDetail(order){
+  const rv=S.review, host=$('#reviewDetail'); const id=rv.selected;
+  if(!id){ host.innerHTML=`<div class="placeholder">${order.length?'':'Nothing to review'}</div>`; return; }
+  const unres=Object.values(S.resolutions).find(r=>(r.member_key||('doc:'+r.doc_id))===id && r.status!=='resolved');
+  if(unres){ const docs=unres.doc_id?[S.docs.find(d=>d.doc_id===unres.doc_id)]:memberDocs(unres.member_key);
+    host.innerHTML=`<div class="group" id="resolutionPanel" style="margin-top:0"><span class="legend">How this record was looked up</span>${resolutionHtml(unres)}</div><div class="cardstack" style="margin-top:10px">${docs.map(d=>cardHtml(d,(S.extracted[d.doc_id]||{}).boxes,null,sideCaption(d))).join('')}</div>`; return; }
+  const rows=S.comparisons.filter(c=>c.member_id===id); const sev={escalate:0,mismatch:1,missing_erp:2,low_confidence:3};
+  rows.sort((a,b)=>((sev[a.verdict]??4)-(sev[b.verdict]??4)));
+  const member=S.members.find(m=>m.member_id===id); const docs=member?memberDocs(member.member_key):[]; const res=member?S.resolutions[member.member_key]:null;
+  const pendingFields=rows.filter(r=>r.decision==='pending');
+  host.innerHTML=`
+    <div class="group" id="resolutionPanel" style="margin-top:0"><span class="legend">How this member was found</span>${resolutionHtml(res)}</div>
+    <div class="beside review-beside" style="margin-top:10px"><div class="cardstack">${docs.length?cardHtml(docs[0],(S.extracted[docs[0].doc_id]||{}).boxes,null,sideCaption(docs[0])):'<div class="placeholder">No document image</div>'}</div>
+    <div class="tablewrap"><table><thead><tr><th>Field</th><th>Document says</th><th>ERP says</th><th>Verdict</th><th>Note</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${esc(label(r.field))}</td><td class="${valueClass(r.field)}">${esc(r.doc_value||'')}</td><td class="${valueClass(r.field)}">${esc(r.erp_value||'')}</td><td style="color:var(--${VERDICT_TOKENS[r.verdict]})" title="${esc(r.note||'')}">${esc(r.verdict)}${r.decision!=='pending'?` <span class="hint">· ${esc(r.decision)}</span>`:''}</td><td class="hint">${esc(r.note||'')}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="row" id="reviewButtons" style="margin-top:10px">
+      <button class="btn" id="btnApprove" ${pendingFields.length?'':'disabled'} title="Accept this comparison and move to the next record.">Approve  (A)</button>
+      <button class="btn" id="btnReject" ${pendingFields.length?'':'disabled'} title="Mark this comparison wrong and move to the next record.">Reject  (R)</button>
+      <button class="btn" id="btnDefer" ${pendingFields.length?'':'disabled'} title="Leave this record pending and move it to the end of the queue.">Defer  (D)</button>
+      <span class="spacer"></span><button class="btn ghost" id="reviewExport">Export to Excel</button></div>`;
+  $('#btnApprove').onclick=()=>decide('approved'); $('#btnReject').onclick=()=>decide('rejected'); $('#btnDefer').onclick=()=>decide('deferred');
+  $('#reviewExport').onclick=()=>downloadCsv(`mismatches_${S.runId}.csv`,['member_id','field','doc_value','erp_value','similarity','verdict','decision','proposed','note'],S.comparisons.filter(c=>!NO_ACTION_VERDICTS.has(c.verdict)).sort((a,b)=>a.member_id.localeCompare(b.member_id)||a.field.localeCompare(b.field)).map(c=>[c.member_id,c.field,c.doc_value,c.erp_value,c.similarity.toFixed(2),c.verdict,c.decision,c.proposed,c.note]));
+}
+// ReviewScreen._decide: UPDATE comparisons SET decision=?, reviewed_at=datetime('now') WHERE ... AND decision='pending'
+function decide(decision){ const id=S.review.selected; if(!id||!pendingByMember()[id]) return; const when=new Date();
+  const pend=S.comparisons.filter(c=>c.member_id===id&&c.decision==='pending');
+  if(decision==='deferred'){ S.deferred[id]=Date.now(); }
+  else for(const c of pend){ c.decision=decision; c.reviewed_at=when.toISOString(); c.reviewed_by='reviewer'; }
+  S.audit.push({when:when.toTimeString().slice(0,8),member:id,fields:pend.map(c=>label(c.field)).join(', '),decision,by:'reviewer'});
+  const order=Object.keys(pendingByMember()); const idx=order.indexOf(id); S.review.selected=null; renderCompare(); refreshRail();
+  if(decision!=='deferred'){ const left=Object.entries(pendingByMember()).sort((a,b)=>(b[1].escalated-a[1].escalated)||a[0].localeCompare(b[0])).map(x=>x[0]); if(left.length){ S.review.selected=left[Math.min(Math.max(idx,0),left.length-1)]; renderCompare(); } } }
+
+
+/* =====================================================================
+   17. Screen 5 — Export (app/export_screen.py, src/export.py)
+   The desktop app writes an .xlsx with two sheets; this page writes the
+   same two sheets as CSV files through the browser's download.
+   ===================================================================== */
+const MEMBER_HEADINGS={member_key:'Member key (NID)',sides:'Sides found',status:'Status',doc_count:'Documents'};
+const DOCUMENT_HEADINGS={doc_id:'Document',member_key:'Member key',card_side:'Side',page:'PDF page',status:'Status',error:'Problem',engine:'Engine',cross_check:'Cross-check',source_path:'Original file',file_path:'Image read'};
+function memberColumns(){ const h=Object.values(MEMBER_HEADINGS); for(const f of inDisplayOrder(ALL_FIELDS)){ const l=label(f); h.push(l,`${l} — confidence`,`${l} — from`); } return [...h,'Contested fields']; }
+function memberRows(){ return S.members.map(m=>{ const row=[m.member_key,m.sides,m.status,m.doc_ids.length]; for(const f of inDisplayOrder(ALL_FIELDS)){ const v=m.confidence[f]; row.push(m.values[f]||'',typeof v==='number'?Math.round(v*100)/100:'',m.sources[f]||''); } row.push(Object.keys(m.conflicts).map(label).join(', ')); return row; }); }
+function documentColumns(){ return [...Object.values(DOCUMENT_HEADINGS),...inDisplayOrder(ALL_FIELDS).map(label)]; }
+function documentRows(){ return registeredDocs().map(d=>{ const e=S.extracted[d.doc_id]||{fields:{}}; return [d.doc_id,d.member_key||'',d.card_side||'',``,d.status,d.error||'',e.engine||'',e.cross_check||'',``,d.file,...inDisplayOrder(ALL_FIELDS).map(f=>e.fields[f]||'')]; }); }
+function downloadCsv(name,columns,rows){ const q=v=>{ const s=String(v==null?'':v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const csv='﻿'+[columns.map(q).join(','),...rows.map(r=>r.map(q).join(','))].join('\r\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
+const exportTarget=()=>({dir:`data\\exports\\${SCOPE.code}`,name:`extraction_${S.runId}.xlsx`});
+async function writeBatch(){ // app/export_screen.write_batch
+  if(!S.members.length){ await dialog('Export','Nothing to write: this batch has no members yet. Run the Extract step first.'); return; }
+  const t=exportTarget(); const base=t.name.replace(/\.xlsx$/,'');
+  downloadCsv(base+'_Members.csv',memberColumns(),memberRows()); setTimeout(()=>downloadCsv(base+'_Documents.csv',documentColumns(),documentRows()),300);
+  await dialog('Export',`Written to\n${t.dir}\\${t.name}\n(here: ${base}_Members.csv and ${base}_Documents.csv, downloaded)\n\nMembers: ${S.members.length} row(s)\nDocuments: ${registeredDocs().length} row(s)`); }
+function renderExport(){
+  const el=$('#screen-export'); const members=S.members.length, documents=registeredDocs().length; const t=exportTarget();
+  const weak=S.members.filter(m=>m.status!=='complete').length; const res=Object.values(S.resolutions).filter(r=>r.member_key);
+  const byVerdict={}; for(const c of S.comparisons) byVerdict[c.verdict]=(byVerdict[c.verdict]||0)+1;
+  const byDecision={}; for(const c of S.comparisons) byDecision[c.decision]=(byDecision[c.decision]||0)+1;
+  const compared=new Set(S.comparisons.map(c=>c.member_id)).size, needing=Object.keys(pendingByMember()).length+new Set(S.audit.filter(a=>a.decision!=='deferred').map(a=>a.member)).size;
+  const extractMs=S.timings.extract||0, read=documents-docCounts().pending; const perMin=extractMs&&read?(read/(extractMs/60000)):0;
+  const c=docCounts();
+  el.innerHTML=`<div class="h2">Export</div><div class="hint">One row per member, plus a sheet showing every document behind it.</div>
+    <p style="margin:12px 0 8px">${members?`${members} member(s) from ${documents} document(s).`:'Nothing to export yet for this batch.'}</p>
+    <div class="stat" id="exportCard" style="max-width:640px"><div>${esc(t.name)}</div><div class="hint mono" style="user-select:text">${esc(t.dir)}</div><div class="hint" style="margin-top:4px">On this page the Members and Documents sheets are written as two CSV files through the browser's download.</div></div>
+    <p class="${weak?'tone-warn':''}" style="margin:10px 0">${weak?`${weak} member(s) are missing a side or have a field nobody has confirmed. They are included, and the Members sheet shows their status.`:''}</p>
+    <div class="eyebrow" style="margin-top:14px">Batch summary</div>
+    <div class="stats" style="margin-top:6px">
+      ${[['Documents',documents],['Extracted',c.extracted],['No NID',c.no_nid],['Unreadable',c.unreadable],['Members',members],['Both sides',S.members.filter(m=>m.status==='complete').length],
+        ['Resolved by NID',res.filter(r=>r.resolved_by&&r.resolved_by!=='name_dob').length],['Resolved by name+DOB',res.filter(r=>r.resolved_by==='name_dob').length],['Ambiguous',res.filter(r=>r.status==='ambiguous').length],['Not in ERP',res.filter(r=>r.status==='not_in_erp').length],
+        ['Compared',compared],['Straight-through',compared?pct((compared-needing)/compared):'—'],['Pending decisions',byDecision.pending||0],['Approved',byDecision.approved||0],['Rejected',byDecision.rejected||0],['Read throughput',perMin?`${perMin.toFixed(0)}/min`:'—']].map(([l,v])=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}
+    </div>
+    <div class="eyebrow" style="margin-top:14px">Verdicts (Stage 4)</div>
+    <div class="row" style="margin-top:6px">${Object.keys(VERDICT_SEVERITY).map(v=>`<span class="badge" style="color:var(--${VERDICT_TOKENS[v]});background:var(--panel3)">${v} ${byVerdict[v]||0}</span>`).join('')}</div>
+    <div class="hint" style="margin-top:8px">The desktop app's timing rule of thumb (README): for 400 members about 27 min of ERP read and 42 min of review at 75% straight-through — roughly 800 members per reviewer per day. The throughput above is this page's own run.</div>
+    <div class="eyebrow" style="margin-top:14px">Members sheet — first columns</div>
+    <div class="tablewrap" style="max-height:220px;margin-top:6px"><table><thead><tr>${memberColumns().slice(0,13).map(h=>`<th>${esc(h)}</th>`).join('')}<th>…</th></tr></thead><tbody>${memberRows().map(r=>`<tr>${r.slice(0,13).map((v,i)=>`<td class="${i>=4&&(i-4)%3===0?valueClass(inDisplayOrder(ALL_FIELDS)[(i-4)/3]):'num'}">${esc(v)}</td>`).join('')}<td class="faint">…</td></tr>`).join('')||'<tr><td colspan="14" class="hint">No members yet.</td></tr>'}</tbody></table></div>
+    <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn ghost" id="exportComparisons" ${S.comparisons.length?'':'disabled'}>Comparisons as CSV</button><button class="btn primary" id="writeSheet" ${members?'':'disabled'} title="${members?'Write the Members and Documents sheets to the file above.':'Nothing to write: this batch has no members yet. Run the Extract step first.'}">Write the spreadsheet</button></div>`;
+  $('#writeSheet').onclick=writeBatch;
+  $('#exportComparisons').onclick=()=>downloadCsv(`comparisons_${S.runId}.csv`,['member_id','field','doc_value','erp_value','similarity','verdict','decision','proposed','note','reviewed_by','reviewed_at'],S.comparisons.map(c=>[c.member_id,c.field,c.doc_value,c.erp_value,c.similarity.toFixed(2),c.verdict,c.decision,c.proposed,c.note,c.reviewed_by,c.reviewed_at]));
+}
+
+/* =====================================================================
+   18. Test a card — the single-image workbench (app/inspect_screen.py)
+   ===================================================================== */
+function renderInspect(){
+  const el=$('#screen-single'); const ins=S.inspect; const d=ins.doc;
+  if(d && !ins.result) ins.result=readDocument(d);
+  const r=ins.result;
+  const chip=(t,s,state)=>`<div class="chip" data-state="${state}"><div class="t">${esc(t)}</div><div class="s">${esc(s)}</div></div>`;
+  let pipe='';
+  if(r){ const bc=r.raw.barcode; const bcState=bc.variant?'ok':'fail'; const bcText=bc.variant?`decoded on “${bc.variant}” · ${bc.symbology} · ${bc.payload_bytes} bytes`:`no barcode found (tried: ${bc.attempts.map(a=>a.variant).join(', ')})`;
+    const mz=r.raw.mrz; const mzState=mz.lines.length?(Object.values(mz.checks).every(Boolean)?'ok':(Object.values(mz.checks).filter(Boolean).length>=2?'ok':'fail')):'skip'; const mzText=mz.lines.length?`${Object.values(mz.checks).filter(Boolean).length} of 3 check digits pass${Object.values(r.sources).includes('mrz')?'':' · barcode already exact, so its values stand'}`:mz.error;
+    const ocrState=r.ocr_text.length?'ok':'fail'; const ocrText=r.ocr_text.length?`surya · ${r.ocr_text.length} lines${r.raw.ocr.title_skipped?` · title block left unread (${r.raw.ocr.title_skipped} lines)`:''}`:'no text read';
+    pipe=`<div class="pipe" id="inspectPipeline">${chip('1  Barcode (PDF417)',bcText,bcState)}<span class="arrow">→</span>${chip('2  MRZ (check digits)',mzText,mzState)}<span class="arrow">→</span>${chip('3  OCR (vision)',ocrText,ocrState)}</div>`; }
+  else pipe=`<div class="pipe" id="inspectPipeline">${chip('1  Barcode (PDF417)','tried first, on 5 preprocessing variants','wait')}<span class="arrow">→</span>${chip('2  MRZ (check digits)','the back of a Smart NID, self-verifying','wait')}<span class="arrow">→</span>${chip('3  OCR (vision)','the fallback, and the only source for Bangla','wait')}</div>`;
+  const nFields=r?Object.keys(r.fields).length:0; const bySrc={}; if(r) for(const s of Object.values(r.sources)) bySrc[s]=(bySrc[s]||0)+1;
+  const verdict = !d ? '' : (!r.ok ? '✗  Nothing could be read from this image' : `✓  Read ${nFields} field(s) — ${Object.entries(bySrc).map(([s,n])=>`${INSPECT_SOURCE_LABEL[s]||s} for ${n}`).join(', ')}`);
+  el.innerHTML=`
+    ${ins.cameFrom?`<div class="row"><button class="btn ghost" id="backToCheck">← Back to check and fix</button><span class="hint">Opened from step 3 — ${esc(d.file)}</span></div>`:''}
+    <div class="drop ${d?'chosen':''}" id="inspectDrop" tabindex="0" role="button">${d?esc(d.file):'Click to open a card image, or drop one here'}<div class="hint">${d?'Click or drop another to replace':'Read one card without setting up a batch — to check a new scan or a doubtful read. Drop a specimen card from the gallery.'}</div></div>
+    ${pipe}
+    <div class="row"><button class="btn ${d?'primary':''}" id="rerun" ${d?'':'disabled'} title="${d?'Read this whole card again from the start, ignoring any selection.':'Open a card first.'}">Re-run</button><button class="btn" disabled title="Select what an automatic crop would keep, so you can see what it would trim. Not simulated on this page.">Auto-crop</button><button class="btn" disabled title="Nothing is selected. Drag a box on the card to select a region.">Clear</button><button class="btn" disabled title="Drag a box on the card first, then this reads just that part.">Read selection</button><button class="btn" disabled title="This image holds one card. Both sides is for a sheet holding two.">Read both sides</button><span class="spacer"></span><button class="btn" id="keepRead" ${ins.cameFrom&&r&&r.ok?'':'disabled'} title="${ins.cameFrom?'Replace the batch’s read of this card with this one. Hand-typed corrections are re-applied afterwards.':'This card did not come from a batch, so there is no read to replace.'}">Keep this read</button></div>
+    <div class="hint" style="margin:6px 0">Drag a box on the image to read just that part, and compare it with the whole-image read. (Cropping is a desktop-only action; the read above is the whole card.)</div>
+    <div class="beside">
+      <div>${d?cardHtml(d,r?r.boxes:{},null,d.side==='blur'?d.file:sideCaption({...d,card_side:r?r.card_side:d.side})):'<div class="placeholder">No image</div>'}
+        <div style="margin-top:6px" class="${r&&r.ok?'tone-ok':'tone-bad'}">${esc(verdict)}</div>
+        <div class="hint">${r?`engine: ${esc(r.engine)}   ·   side: ${esc(r.card_side)}   ·   card: ${esc(r.card_type)}`:''}</div>
+        ${r&&r.error?`<div class="hint tone-warn">${esc(r.error)}</div>`:''}</div>
+      <div><div class="tablewrap"><table><thead><tr><th>Field</th><th>As printed</th><th>Stored as</th><th>Read from</th><th>Confidence</th></tr></thead><tbody>
+        ${r?inDisplayOrder(Object.keys(r.fields)).map(f=>`<tr><td>${esc(label(f))}</td><td class="${valueClass(f)}">${esc(r.fields[f])}</td><td class="${valueClass(f)}">${esc(normaliseForStorage(f,r.fields[f]))}</td><td>${badgeHtml(r.sources[f],INSPECT_SOURCE_LABEL[r.sources[f]]||r.sources[f])}</td><td>${meterHtml(r.confidence[f])}</td></tr>`).join(''):''}
+        </tbody></table></div>
+        <div style="margin-top:10px">Engine detail</div>
+        <div class="log" style="height:170px">${r?esc(JSON.stringify({barcode:r.raw.barcode,mrz:r.raw.mrz,ocr:r.raw.ocr,address_repairs:r.raw.address_repairs,uncorroborated:r.raw.uncorroborated,cross_check:r.cross_check},null,1)):''}</div></div>
+    </div>
+    <div class="eyebrow" style="margin-top:14px">Specimen cards</div>
+    <div class="gallery" id="inspectGallery">${S.docs.map(x=>`<button type="button" draggable="true" data-doc="${x.doc_id}" title="${esc(x.file)}"><img src="${x.url}" alt="${esc(x.file)}"><span class="fn">${esc(x.file)}</span></button>`).join('')}</div>`;
+  wireDrop($('#inspectDrop'),doc=>{ ins.doc=doc; ins.result=null; ins.cameFrom=null; renderInspect(); });
+  $$('#inspectGallery button',el).forEach(b=>{ b.onclick=()=>{ ins.doc=S.docs.find(x=>x.doc_id===+b.dataset.doc); ins.result=null; ins.cameFrom=null; renderInspect(); window.scrollTo({top:0}); }; b.ondragstart=e=>e.dataTransfer.setData('text/plain',b.dataset.doc); });
+  if(d) $('#rerun').onclick=()=>{ ins.result=null; renderInspect(); };
+  if(ins.cameFrom){ $('#backToCheck').onclick=()=>show('check');
+    $('#keepRead').onclick=async()=>{ if(!r||!r.ok){ await dialog('Keep this read','This read found no fields, so there is nothing to keep.'); return; }
+      const a=await dialog('Keep this read',`Replace the batch's read of this card with this one?\n\nValues a person has typed by hand are re-applied afterwards.`,['No','Yes']); if(a!=='Yes') return;
+      const fields={}; for(const [k,v] of Object.entries(r.fields)) fields[k]=normaliseForStorage(k,v);
+      S.extracted[d.doc_id]={doc_id:d.doc_id,engine:r.engine,fields,confidence:r.confidence,sources:r.sources,boxes:r.boxes,ocr_text:r.ocr_text,cross_check:r.cross_check,raw:r.raw,card_side:r.card_side,extracted_at:new Date().toISOString()};
+      d.status=(fields.nid_old||fields.nid_smart)?'extracted':'no_nid'; d.card_side=r.card_side; d.error='';
+      await STAGE_FN.group(); await dialog('Keep this read',`Kept. ${Object.keys(fields).length} field(s) stored for this card, and the member was rebuilt from both sides.`); show('check'); }; }
+}
+
+/* =====================================================================
+   19. Past batches (app/screens.py HistoryScreen, app/bridge.py list_runs)
+   ===================================================================== */
+const PAST=[{run_id:'DHK-07-2026-08',level:'branch',code:'DHK-07',started:'2026-08-19 09:42',docs:412,to_review:0},{run_id:'DHK-03-2026-08',level:'branch',code:'DHK-03',started:'2026-08-27 14:05',docs:286,to_review:3}];  // invented
+function renderHistory(){ const el=$('#screen-history'); const rows=[...(S.runCreated?[{run_id:S.runId,level:SCOPE.level,code:SCOPE.code,started:S.runCreated.toISOString().slice(0,16).replace('T',' '),docs:registeredDocs().length,to_review:S.comparisons.filter(c=>c.decision==='pending').length}]:[]),...PAST];
+  el.innerHTML=`<div class="tablewrap"><table><thead><tr><th>Run</th><th>Level</th><th>Code</th><th>Started</th><th>Documents</th><th>Awaiting review</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="num">${esc(r.run_id)}</td><td>${esc(r.level)}</td><td class="num">${esc(r.code)}</td><td class="num">${esc(r.started)}</td><td class="num">${r.docs}</td><td class="num">${r.to_review}</td></tr>`).join('')}</tbody></table></div><div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" id="histRefresh">Refresh</button></div>`;
+  $('#histRefresh').onclick=renderHistory; }
+
+/* =====================================================================
+   20. Settings — config.yaml, read-only. The desktop app has no settings
+   screen: the file is read at start-up and never written by the app.
+   ===================================================================== */
+function kv(obj){ return `<div class="kv">${Object.entries(obj).map(([k,v])=>`<div class="k">${esc(k)}</div><div class="v">${esc(Array.isArray(v)?'['+v.join(', ')+']':(typeof v==='object'&&v?JSON.stringify(v):String(v===''?'""':v)))}</div>`).join('')}</div>`; }
+function renderSettings(){ const el=$('#screen-settings'); const cf=COMPARE_CFG.fields; const {selectors,...erp}=CONFIG.erp; const {barcode,vision,...extract}=CONFIG.extract;
+  el.innerHTML=`<div class="h2">Settings — config.yaml</div><div class="hint">Read-only. The app reads this file and never writes it; the scope is set from the desktop app, not by hand. ERP credentials come from the environment (ERP_USERNAME / ERP_PASSWORD), never from this file.</div>
+  <div class="beside" style="margin-top:10px">
+   <div>
+    <fieldset class="group"><legend>run</legend>${kv(CONFIG.run)}</fieldset>
+    <fieldset class="group"><legend>scope</legend>${kv(CONFIG.scope)}</fieldset>
+    <fieldset class="group"><legend>batch</legend>${kv(CONFIG.batch)}</fieldset>
+    <fieldset class="group"><legend>extract</legend>${kv(extract)}<div class="eyebrow" style="margin-top:8px">barcode</div>${kv(barcode)}<div class="eyebrow" style="margin-top:8px">vision</div>${kv(vision)}</fieldset>
+   </div>
+   <div>
+    <fieldset class="group"><legend>compare</legend><div class="tablewrap"><table><thead><tr><th>field</th><th>comparator</th><th>threshold</th><th>auto_fix</th><th>weight</th></tr></thead><tbody>${Object.entries(cf).map(([f,r])=>`<tr><td class="num">${f}</td><td>${r.comparator}</td><td class="num">${r.threshold.toFixed(2)}</td><td>${r.auto_fix}</td><td class="num">${r.weight}</td></tr>`).join('')}</tbody></table></div>
+      <div style="margin-top:8px">${kv({'escalate.name_similarity_below':COMPARE_CFG.escalate.name_similarity_below,'escalate.and_dob_differs':COMPARE_CFG.escalate.and_dob_differs,min_confidence_for_auto:COMPARE_CFG.min_confidence_for_auto})}</div></fieldset>
+    <fieldset class="group"><legend>erp</legend>${kv(erp)}<div class="eyebrow" style="margin-top:8px">selectors — ${selectors.length} CSS selectors, all ""</div><div class="hint">Stages 3–5 refuse to run until these are set, and name exactly which are missing. On this page Stage 3 looks members up in an invented ERP export instead.</div><div class="mono hint" style="margin-top:4px">${selectors.map(esc).join(' · ')}</div></fieldset>
+    <fieldset class="group"><legend>apply — Stage 5, deferred, not built</legend>${kv(CONFIG.apply)}<div class="hint" style="margin-top:6px">Stages 1–4 end at a reviewed mismatch report. <b>enabled: false</b> means the app does not expose Stage 5 at all; the schema and review decisions are already shaped for it.</div></fieldset>
+   </div></div>`; }
+
+/* =====================================================================
+   21. Guided tour
+   ===================================================================== */
+const TOUR=[
+  {t:'Five numbered steps, not tabs',screen:'setup',target:'#rail',b:'The rail across the top names the job in order: Set up, Extract, Check and fix, Compare, Export. Each step carries its own state mark (✓ done, ! needs you, ● running, – idle). Utilities sit after the divider. 4 of the 5 planned pipeline stages are built; Stage 5 — writing corrections back into the ERP — is switched off (apply.enabled: false).'},
+  {t:'Set up the batch',screen:'setup',target:'#sourcesBox',b:'One run covers one scope (a branch, area or region). Documents come from any number of sources — a synced OneDrive folder, a local folder, a network share, a single file — de-duplicated on file content. Below the sources is the batch folder itself: 16 specimen cards. Press “Run extraction (stages 1–2)” to start.'},
+  {t:'Barcode first, OCR as the fallback',screen:'extract',target:'#progressLog',b:'Each card is read by three engines in a fixed order: the PDF417 barcode on the back (exact when it decodes, tried on five preprocessing variants), then the machine-readable zone (self-verifying by check digits), then OCR of the printed text — the only source for the Bangla names. The log shows which engine settled each card.'},
+  {t:'Every field, with where it came from',screen:'check',target:'#fieldsTable',b:'Fifteen fields, always in the same order. The “Read from” badge is filled with a tick when the value was proved (barcode or MRZ) and plain when it was read. The confidence meter is banded at 90% (auto-apply) and 60%; only rows below 90% are tinted, because those are the ones a person must look at. Double-click a value to type a correction — it is saved beside the reading, never over it.'},
+  {t:'The card beside the fields',screen:'check',target:'#cardStack',b:'Both sides of a member’s card are on screen. Click a field row to highlight the patch of card the value was read from, and to switch to the side that carries it. “Show every line the OCR read” opens the raw lines for diagnosing a bad parse.'},
+  {t:'Resolve: NID, then NID, then name + date of birth',screen:'compare',target:'#resolutionPanel',b:'Documents carry no member id, so the NID is the join key: nid_old → nid_smart → name + DOB, first hit wins. A member found only by name+DOB is a member whose ERP NID is wrong — the most valuable finding in the run. Two hits is ambiguous, none is not-in-ERP, and both stay that way: unknown stays unknown, nothing is guessed.'},
+  {t:'The review queue',screen:'compare',target:'#reviewButtons',b:'Stage 4 sorts every difference into a verdict — match, format_only, missing_doc, missing_erp, low_confidence, mismatch, escalate — and only pending ones reach a person. Approve (A) and Reject (R) carry equal weight on purpose. Defer (D) moves a record to the end. Every decision writes an audit row with who and when.'},
+  {t:'Export and the batch summary',screen:'export',target:'#exportCard',b:'One row per member plus a sheet of every document behind it, each field followed by its confidence and its source. Here the two sheets download as CSV. The summary counts each outcome, the straight-through rate and this run’s read throughput.'},
+  {t:'Test a card',screen:'single',target:'#inspectPipeline',b:'The single-image workbench: open any specimen and see exactly what happened — which barcode variant decoded, whether the MRZ check digits passed, how many OCR lines were read, the value as printed and as stored. “Fix this read” on step 3 opens a card here; “Keep this read” writes it back into the batch.'},
+  {t:'Settings',screen:'settings',target:'#screen-settings .group',b:'config.yaml, shown read-only: the comparison thresholds and weights, the engine order, the barcode variants, the 27 empty ERP selectors, and the Stage 5 block that is deliberately disabled.'},
+];
+function renderTour(){ const el=$('#tour'); const i=S.tourStep, step=TOUR[i];
+  el.innerHTML=`<div class="row"><b>Guided tour</b><span class="hint">step ${i+1} of ${TOUR.length}</span><span class="spacer"></span><button class="btn ghost" id="tourClose" aria-label="Close the tour">✕</button></div>
+    <ol>${TOUR.map((s,k)=>`<li ${k===i?'aria-current="step"':''} data-k="${k}" tabindex="0">${esc(s.t)}</li>`).join('')}</ol>
+    <div class="body">${esc(step.b)}</div>
+    <div class="row"><button class="btn" id="tourBack" ${i?'':'disabled'}>Back</button><span class="spacer"></span><button class="btn primary" id="tourNext">${i<TOUR.length-1?'Next':'Finish'}</button></div>`;
+  $('#tourClose').onclick=toggleTour; $('#tourBack').onclick=()=>gotoTour(i-1); $('#tourNext').onclick=()=>i<TOUR.length-1?gotoTour(i+1):toggleTour();
+  $$('li[data-k]',el).forEach(li=>{ li.onclick=()=>gotoTour(+li.dataset.k); li.onkeydown=e=>{ if(e.key==='Enter') gotoTour(+li.dataset.k); }; });
+  $$('.tour-highlight').forEach(x=>x.classList.remove('tour-highlight'));
+  if(S.screen!==step.screen) show(step.screen);
+  const target=$(step.target); if(target){ target.classList.add('tour-highlight'); target.scrollIntoView({behavior:'smooth',block:'center'}); } }
+function gotoTour(i){ S.tourStep=Math.max(0,Math.min(TOUR.length-1,i)); renderTour(); }
+function toggleTour(){ const el=$('#tour'); const open=el.hidden; el.hidden=!open; $('#tourToggle').setAttribute('aria-expanded',String(open)); if(open) renderTour(); else $$('.tour-highlight').forEach(x=>x.classList.remove('tour-highlight')); }
+
+/* =====================================================================
+   22. Theme (app/main.py apply_theme, app/prefs.py) and start-up
+   ===================================================================== */
+function applyTheme(name){ document.documentElement.dataset.theme=name; const dark=name==='dark'; const b=$('#themeToggle'); b.textContent=dark?'☀  Light':'☾  Dark'; b.title=(dark?'Switch to the light theme.':'Switch to the dark theme.')+' Remembered for next time.'; try{ localStorage.setItem('dee-theme',name); }catch(e){} }
+(function init(){
+  let chosen='light'; try{ chosen=localStorage.getItem('dee-theme')||'light'; }catch(e){} if(!['light','dark'].includes(chosen)) chosen='light'; applyTheme(chosen);
+  $('#themeToggle').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+  $('#tourToggle').onclick=toggleTour;
+  document.addEventListener('keydown',e=>{ const tag=(e.target.tagName||'').toLowerCase(); if(['input','select','textarea'].includes(tag)) return;
+    if(e.altKey&&/^[1-5]$/.test(e.key)){ e.preventDefault(); show(RAIL_STEPS[+e.key-1][0]); return; }   // app/rail.py: the shortcut is the number
+    if(S.screen==='compare'&&!e.altKey&&!e.ctrlKey&&!e.metaKey){ const k=e.key.toLowerCase(); if(k==='a') decide('approved'); else if(k==='r') decide('rejected'); else if(k==='d') decide('deferred'); } });
+  notice([['Offline','Nothing on this page leaves your computer: no request is made to any server, and the cards, members and ERP rows are invented.'],['Start','Step 1 is set up with two sources and 16 specimen images. Press “Run extraction (stages 1–2)”, then “Run ERP + compare (stages 3–4)”, or open the guided tour.']],'info');
+  refreshRail(); show('setup');
+})();
+
+</script>
+</body>
+</html>

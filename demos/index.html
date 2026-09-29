@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Demos</title>
+<meta name="description" content="Working simulations of the systems designed and built by Md. Mominul Haque (Pabel) for a 400-branch microfinance institution. Invented data; production systems are private.">
+<style>
+  :root{--bg:#f6f7f9;--card:#ffffff;--ink:#1a1d23;--muted:#5b6270;--line:#e3e6eb;--accent:#0f5fa8;--accent-ink:#ffffff;--tag:#eef3fa;--tag-ink:#274a78}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111418;--card:#1a1f26;--ink:#e8ebef;--muted:#9aa3b0;--line:#2a313b;--accent:#5aa2e6;--accent-ink:#0b1622;--tag:#1f2a38;--tag-ink:#a9c6e8}}
+  :root[data-theme="dark"]{--bg:#111418;--card:#1a1f26;--ink:#e8ebef;--muted:#9aa3b0;--line:#2a313b;--accent:#5aa2e6;--accent-ink:#0b1622;--tag:#1f2a38;--tag-ink:#a9c6e8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:1040px;margin:0 auto;padding:40px 16px 64px}
+  h1{font-size:1.9rem;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 28px;max-width:70ch}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px}
+  .card h2{font-size:1.1rem;margin:0}
+  .card p{margin:0;color:var(--muted);font-size:.95rem}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{background:var(--tag);color:var(--tag-ink);border-radius:999px;padding:2px 10px;font-size:.78rem}
+  .num{font-size:.9rem;color:var(--ink)}
+  .open{margin-top:auto;display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;padding:9px 14px;border-radius:8px;font-weight:600;font-size:.95rem}
+  .open:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .note{margin-top:32px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:.9rem;background:var(--card)}
+  footer{margin-top:24px;color:var(--muted);font-size:.85rem}
+  footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 10px"><a href="../index.html" style="color:var(--accent);text-decoration:none">&larr; Portfolio and case studies</a></p>
+  <h1>System demos</h1>
+  <p class="sub">Working simulations of systems I designed and built at a 400-branch microfinance institution in Bangladesh (2024–2026). Each one reproduces the real screens and business rules with invented data. Open any card; a guided tour inside each page walks through the main flow in about three minutes.</p>
+
+  <div class="grid">
+    <article class="card">
+      <h2>Field-Staff Target System</h2>
+      <p>Splits every branch target across its officers by a weighted formula so the parts sum exactly to the whole, with validation, a run state machine and a full audit trail.</p>
+      <div class="tags"><span class="tag">Django · React</span><span class="tag">Allocation engine</span><span class="tag">Audit log</span></div>
+      <p class="num">Production: ~18,000 weekly targets for 2,600 officers in 409 branches, live since July 2026.</p>
+      <a class="open" href="PMUK_Field_Staff_Target_System/PMUK_Field_Staff_Target_System.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>SaiMarz</h2>
+      <p>Offline desktop tool that joins two 730,000-row weekly workbooks and reports the duplicate-key conflicts VLOOKUP hides, with a provenance sheet in every output.</p>
+      <div class="tags"><span class="tag">PySide6 · DuckDB · Polars</span><span class="tag">Desktop</span></div>
+      <p class="num">Production: about 46 seconds per run, replacing a crash-prone 20–30 minute process.</p>
+      <a class="open" href="SaiMarz/SaiMarz.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>MFS Branch Wallet Portal</h2>
+      <p>bKash / Nagad merchant-wallet onboarding for branch offices: bilingual forms, a 13-state maker-checker workflow, account change requests and generated provider packs.</p>
+      <div class="tags"><span class="tag">Django</span><span class="tag">Bengali / English</span><span class="tag">Workflow</span></div>
+      <p class="num">Production: 731 branch users, 189 registrations, median 0.8-day verification, live since June 2026.</p>
+      <a class="open" href="MFS_Branch_Wallet_Portal/MFS_Branch_Wallet_Portal.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>Transfer Eligibility Control Tower</h2>
+      <p>Checks member transfer requests against loan positions read from the core ERP and flags overdue members moved between officers, the pattern that hides portfolio at risk.</p>
+      <div class="tags"><span class="tag">Streamlit · Playwright</span><span class="tag">ERP automation</span></div>
+      <p class="num">Configured for 568 branch offices; every check logged.</p>
+      <a class="open" href="Transfer_Eligibility_Control_Tower/Transfer_Eligibility_Control_Tower.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>Special Permission Register</h2>
+      <p>Reads a WhatsApp group export, extracts loan special-permission, rebate and waiver applications, validates members against the ERP and builds audit dashboards. Reads only; never sends.</p>
+      <div class="tags"><span class="tag">Flask · Playwright</span><span class="tag">Bilingual parsing</span></div>
+      <p class="num">Production: 257 applications across 141 branches, 12 months of history.</p>
+      <a class="open" href="Special_Permission_Register/Special_Permission_Register.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>Special Rebate Automation</h2>
+      <p>From zonal e-mails to a verified SMS list: extracts member rows from attachments, verifies in the ERP, applies three-tier eligibility, removes ineligible rows with reasons and drafts the ICT hand-off.</p>
+      <div class="tags"><span class="tag">Outlook COM · Playwright</span><span class="tag">Rules registry</span></div>
+      <p class="num">Production: 66 members processed, 4 ineligible rebates caught before payment.</p>
+      <a class="open" href="Special_Rebate_Automation/Special_Rebate_Automation.html">Open simulation</a>
+    </article>
+
+    <article class="card">
+      <h2>Document Extraction Engine</h2>
+      <p>NID card to KYC reconciliation: barcode first, OCR fallback, member resolution by NID then name and date of birth, and a review queue for mismatches. Unknown stays unknown.</p>
+      <div class="tags"><span class="tag">Python · OCR</span><span class="tag">Offline</span></div>
+      <p class="num">4 of 5 planned stages built; nothing leaves the machine.</p>
+      <a class="open" href="Document_Extraction_Engine/Document_Extraction_Engine.html">Open simulation</a>
+    </article>
+  </div>
+
+  <div class="note">All data in these pages is invented and generated in the browser. The production systems run against organisational data and are private. Business Pulse, the weekly KPI dashboard that receives the target system's output, is described in the portfolio case study.</div>
+
+  <footer>Md. Mominul Haque (Pabel) · <a href="https://pabelhaque.github.io/portfolio/">Portfolio and case studies</a> · <a href="https://github.com/PabelHaque">GitHub</a></footer>
+</main>
+</body>
+</html>

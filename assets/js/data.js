@@ -38,6 +38,7 @@ window.PORTFOLIO = {
      repo:       full URL, or "" if there is nothing to link
      visibility: "public" | "private"
      page:       path to the case study, or "" for no page
+     demo:       path to the dummy-data simulation, or omit
      Node positions and connecting lines are computed — nothing
      to lay out by hand.
      --------------------------------------------------------- */
@@ -79,7 +80,29 @@ window.PORTFOLIO = {
       ],
       tags: ["Django", "PostgreSQL", "TypeScript", "React", "Docker", "RBAC", "i18n"],
       page: "projects/pmuk-target-system.html",
+      demo: "demos/PMUK_Field_Staff_Target_System/PMUK_Field_Staff_Target_System.html",
       repo: "https://github.com/PabelHaque/PMUK-Target-System",
+      visibility: "private"
+    },
+    {
+      slug: "mfs-branch-wallet",
+      part: "systems",
+      title: "MFS Branch Wallet Registration Portal",
+      kicker: "Workflow system \u00b7 payments onboarding",
+      year: "2026",
+      glyph: "audit",
+      principle: "Checks before it registers.",
+      stat: { n: "731", label: "branch users \u00b7 live since June 2026" },
+      summary: "Every branch office needs a bKash or Nagad merchant wallet to collect and disburse by mobile money. Registration used to travel by email and Excel for two to four weeks per branch, and one typo against the cheque meant a rejection. The portal is a bilingual maker-checker workflow with thirteen states: the branch submits with a cheque image, the region verifies, head office approves, and the provider pack is generated on letterhead. A number already registered is caught before it ever reaches the provider.",
+      facts: [
+        { k: "Scale", v: "736 branch offices \u00b7 731 users" },
+        { k: "Verification", v: "Median 0.8 days, was 2\u20134 weeks" },
+        { k: "Workflow", v: "13 states \u00b7 maker-checker" }
+      ],
+      tags: ["Django", "Bootstrap", "SQLite", "Bangla / English", "Maker-checker", "DOCX / Excel generation"],
+      page: "",
+      demo: "demos/MFS_Branch_Wallet_Portal/MFS_Branch_Wallet_Portal.html",
+      repo: "",
       visibility: "private"
     },
     {
@@ -139,6 +162,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Flask", "SQLite", "Playwright", "Chart.js", "Excel automation", "Bilingual parsing"],
       page: "projects/padakhep-rebate-automation.html",
+      demo: "demos/Special_Permission_Register/Special_Permission_Register.html",
       repo: "https://github.com/PabelHaque/padakhep-rebate-automation",
       visibility: "private"
     },
@@ -159,6 +183,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Outlook COM", "Playwright", "openpyxl", "SQLite", "YAML config"],
       page: "projects/special-rebate-automation.html",
+      demo: "demos/Special_Rebate_Automation/Special_Rebate_Automation.html",
       repo: "https://github.com/PabelHaque/special-rebate-automation",
       visibility: "private"
     },
@@ -179,6 +204,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "Streamlit", "Playwright", "SQLite", "Excel", "Outlook COM"],
       page: "projects/transfer-automation.html",
+      demo: "demos/Transfer_Eligibility_Control_Tower/Transfer_Eligibility_Control_Tower.html",
       repo: "https://github.com/PabelHaque/transfer-automation",
       visibility: "private"
     },
@@ -199,6 +225,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "PySide6", "Surya OCR", "PDF417 barcode", "SQLite", "pytest"],
       page: "projects/document-extraction-engine.html",
+      demo: "demos/Document_Extraction_Engine/Document_Extraction_Engine.html",
       repo: "https://github.com/PabelHaque/document-extraction-engine",
       visibility: "private"
     },
@@ -219,6 +246,7 @@ window.PORTFOLIO = {
       ],
       tags: ["Python", "PySide6 / Qt", "pandas", "Parquet", "Inno Setup", "MIT licence"],
       page: "projects/saimarz.html",
+      demo: "demos/SaiMarz/SaiMarz.html",
       repo: "https://github.com/PabelHaque/saimarz",
       visibility: "private"
     },
