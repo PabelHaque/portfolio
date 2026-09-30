@@ -94,60 +94,16 @@
       <figcaption>The fifth stage is designed for and deliberately not enabled.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>The fallback chain is a finding, not a fallback.</strong></p>
-    <p>
-      The resolution order is national ID, then smart-card ID, then name and date of birth, and
-      the record stores which one succeeded. That last field is the most valuable output of the
-      whole stage, because <strong>a member who could only be found by name and date of birth is
-      a member whose ID number in the ERP is wrong</strong>. A step that exists to rescue a
-      failed lookup turns out to be the detector for the exact records the project was
-      commissioned to find.
-    </p>
-
-    <h3>Choosing the recognition engine on evidence</h3>
-    <p>
-      I measured two engines on real cards rather than trusting their documentation. Accuracy was
-      close. Confidence was not, and confidence is what decides whether a human has to look.
-    </p>
-    <div class="table-scroll">
-      <table class="data-table">
-        <thead><tr><th>&nbsp;</th><th>Engine A</th><th>Engine B</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Bangla names</strong></td><td>3 of 3 exact, one pass</td><td>3 of 3 exact, but only across three passes</td></tr>
-          <tr><td><strong>English name</strong></td><td>Same pass</td><td>Needs a second, Latin-only pass</td></tr>
-          <tr><td><strong>Machine-readable check digits</strong></td><td>All pass</td><td>One fails</td></tr>
-          <tr><td><strong>Mean confidence</strong></td><td><strong>0.88 &ndash; 0.97</strong></td><td>0.44 &ndash; 0.52</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p>
-      The second engine returns around 0.52 on values that are <em>correct</em>. Against an
-      auto-accept threshold of 0.90, every Bangla name it reads lands in the review queue whether
-      it is right or wrong &mdash; which makes the threshold meaningless and the queue
-      unmanageable. The first engine's scores actually separate good reads from bad, so the
-      threshold does real work. I chose on that, not on the accuracy column.
-    </p>
-
-    <div class="callout">
-      <span class="label">Read the wrong column before the missed column</span>
-      When scoring extraction against a corrected gold set, a <em>missed</em> field sends a
-      record to review, which is merely expensive. A <em>wrong</em> field can match a different
-      member entirely, which is a data-integrity incident. The two failures are not
-      interchangeable and the evaluation reports them separately.
-    </div>
-
-    <h3>One more decision</h3>
-    <ul>
-      <li><strong>Everything runs on the machine in front of you.</strong> No document leaves the computer: the recognition models run locally, cloud folders are read as ordinary synced directories rather than through an API, and there are no tokens to manage. For a file of identity documents that is the only defensible design.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
       A batch of scanned cards becomes a reviewed list of concrete mismatches between what the
       ERP believes and what the member's document says, with the records whose ID number is
       wrong called out specifically. The correction step is built for and switched off, which is
-      where it should stay until the review workflow has been used in anger.
+      where it should stay until the review workflow has been used in anger. The fallback chain
+      turned out to be a finding rather than a fallback. A member who can only be found by name and
+      date of birth is a member whose ID number in the ERP is wrong, so the step that exists to
+      rescue a failed lookup is also the detector for the exact records the project was
+      commissioned to find.
     </p>
 
     <div class="case-nav">

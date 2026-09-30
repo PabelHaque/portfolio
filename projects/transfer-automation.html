@@ -106,40 +106,21 @@
       <figcaption>Steps 1 to 4 answer today's request. Steps 5 and 6 are what make next quarter's pattern visible.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>No language model takes part in an eligibility or fraud decision.</strong></p>
-    <p>
-      I build with language models elsewhere in this portfolio, including a pipeline of 71 of
-      them. Here I deliberately kept them out of the decision path. A compliance tool has to give
-      the same answer twice and be able to say exactly why. A probabilistic component in that
-      path would mean an officer could be flagged by something no one can reproduce, and a
-      flagged officer deserves a rule they can read.
-    </p>
-    <p>
-      Two properties follow from the same reasoning. The tool <strong>fails loud</strong>: a
-      failure to read a page never becomes a quiet "Eligible", it becomes Manual Review. And
-      every decision stores the <strong>version of the rule</strong> that produced it, so a
-      decision made in June can still be explained after the rule changes in September.
-    </p>
-
     <div class="callout">
       <span class="label">A pre-check, not an approval</span>
       The tool never approves a transfer. It tells a human what the loan system actually says
       and records that it was asked. Business sign-off stays where it was.
     </div>
 
-    <h3>Two more decisions</h3>
-    <ul>
-      <li><strong>Evidence, not just verdicts.</strong> Each member check keeps the page text and a screenshot. When someone disputes a result months later, the answer is not my parser's opinion but what the system displayed at the time.</li>
-      <li><strong>Member data never leaves the machine.</strong> The governance database, the uploaded requests, the generated results and the per-member snapshots are all excluded from version control. Clone the repository and you get the code and the configuration templates, not anyone's loan balance.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
       A manual check that nobody had time to do properly now runs as a batch with evidence
       attached, and a category of quiet number-moving that was previously invisible has a
       permanent record. The tool is a working prototype, exercised on test data; the remaining
-      work before a first production run is listed in its handover brief rather than implied.
+      work before a first production run is listed in its handover brief rather than implied. No
+      language model takes part in an eligibility or fraud decision. A compliance tool has to give
+      the same answer twice and be able to say exactly why, so a flagged officer gets a rule they
+      can read rather than a verdict nobody can reproduce.
     </p>
 
     <div class="case-nav">

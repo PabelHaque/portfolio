@@ -79,7 +79,7 @@
     </p>
     <ul>
       <li><strong>71 specialist agents</strong> across requirements, architecture, design, build, QA, security, documentation, deployment and business intelligence — including a six-agent technology-decision sub-pipeline that scores stack options against alternatives.</li>
-      <li><strong>20 workflow playbooks</strong> for the shapes work actually arrives in: bug fix, hotfix, schema change, data migration, security incident, consulting engagement, new-system incubation — and a deliberate <code>cosmetic_fast_path</code> so a one-line CSS change does not walk the full pipeline.</li>
+      <li><strong>20 workflow playbooks</strong> for the shapes work actually arrives in: bug fix, hotfix, schema change, data migration, security incident, consulting engagement, new-system incubation — and a deliberate cosmetic fast path so a one-line CSS change does not walk the full pipeline.</li>
       <li><strong>Four mandatory human gates</strong> — CLARIFY, REQ, Mockup, PR.</li>
       <li><strong>An adversarial critic</strong> whose revise verdict blocks the pipeline.</li>
       <li><strong>A harness-level write-guard hook</strong> protecting registries, agent definitions, approved requirements and secrets from the agents themselves.</li>
@@ -109,47 +109,14 @@
       <figcaption>The four gates are the design. Everything between them is parallelisable; the gates are not.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>Artifact verification — agents cannot mark their own homework.</strong></p>
-    <p>
-      The confident false completion is what makes agent pipelines untrustworthy: a stage
-      reports success, the next stage builds on nothing, and the error surfaces four stages
-      later when the context that would explain it is gone.
-    </p>
-    <p>
-      So stage completion is not a claim an agent is allowed to make. A stage is complete when a
-      physical file exists at the expected path <em>and</em> passes a self-check for that
-      artifact type. No file, no completion — regardless of what the agent reports. The
-      integrity check moves from the model's judgement, where it is unreliable, to the
-      filesystem, where it is not.
-    </p>
-
-    <div class="callout">
-      <span class="label">Same principle, applied to the rules</span>
-      If an agent could edit the registry that defines the rules it is judged against, the rules
-      would be advisory. The write-guard hook means it cannot, so they are not.
-    </div>
-
-    <h3>Two more decisions</h3>
-    <ul>
-      <li><strong>Business rules and KPIs live in a registry, never in code.</strong> A formula duplicated across a backend, a report and a dashboard drifts. One definition, referenced everywhere; changing it is a governed action.</li>
-      <li><strong>Agent updates are themselves a governed workflow.</strong> Changing an agent needs a proposal, human approval, regression tests and a rollback path — the <code>update_agents</code> and <code>sharpen_agents</code> playbooks. The system that enforces process on your code is held to the same process.</li>
-    </ul>
-
-    <h2>Portability</h2>
-    <p>
-      Parallel PowerShell and Bash installers with matching verifiers; no npm or pip install
-      step of its own; creates only directories and stub files. A packaging script assembles a
-      Claude Code plugin distribution from the live agent, skill and hook directories —
-      read-only sources — with a dry-run mode that reports what it <em>would</em> write before
-      writing anything. One-command setup for a new machine, Windows or Unix.
-    </p>
-
     <h2>Outcome</h2>
     <p>
       The overlay drives the three other systems in this portfolio. The PMUK allocation engine,
       the reporting dashboard and the study platform were all built through it — it is not a
-      demo of a process, it is the process the rest of this work was produced by.
+      demo of a process, it is the process the rest of this work was produced by. Agents cannot
+      mark their own homework. A stage counts as complete only when a physical file exists at the
+      expected path and passes a self-check for that artifact type, regardless of what the agent
+      reports, so the integrity check lives in the filesystem rather than in the model's judgement.
     </p>
 
     <div class="case-nav">

@@ -104,43 +104,15 @@
       <figcaption>Two gates: one where a human decides, one where the record decides.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>No approval is guessed — by design, not by omission.</strong></p>
-    <p>
-      In the chat, approvals arrive as bare acknowledgements — a one-word reply from the
-      approver, some time after some application. The tempting shortcut is obvious: attach
-      each "okay" to the nearest preceding application and mark it approved. It would make the
-      dashboard look complete on day one.
-    </p>
-    <p>
-      It would also, sooner or later, mark the wrong member's waiver as approved — a financial
-      record that is wrong in a way nobody would notice until it mattered. So the system does
-      not do it. Every application is stored as <code>pending</code>, and the decision is set by
-      a person, per record, in the member's detail view. The dashboard has a "pending review"
-      sheet precisely because that queue is real work, not a gap to be papered over by a
-      heuristic.
-    </p>
-
-    <div class="callout">
-      <span class="label">The same instinct, on the matching side</span>
-      A member may have taken the same loan amount several times. To pin the concession to the
-      right loan, the validator matches the WhatsApp message's disbursement date <em>and</em>
-      amount — compared against both the principal and the total — rather than trusting either
-      field alone. Where a match is ambiguous, it stays visible as ambiguous.
-    </div>
-
-    <h3>Two more decisions</h3>
-    <ul>
-      <li><strong>Idempotency keyed on content, not position.</strong> Hashing timestamp + sender + member + amount + loan date means the pipeline is safe to re-run on the full export every time, which is exactly what a scheduled job needs — and it still accepts a back-filled history without a special import mode.</li>
-      <li><strong>Read the record, not the summary.</strong> The validator visits every loan detail page rather than the member's overview, because the overview does not carry disbursement dates and guarantors, and the policy check is meaningless without the date.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
       A chat that had to be read by hand is now a ledger with a review queue: each concession
       recorded once, tied to the exact loan in the core banking system, with every
       post-concession loan flagged automatically and a six-sheet audit workbook that finance
-      can open directly. The approvals column is filled in by people — which is the point.
+      can open directly. No approval is guessed, by design rather than by omission. Approvals in
+      the chat arrive as one-word acknowledgements that could easily be attached to the wrong
+      application, so every request is stored as pending and the decision is set by a person,
+      per record.
     </p>
 
     <div class="case-nav">

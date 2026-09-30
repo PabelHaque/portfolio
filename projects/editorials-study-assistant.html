@@ -97,22 +97,6 @@
       points, response strategy — so a candidate gets the <em>argument</em>, not just the headline.
     </div>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>A model router with a real fallback chain — free and local tiers first.</strong></p>
-    <p>
-      Every LLM call goes through a shared router with an ordered fallback chain: free-tier hosted
-      open-weight routes first, then a second independent free-tier provider serving the same
-      open-weight model, then local models. It advances down the chain on a rate limit, a daily
-      quota exhaustion, invalid JSON in the response, an unavailable model, or a local server
-      that is not running.
-    </p>
-    <ul>
-      <li><strong>Paid routes are off by default</strong> behind an explicit opt-in flag. Cost cannot escape by accident.</li>
-      <li><strong>Provider independence.</strong> The second provider serves the same open-weight model, so exhausting one daily quota degrades throughput, not output quality. With only the second key present, the router picks it directly.</li>
-      <li><strong>Invalid JSON is a routing signal, not a crash.</strong> Treating a malformed structured response like an outage is what keeps an overnight crawl from dying at 2am on one bad generation.</li>
-      <li><strong>Named presets</strong> — best quality, fastest, Bangla-capable — so the operator picks an intent, not a model identifier.</li>
-    </ul>
-
     <figure class="figure">
       <div class="pipeline" aria-label="Article processing pipeline">
         <div class="stage"><span class="num">1</span><div><div class="name">Crawl</div><div class="what">Scrapy across a curated source catalogue — op-ed, business, and a global geopolitics layer.</div></div></div>
@@ -125,34 +109,14 @@
       <figcaption>Two outputs per crawl: a JSONL feed and the study database.</figcaption>
     </figure>
 
-    <h2>A corpus that predates its own scoring</h2>
-    <p>
-      Relevance scoring did not exist in the first version, so a body of articles had no score.
-      Deleting them discards real content; scoring them zero hides it; pretending they were scored
-      corrupts the comparison. They are marked <code>legacy</code> and backfilled at a neutral
-      value until <code>rescore_articles.py</code> recalculates them against the <em>current</em>
-      gate. The state is visible in the data rather than papered over.
-    </p>
-
-    <h2>Beyond the crawler</h2>
-    <p>
-      Past exam questions come in from three directions because no single one is sufficient:
-      structured CSV import, online discovery that downloads linked PDFs and images from public
-      sources, and an OCR path that prepares scanned papers for review using local tools only. On
-      top of the corpus: model answers, an answer rubric, practice sets, a question workbench, a
-      prompt lab for iterating on the scoring prompts themselves, and a source-health page for
-      spotting a feed that has quietly stopped returning anything.
-    </p>
-    <p>
-      Crawls, rescores and ingestion run through an app-safe background job runner so the
-      workspace stays usable while a crawl is in flight.
-    </p>
-
     <h2>Outcome</h2>
     <p>
       A daily current-affairs workflow that cost an hour of triage now arrives pre-filtered,
-      syllabus-mapped, scored, and exportable as a study pack — on free and local models, with
-      the paid path switched off.
+      syllabus-mapped, scored, and exportable as a study pack. Every model call goes through one
+      router with a real fallback chain, free hosted routes first, then a second independent free
+      provider, then local models, so a rate limit or a malformed response moves the job down the
+      chain instead of killing an overnight crawl. Paid routes are off by default behind an
+      explicit opt-in, so cost cannot escape by accident.
     </p>
 
     <div class="case-nav">

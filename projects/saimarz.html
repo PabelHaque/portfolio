@@ -77,9 +77,8 @@
       The silent failures are the reason this exists. A key that is blank on a quarter of the
       rows can never match those rows, but the result still looks complete. A key the lookup file
       repeats means "take the first match" is choosing one of several arbitrarily, and nothing
-      says so. And a member ID written as a number loses its leading zero, so
-      <code>0012345</code> becomes <code>12345</code> &mdash; which is still a plausible-looking
-      identifier, and matches nothing.
+      says so. And a member ID written as a number loses its leading zero and becomes a
+      plausible-looking identifier that matches nothing.
     </p>
 
     <h2>What I built</h2>
@@ -98,41 +97,22 @@
       <figcaption>Steps 2 and 4 both exist to let someone stop before they have produced a confident, wrong answer.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>The tool tells you what your key will cost before you use it.</strong></p>
-    <p>
-      Under the key picker, one sentence: how much of the column is filled, how many keys the
-      lookup file repeats, and the highest match rate that is therefore possible. A key that is
-      blank on a quarter of the rows is capped at 75% before the join has run, and a repeated key
-      means the tool is picking arbitrarily among candidates.
-    </p>
-    <p>
-      Neither fact is visible in a spreadsheet, and both change what a careful person would do.
-      Putting them on screen at the moment of the decision, rather than in a log afterwards, is
-      most of the value of the tool. There is also a comparison view that scores every candidate
-      column, for when the obvious key turns out to be the wrong one.
-    </p>
-
     <div class="callout">
       <span class="label">Keeps a zero a zero</span>
       When a column holds digits stored as text with leading zeros &mdash; a member ID, a staff
-      ID, a phone number &mdash; it stays text, and the tool says so on screen. Writing
-      <code>0012345</code> as a number produces <code>12345</code>, which still looks like a valid
-      identifier. That is the difference between a join that fails visibly and one that fails
+      ID, a phone number &mdash; it stays text, and the tool says so on screen. Written as a
+      number, 0012345 becomes 12345, which still looks like a valid identifier. That is the difference between a join that fails visibly and one that fails
       silently.
     </div>
 
-    <h3>Three more decisions</h3>
-    <ul>
-      <li><strong>No network calls at any point.</strong> No telemetry, no update check, nothing. It works with the network cable pulled out. The activity log records file names, sheet names, column names and timings, and never the contents of a row &mdash; so the log is safe to send when someone needs help.</li>
-      <li><strong>Every output carries its own provenance.</strong> Each workbook it writes includes a metadata sheet recording which files were merged, their fingerprints, the key, the join settings, the match rate and the version that produced it. A result found on a shared drive months later can be traced back to its inputs.</li>
-      <li><strong>It has to install without help.</strong> Per-user installation, so no administrator password, and everything bundled, so no runtime to install first. The documentation tells people the unsigned-installer warning is coming and what to click, because a tool nobody can install is not a tool.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
-      Colleagues join two very large workbooks themselves, offline, and see the cost of their key
-      before they commit to it. On a measured pair of real exports &mdash; 731,771 rows by 95
+      Under the key picker, one line tells the user what the chosen key will cost before the join
+      runs: how much of the column is filled, how many keys the lookup file repeats, and the
+      highest match rate that is therefore possible. Neither fact is visible in a spreadsheet, and
+      putting them on screen at the moment of the decision rather than in a log afterwards is most
+      of the value of the tool. Colleagues join two very large workbooks themselves, offline, and
+      see the cost of their key before they commit to it. On a measured pair of real exports &mdash; 731,771 rows by 95
       columns joined to 723,121 by 95 &mdash; reading each file takes about two minutes once and
       is cached thereafter, the pre-flight check about thirty seconds, and the write under a
       minute.

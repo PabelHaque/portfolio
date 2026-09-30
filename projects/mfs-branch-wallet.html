@@ -103,23 +103,6 @@
       <figcaption>Two human gates, one audit log, and a provider pack that is generated rather than typed.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>The portal was live for 400+ branch offices one week after the requirement was agreed.</strong></p>
-    <p>
-      The workflow was already known in detail because I coordinate the mobile-money
-      partnerships myself: I am the single point of contact with bKash, Nagad and Upay, I handle
-      the issue resolution on registrations and account changes, and I had seen every way the
-      email process failed. That let the first version ship with the real state machine, the
-      real reason codes and the real provider layouts rather than approximations, and seven
-      generated user manuals in Bangla and English went out with it.
-    </p>
-    <p>
-      Two properties were fixed from the start. The cheque image is <strong>mandatory</strong>,
-      because the name on it is what the provider will check. And the portal
-      <strong>generates</strong> the provider pack instead of letting anyone type it, because
-      re-typing is where the rejections came from.
-    </p>
-
     <div class="callout">
       <span class="label">A hand-off, not a hand-over</span>
       The portal prepares and controls the submission. Registration with the provider, and the
@@ -127,19 +110,14 @@
       right the first time.
     </div>
 
-    <h3>Two more decisions</h3>
-    <ul>
-      <li><strong>Bilingual by design.</strong> Branch users work in Bangla; head office and the providers work in English. Every label, reason code and manual exists in both, generated from one source, so the two audiences never see different rules.</li>
-      <li><strong>Branch data stays inside the organisation.</strong> The portal runs on the organisation's own machine behind an authenticated tunnel; no provider or third party can see the register.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
       Live from 21 June 2026 with 750+ branch users. 194 registrations from branches across the
       network, 57 provider-ready batches, and a median of 0.8 days from submission to regional
       verification, against two to four weeks by email. Thirteen duplicate numbers stopped before
       they cost a rejection. The same portal now carries the account-change requests that used
-      to travel by letter.
+      to travel by letter. It went live for 400+ branch offices one week after the requirement
+      was agreed.
     </p>
 
     <div class="case-nav">

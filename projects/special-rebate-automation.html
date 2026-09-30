@@ -98,34 +98,15 @@
       <figcaption>Two of the six steps exist to stop the run rather than advance it.</figcaption>
     </figure>
 
-    <h2>The detail I would defend in an interview</h2>
-    <p class="plain"><strong>The unsent draft is the product, not a limitation.</strong></p>
-    <p>
-      It would have been three lines to send the mail. I did not, and the module that builds it
-      is named for what it does rather than what it could do. Two irreversible things happen at
-      the end of this pipeline: an institution pays out money, and a member receives a message
-      saying so. Neither can be recalled if the formula was wrong, and the formula is exactly
-      the part I was least certain about.
-    </p>
-    <div class="callout">
-      <span class="label">Uncertainty belongs in configuration, not in code</span>
-      The rebate rate and the base it applies to live in a settings file, with a note in the
-      documentation saying they must be confirmed with management before a production run.
-      Encoding a number I had not had confirmed as though it were settled would have hidden the
-      one thing a reviewer most needed to see.
-    </div>
-    <h3>Two more decisions</h3>
-    <ul>
-      <li><strong>Back up before you append, not after.</strong> The master workbook is the institution's record of every rebate granted. The backup is written before a single row is added, so the worst outcome of a bad run is a file to restore rather than a history to reconstruct.</li>
-      <li><strong>An audit database beside the workbook.</strong> Four tables record every email processed, every row extracted, every verification result and every append. The workbook is what finance opens; the database is what answers "why is this member in here twice" six months later.</li>
-    </ul>
-
     <h2>Outcome</h2>
     <p>
       A cycle of copying between mailboxes and spreadsheets is now one run that ends in a draft
       waiting for a human to read. The rows are unique by construction, every member has been
       checked against the loan system rather than taken on trust, and the reasoning behind each
-      decision is queryable long after the workbook has moved on.
+      decision is queryable long after the workbook has moved on. The unsent draft is the product,
+      not a limitation. Two irreversible things happen at the end of this pipeline, the institution
+      pays out money and a member is told so, and neither can be recalled if the formula was wrong,
+      so the automation prepares everything and a person presses send.
     </p>
 
     <div class="case-nav">
