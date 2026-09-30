@@ -3,7 +3,7 @@
 **Live site → https://pabelhaque.github.io/portfolio/**
 
 Systems that wait for a human, refuse to guess, won't overspend, know who's asking, and won't
-assume a yes. Five production systems — a 71-agent AI delivery pipeline, a deterministic
+assume a yes. Six production systems — a 71-agent AI delivery pipeline, a deterministic
 allocation engine, an LLM study platform, role-scoped analytics, and a WhatsApp-to-ledger
 automation validated against core banking — each with a full case study built around the one
 rule it refuses to break.

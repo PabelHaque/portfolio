@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MFS Branch Wallet Registration Portal &mdash; Md. Mominul Haque (Pabel)</title>
+<meta name="description" content="Moves bKash, Nagad and Upay merchant-wallet registration for 400+ branch offices from two to four weeks of email and Excel to a bilingual maker-checker portal with a median verification time under a day.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../assets/css/site.css?v=v=20260926a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307070c'/><circle cx='16' cy='16' r='6' fill='%23ff7a1a'/></svg>">
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<header class="site-head scrolled">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span data-profile="name">Md. Mominul Haque (Pabel)</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="../index.html#part-systems">Systems</a>
+      <a href="../index.html#part-analytics">Analytics</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="case-head">
+  <div class="wrap">
+    <a class="backlink" href="../index.html#gates"><span>&larr;</span> All systems</a>
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Case study 03 &middot; Workflow system &amp; payments onboarding</p>
+        <h1>MFS Branch Wallet Registration Portal</h1>
+        <p class="lede">
+          Every branch office collects and disburses by mobile money, so each one needs a
+          merchant wallet with bKash, Nagad or Upay. Getting one used to mean an email thread, an
+          Excel sheet and two to four weeks of waiting, and a single typo against the cheque meant
+          the provider rejected the whole application. This portal turns that into a bilingual
+          maker-checker workflow: the branch submits, the region verifies, head office approves,
+          and the provider pack is generated on letterhead. A number already registered is caught
+          before it ever reaches the provider.
+        </p>
+      </div>
+      <div data-glyph="audit" aria-hidden="true"></div>
+    </div>
+
+    <table class="meta-table">
+      <tbody>
+        <tr><th>Role</th><td>Product owner and builder; also the organisation's coordinator for the bKash, Nagad and Upay partnerships</td></tr>
+        <tr><th>Year</th><td>2026 &middot; live since 21 June 2026</td></tr>
+        <tr><th>Scale</th><td>400+ branch offices &middot; 750+ branch users &middot; 194 registrations &middot; 57 provider batches</td></tr>
+        <tr><th>Result</th><td>Median 0.8 days from submission to regional verification, from 2&ndash;4 weeks by email</td></tr>
+        <tr><th>Stack</th><td>Django, Bootstrap, SQLite, bilingual Bangla/English UI, generated DOCX and Excel packs</td></tr>
+        <tr><th>Code</th><td>Private repository &mdash; walkthrough available on request</td></tr>
+        <tr><th>Try it</th><td><a href="../demos/MFS_Branch_Wallet_Portal/MFS_Branch_Wallet_Portal.html" target="_blank" rel="noopener">Open the working simulation</a> &mdash; the real screens and rules with invented data, runs in your browser</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="case-body">
+  <div class="wrap narrow">
+
+    <h2>The problem</h2>
+    <p>
+      Mobile financial services are how a microfinance branch in Bangladesh moves money
+      today: collections come in and disbursements go out through bKash, Nagad and Upay.
+      Each branch office therefore needs its own merchant wallet, registered with the provider
+      against the branch's bank account.
+    </p>
+    <p>
+      The registration itself is simple. The process around it was not. A branch emailed its
+      details to the region, the region copied them into a spreadsheet, head office
+      consolidated the spreadsheets and sent them to the provider, and the provider sent back
+      rejections when a name on the form did not match the name on the cheque. Two to four
+      weeks per branch was normal, and a wallet that was already registered under a different
+      spelling was discovered only when the provider said so.
+    </p>
+
+    <div class="callout">
+      <span class="label">The rule</span>
+      Nothing reaches a provider until a human at the region has verified it against the
+      cheque image, a second human at head office has approved it, and the mobile number has
+      been checked against everything already registered. <strong>Checks before it registers.</strong>
+    </div>
+
+    <h2>What I built</h2>
+
+    <figure class="figure">
+      <div class="pipeline" aria-label="From branch submission to provider pack">
+        <div class="stage"><span class="num">1</span><div><div class="name">Branch submits</div><div class="what">A branch user fills one bilingual form with the wallet details and attaches a mandatory image of the cheque. Format checks run on the mobile number and identity fields before submission is allowed.</div></div></div>
+        <div class="stage"><span class="num">2</span><div><div class="name">Duplicates stopped at the door</div><div class="what">Three layers of duplicate detection on the number, the account and the branch, plus a check against the provider's own pre-registration list. Thirteen already-registered numbers were caught this way before reaching a provider.</div></div></div>
+        <div class="stage gate"><span class="num">3</span><div><div class="name">Region verifies <span class="badge">Maker-checker</span></div><div class="what">The regional finance and accounts admin compares the form with the cheque image. A name mismatch escalates instead of passing; a return goes back to the branch with a reason from a fixed list.</div></div></div>
+        <div class="stage gate"><span class="num">4</span><div><div class="name">Head office approves <span class="badge">Second gate</span></div><div class="what">Head-office finance approves or returns. The submission moves through a thirteen-state workflow, and every transition is written to an audit log with who did it and when.</div></div></div>
+        <div class="stage"><span class="num">5</span><div><div class="name">Provider pack generated</div><div class="what">Approved submissions are batched per provider into the Excel layout each one requires and a cover letter on letterhead, ready to send. Fifty-seven batches so far.</div></div></div>
+        <div class="stage"><span class="num">6</span><div><div class="name">Account changes follow the same path</div><div class="what">A separate Account Change Request workflow handles bank-account changes with the same verification and approval steps, so a change is never less controlled than the original registration.</div></div></div>
+      </div>
+      <figcaption>Two human gates, one audit log, and a provider pack that is generated rather than typed.</figcaption>
+    </figure>
+
+    <h2>The detail I would defend in an interview</h2>
+    <p class="plain"><strong>The portal was live for 400+ branch offices one week after the requirement was agreed.</strong></p>
+    <p>
+      The workflow was already known in detail because I coordinate the mobile-money
+      partnerships myself: I am the single point of contact with bKash, Nagad and Upay, I handle
+      the issue resolution on registrations and account changes, and I had seen every way the
+      email process failed. That let the first version ship with the real state machine, the
+      real reason codes and the real provider layouts rather than approximations, and seven
+      generated user manuals in Bangla and English went out with it.
+    </p>
+    <p>
+      Two properties were fixed from the start. The cheque image is <strong>mandatory</strong>,
+      because the name on it is what the provider will check. And the portal
+      <strong>generates</strong> the provider pack instead of letting anyone type it, because
+      re-typing is where the rejections came from.
+    </p>
+
+    <div class="callout">
+      <span class="label">A hand-off, not a hand-over</span>
+      The portal prepares and controls the submission. Registration with the provider, and the
+      relationship with the provider, stay with people. The system makes sure what they send is
+      right the first time.
+    </div>
+
+    <h3>Two more decisions</h3>
+    <ul>
+      <li><strong>Bilingual by design.</strong> Branch users work in Bangla; head office and the providers work in English. Every label, reason code and manual exists in both, generated from one source, so the two audiences never see different rules.</li>
+      <li><strong>Branch data stays inside the organisation.</strong> The portal runs on the organisation's own machine behind an authenticated tunnel; no provider or third party can see the register.</li>
+    </ul>
+
+    <h2>Outcome</h2>
+    <p>
+      Live from 21 June 2026 with 750+ branch users. 194 registrations from branches across the
+      network, 57 provider-ready batches, and a median of 0.8 days from submission to regional
+      verification, against two to four weeks by email. Thirteen duplicate numbers stopped before
+      they cost a rejection. The same portal now carries the account-change requests that used
+      to travel by letter.
+    </p>
+
+    <div class="case-nav">
+      <a href="editorials-study-assistant.html">
+        <span class="k">Next &middot; 04</span>
+        <span class="t">Autonomous Exam-Study Intelligence Platform &rarr;</span>
+      </a>
+      <a href="pmuk-target-system.html">
+        <span class="k">Previous &middot; 02</span>
+        <span class="t">&larr; PMUK Field-Staff Target &amp; Budget Allocation System</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>&copy; <span id="year">2026</span> <span data-profile="name">Md. Mominul Haque (Pabel)</span></span>
+    <a href="../index.html#contact">Get in touch</a>
+  </div>
+</footer>
+
+<script src="../assets/js/data.js?v=v=20260926a"></script>
+<script src="../assets/js/site.js?v=v=20260926a"></script>
+</body>
+</html>

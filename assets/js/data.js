@@ -100,7 +100,7 @@ window.PORTFOLIO = {
         { k: "Workflow", v: "13 states \u00b7 maker-checker" }
       ],
       tags: ["Django", "Bootstrap", "SQLite", "Bangla / English", "Maker-checker", "DOCX / Excel generation"],
-      page: "",
+      page: "projects/mfs-branch-wallet.html",
       demo: "demos/MFS_Branch_Wallet_Portal/MFS_Branch_Wallet_Portal.html",
       repo: "",
       visibility: "private"
