@@ -108,13 +108,13 @@ window.PORTFOLIO = {
     {
       slug: "editorials-study-assistant",
       part: "systems",
-      title: "Autonomous Exam-Study Intelligence Platform",
+      title: "Autonomous Competitive Job Exam-Study Intelligence Platform",
       kicker: "LLM pipeline · data engineering",
       year: "2026",
       glyph: "funnel",
       principle: "Won't overspend.",
       stat: { n: "0", label: "paid API calls · by default" },
-      summary: "Reads the morning's op-eds and geopolitics coverage so exam candidates don't have to — scoring every article 0–100 against the syllabus, keeping the argument for why a foreign story matters in Bangladesh, and logging the rejects for audit. Routes across six model providers, free and local tiers first; paid calls stay off until someone turns them on.",
+      summary: "Reads the morning's op-eds and geopolitics coverage so candidates for Bangladesh's competitive job exams don't have to — scoring every article 0–100 against the syllabus, keeping the argument for why a foreign story matters in Bangladesh, and logging the rejects for audit. Routes across six model providers, free and local tiers first; paid calls stay off until someone turns them on.",
       facts: [
         { k: "Model routing", v: "6-provider fallback" },
         { k: "Workspace", v: "18 pages" },
