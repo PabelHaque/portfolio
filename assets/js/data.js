@@ -20,7 +20,7 @@ window.PORTFOLIO = {
   /* Two parts. Every project carries a `part`; the gates get a divider
      where the part changes, and the field colours nodes by part. */
   parts: {
-    systems:   { label: "Products & systems", numeral: "I",  blurb: "Things people use every day: a delivery pipeline, an allocation engine, a study platform, a dashboard, and five tools that verify, reconcile and record what a microfinance institution runs on. Each one enforces a rule so nobody has to remember it." },
+    systems:   { label: "Products & systems", numeral: "I",  blurb: "Things people use every day: a delivery pipeline, an allocation engine, a study platform, a dashboard, a branch onboarding portal and five tools that verify, reconcile and record what a microfinance institution runs on. Each one enforces a rule so nobody has to remember it." },
     analytics: { label: "Analytics",          numeral: "II", blurb: "The practice behind them: turning one unwieldy monthly export into answers for regulators, finance, programme heads and donors — in minutes, not days." }
   },
 
@@ -71,10 +71,10 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "cascade",
       principle: "Refuses to guess.",
-      stat: { n: "17,962", label: "targets per cycle · bit-identical" },
-      summary: "Turns a branch's microfinance targets into a fair share for each of 2,574 field officers, weighted by their own portfolio. The engine will not run on inputs it cannot order canonically and will not accept a metric without a declared direction — so the same cycle re-run gives the same 17,962 numbers, and each one can be explained to the officer who received it.",
+      stat: { n: "18,000", label: "weekly targets · bit-identical re-runs" },
+      summary: "Turns a branch's microfinance targets into a fair share for each of about 2,600 field officers, weighted by their own portfolio. The engine will not run on inputs it cannot order canonically and will not accept a metric without a declared direction — so the same cycle re-run gives the same 18,000 numbers, and each one can be explained to the officer who received it.",
       facts: [
-        { k: "Scale", v: "2,574 staff · 409 branches" },
+        { k: "Scale", v: "About 2,600 officers · 400+ branches" },
         { k: "Domain modules", v: "11" },
         { k: "Re-runs", v: "Bit-identical" }
       ],
@@ -92,10 +92,10 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "audit",
       principle: "Checks before it registers.",
-      stat: { n: "731", label: "branch users \u00b7 live since June 2026" },
-      summary: "Every branch office needs a bKash or Nagad merchant wallet to collect and disburse by mobile money. Registration used to travel by email and Excel for two to four weeks per branch, and one typo against the cheque meant a rejection. The portal is a bilingual maker-checker workflow with thirteen states: the branch submits with a cheque image, the region verifies, head office approves, and the provider pack is generated on letterhead. A number already registered is caught before it ever reaches the provider.",
+      stat: { n: "750", label: "branch users \u00b7 live since June 2026" },
+      summary: "Every branch office needs a bKash, Nagad or Upay merchant wallet to collect and disburse by mobile money. Registration used to travel by email and Excel for two to four weeks per branch, and one typo against the cheque meant a rejection. The portal is a bilingual maker-checker workflow with thirteen states: the branch submits with a cheque image, the region verifies, head office approves, and the provider pack is generated on letterhead. A number already registered is caught before it ever reaches the provider.",
       facts: [
-        { k: "Scale", v: "736 branch offices \u00b7 731 users" },
+        { k: "Scale", v: "400+ branch offices \u00b7 750+ users \u00b7 194 registrations" },
         { k: "Verification", v: "Median 0.8 days, was 2\u20134 weeks" },
         { k: "Workflow", v: "13 states \u00b7 maker-checker" }
       ],
@@ -114,9 +114,9 @@ window.PORTFOLIO = {
       glyph: "funnel",
       principle: "Won't overspend.",
       stat: { n: "0", label: "paid API calls · by default" },
-      summary: "Reads the morning's op-eds and geopolitics coverage so exam candidates don't have to — scoring every article 0–100 against the syllabus, keeping the argument for why a foreign story matters in Bangladesh, and logging the rejects for audit. Routes across three model providers, free and local tiers first; paid calls stay off until someone turns them on.",
+      summary: "Reads the morning's op-eds and geopolitics coverage so exam candidates don't have to — scoring every article 0–100 against the syllabus, keeping the argument for why a foreign story matters in Bangladesh, and logging the rejects for audit. Routes across six model providers, free and local tiers first; paid calls stay off until someone turns them on.",
       facts: [
-        { k: "Model routing", v: "3-provider fallback" },
+        { k: "Model routing", v: "6-provider fallback" },
         { k: "Workspace", v: "18 pages" },
         { k: "Paid API calls", v: "Off by default" }
       ],
@@ -134,7 +134,7 @@ window.PORTFOLIO = {
       glyph: "hierarchy",
       principle: "Knows who's asking.",
       stat: { n: "5", label: "role tiers · each scoped" },
-      summary: "One dashboard for a five-tier field hierarchy: a field officer sees their own figures, each manager sees one level wider, head office gets the whole network in the shape HR and payroll consume. Scoring configuration lives in a separate admin console, so a settings mistake and a data-access mistake can never share a click.",
+      summary: "One dashboard for a five-tier field hierarchy: a field officer sees their own figures, each manager sees only the units they are responsible for, head office gets the whole network in the shape HR and payroll consume. Scoring configuration lives in a separate admin console, so a settings mistake and a data-access mistake can never share a click. In weekly use since July 2026 as the receiving end of the field-staff target cycle.",
       facts: [
         { k: "Role tiers", v: "5 + admin" },
         { k: "Stack", v: "Django + Next.js" },
@@ -237,11 +237,11 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "join",
       principle: "Keeps a zero a zero.",
-      stat: { n: "731,771", label: "rows joined \u00b7 offline, on a laptop" },
-      summary: "The job people do with VLOOKUP across hundreds of thousands of rows, as a desktop tool colleagues install themselves without an administrator password. Before it writes anything it tells you what your key will cost: how many rows carry it, how many times the lookup repeats it, the best match rate available. Identifier columns stay text, so a member ID never loses its leading zero, and it makes no network call at any point.",
+      stat: { n: "1", label: "minute or less per merge \u00b7 was 20\u201330 and a frozen laptop" },
+      summary: "Built on my own initiative after watching teammates lose 20 to 30 minutes, and often the whole laptop, to every weekly VLOOKUP merge. SaiMarz does the same join in under a minute for anyone on the team, on any two Excel files, and also combines many workbooks on one key, converts Excel to CSV and splits output by branch. Colleagues install it themselves without an administrator password. Before it writes anything it tells you what your key will cost: how many rows carry it, how many times the lookup repeats it, the best match rate available. Identifier columns stay text, so a member ID never loses its leading zero, and it makes no network call at any point.",
       facts: [
-        { k: "Measured", v: "731,771 \u00d7 95 joined to 723,121 \u00d7 95" },
-        { k: "Network calls", v: "None, ever" },
+        { k: "Test run", v: "731,771 \u00d7 95 joined to 723,121 \u00d7 95, offline on a laptop" },
+        { k: "Also does", v: "Combine many files on one key \u00b7 Excel to CSV \u00b7 split by branch" },
         { k: "Every output", v: "Carries its own provenance sheet" }
       ],
       tags: ["Python", "PySide6 / Qt", "pandas", "Parquet", "Inno Setup", "MIT licence"],
@@ -258,8 +258,8 @@ window.PORTFOLIO = {
       year: "2023–2026",
       glyph: "report",
       principle: "Shows its working.",
-      stat: { n: "73", label: "analyses · 27 months · one dataset" },
-      summary: "Every month the MIS exports one file of 590,000 to 736,000 rows and 56 to 82 columns, growing every month: every member and every loan. Excel could barely hold it, and a single question meant a day of filtering, lookups and copying. For twenty-seven months I answered regulators, finance, programme heads and donors from that file with pandas instead — 73 notebooks in seven programmes, each one run in minutes and footed to the source before it left. The reconciliation checks stay in the code.",
+      stat: { n: "50", label: "recurring reports automated · 73 notebooks" },
+      summary: "Every month the MIS exports one file of 590,000 to 736,000 rows and 56 to 82 columns, growing every month: every member and every loan. Excel could barely hold it, and a single question meant a day of filtering, lookups and copying. Over two years I automated 50+ recurring reports for regulators, finance, programme heads and donors from that file with pandas instead: 73 notebooks in seven programmes, each one run in minutes and footed to the source before it left. The reconciliation checks stay in the code.",
       facts: [
         { k: "Monthly export", v: "590,000\u2013736,000 rows \u00d7 56\u201382 columns" },
         { k: "Notebooks", v: "73 kept of 104" },
@@ -306,7 +306,7 @@ window.PORTFOLIO = {
         impact: [
           "<b>Minutes, not days.</b> A question that took a day in a spreadsheet is a notebook run, and next month it is the same run on the next export.",
           "<b>Recurring deliverables, owned.</b> The regulator’s half-yearly return, finance’s monthly bank statement, the zone overdue packs and the member-count cross-checks all run from the same engine.",
-          "<b>Twenty-seven months</b> of regulator, finance, programme and donor questions answered from one dataset. 73 analyses kept in seven programmes, runnable by the next person.",
+          "<b>50+ recurring reports automated</b> for the regulator, finance, programme heads and donors from one dataset, work of days per cycle now run in minutes. 73 analyses kept in seven programmes, runnable by the next person.",
           "<b>The groundwork for Part I.</b> The target-allocation engine, the reporting dashboard and the special-permission tracker were built on the understanding of the data these notebooks produced."
         ]
       },

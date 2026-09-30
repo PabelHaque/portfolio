@@ -38,7 +38,7 @@
         <h1>PMUK Field-Staff Target &amp; Budget Allocation System</h1>
         <p class="lede">
           A branch gets a target. Somebody has to turn it into a number for every field officer —
-          fairly, across 409 branches and 2,574 staff, every planning cycle, with nobody able to
+          fairly, across 400+ branches and 2,574 staff, every planning cycle, with nobody able to
           argue the arithmetic. This engine does it with a weighted largest-remainder cascade,
           and refuses to run on anything it could not reproduce: the same inputs give the same
           17,962 numbers, bit for bit.
@@ -51,7 +51,7 @@
       <tbody>
         <tr><th>Role</th><td>Sole designer and builder</td></tr>
         <tr><th>Year</th><td>2026 · run against live planning data</td></tr>
-        <tr><th>Scale</th><td>2,574 staff · 409 branches · 17,962 staff targets per cycle</td></tr>
+        <tr><th>Scale</th><td>About 2,600 officers · 400+ branches · about 18,000 staff targets a week (17,962 in the pilot run)</td></tr>
         <tr><th>Stack</th><td>Django, PostgreSQL / PL&#47;pgSQL, TypeScript, React, Docker, role-scoped RBAC, bilingual UI</td></tr>
         <tr><th>Architecture</th><td>11 domain modules — access control, org hierarchy, roster, indicator and metric catalogues, weight-matrix configuration, target input, run lifecycle, calendar, export integration</td></tr>
         <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
@@ -112,7 +112,7 @@
       <figcaption>
         Flooring alone leaves the branch one unit short. The remaining unit goes to officer C —
         the largest fractional remainder — and the column foots exactly. Illustrative figures; the
-        production run does this across 409 branches and ten metrics.
+        production run does this across 400+ branches and ten metrics.
       </figcaption>
     </figure>
 
@@ -195,7 +195,7 @@
 
     <h2>Outcome</h2>
     <p>
-      One planning cycle: 17,962 individual staff targets across 409 branches from branch-level
+      One planning cycle: 17,962 individual staff targets across 400+ branches from branch-level
       inputs — reconciling exactly, reproducible on demand, an audit trail behind each figure, a
       bilingual interface for the field.
     </p>
