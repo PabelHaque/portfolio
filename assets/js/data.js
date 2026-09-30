@@ -237,8 +237,8 @@ window.PORTFOLIO = {
       year: "2026",
       glyph: "join",
       principle: "Keeps a zero a zero.",
-      stat: { n: "1", label: "minute or less per merge \u00b7 was 20\u201330 and a frozen laptop" },
-      summary: "Built on my own initiative after watching teammates lose 20 to 30 minutes, and often the whole laptop, to every weekly VLOOKUP merge. SaiMarz does the same join in under a minute for anyone on the team, on any two Excel files, and also combines many workbooks on one key, converts Excel to CSV and splits output by branch. Colleagues install it themselves without an administrator password. Before it writes anything it tells you what your key will cost: how many rows carry it, how many times the lookup repeats it, the best match rate available. Identifier columns stay text, so a member ID never loses its leading zero, and it makes no network call at any point.",
+      stat: { n: "5", label: "minutes or less per merge \u00b7 was 20\u201330 and a frozen laptop" },
+      summary: "Built on my own initiative after watching teammates lose 20 to 30 minutes, and often the whole laptop, to every weekly VLOOKUP merge. SaiMarz does the same join in under 5 minutes for anyone on the team, on any two Excel files, and also combines many workbooks on one key, converts Excel to CSV and splits output by branch. Colleagues install it themselves without an administrator password. Before it writes anything it tells you what your key will cost: how many rows carry it, how many times the lookup repeats it, the best match rate available. Identifier columns stay text, so a member ID never loses its leading zero, and it makes no network call at any point.",
       facts: [
         { k: "Test run", v: "731,771 \u00d7 95 joined to 723,121 \u00d7 95, offline on a laptop" },
         { k: "Also does", v: "Combine many files on one key \u00b7 Excel to CSV \u00b7 split by branch" },
