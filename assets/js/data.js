@@ -128,7 +128,7 @@ window.PORTFOLIO = {
     {
       slug: "ak47-dashboard",
       part: "systems",
-      title: "AK47 Performance & Reporting Dashboard",
+      title: "MF Plan Tracker (AK47) Performance Dashboard",
       kicker: "Analytics · full-stack",
       year: "2026",
       glyph: "hierarchy",
