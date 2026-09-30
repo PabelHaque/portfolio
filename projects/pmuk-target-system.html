@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PMUK Target &amp; Budget Allocation System — Md. Mominul Haque (Pabel)</title>
-<meta name="description" content="A deterministic weighted largest-remainder cascade that divides branch-level microfinance targets across about 2,600 field staff and reproduces the same 18,000 weekly targets on every re-run.">
+<meta name="description" content="A weighted, exactly-summing split that divides branch-level microfinance targets across about 2,600 field staff and reproduces the same 18,000 weekly targets on every re-run.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07070c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,7 +39,7 @@
         <p class="lede">
           A branch gets a target. Somebody has to turn it into a number for every field officer —
           fairly, across 400+ branches and about 2,600 field officers, every planning cycle, with nobody able to
-          argue the arithmetic. This engine does it with a weighted largest-remainder cascade,
+          argue the arithmetic. This engine does it with a weighted split and fair rounding,
           and refuses to run on anything it could not reproduce: the same inputs give the same
           about 18,000 weekly targets, bit for bit.
         </p>
@@ -52,7 +52,7 @@
         <tr><th>Role</th><td>Sole designer and builder</td></tr>
         <tr><th>Year</th><td>2026 · run against live planning data</td></tr>
         <tr><th>Scale</th><td>About 2,600 officers · 400+ branches · about 18,000 staff targets a week (17,962 in the pilot run)</td></tr>
-        <tr><th>Stack</th><td>Django, PostgreSQL / PL&#47;pgSQL, TypeScript, React, Docker, role-scoped RBAC, bilingual UI</td></tr>
+        <tr><th>Stack</th><td>Django, PostgreSQL, TypeScript, React, Docker, role-scoped RBAC, bilingual UI</td></tr>
         <tr><th>Architecture</th><td>11 domain modules — access control, org hierarchy, roster, indicator and metric catalogues, weight-matrix configuration, target input, run lifecycle, calendar, export integration</td></tr>
         <tr><th>Code</th><td>Private repository — walkthrough available on request</td></tr>
         <tr><th>Try it</th><td><a href="../demos/PMUK_Field_Staff_Target_System/PMUK_Field_Staff_Target_System.html" target="_blank" rel="noopener">Open the working simulation</a> &mdash; the real screens and rules with invented data, runs in your browser</td></tr>
@@ -79,12 +79,11 @@
     </ul>
 
     <h2>The allocation engine</h2>
-    <p class="plain"><strong>A weighted largest-remainder cascade.</strong></p>
+    <p class="plain"><strong>A weighted split with rounding that always adds up.</strong></p>
     <p>
       Each officer gets a score from their own portfolio indicators — samity count, member count,
       loan outstanding — combined through a weight matrix. Scores become proportional shares of
-      the branch target. Those shares are rounded by the <strong>largest-remainder
-      method</strong>: floor every share, count the whole units left unallocated, hand them out
+      the branch target. Those shares are rounded by <strong>a fair-share rule</strong>: floor every share, count the whole units left unallocated, hand them out
       one at a time to the officers with the largest fractional remainders.
     </p>
     <p>
